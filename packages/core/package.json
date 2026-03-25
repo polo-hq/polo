@@ -1,23 +1,39 @@
 {
   "name": "@polo/core",
-  "version": "0.0.1",
+  "version": "0.0.0",
+  "description": "Polo core package",
+  "homepage": "https://github.com/polo-hq/polo#readme",
+  "bugs": {
+    "url": "https://github.com/polo-hq/polo/issues"
+  },
+  "license": "MIT",
+  "author": "Ethan Cohen <ethan@polo.dev>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polo-hq/polo.git"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check",
+    "prepublishOnly": "vp run build"
   },
   "devDependencies": {
-    "typescript": "latest",
-    "vitest": "latest"
+    "@types/node": "^25.5.0",
+    "@typescript/native-preview": "7.0.0-dev.20260316.1",
+    "bumpp": "^11.0.1",
+    "typescript": "^5.9.3"
   }
 }
