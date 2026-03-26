@@ -363,7 +363,9 @@ describe("polo.chunks", () => {
 
     // dropped chunk is in trace
     const chunkSource_ = trace.sources.find((s) => s.key === "guidelines");
-    const dropped = chunkSource_?.chunks?.filter((c) => !c.included);
+    expect(chunkSource_?.type).toBe("chunks");
+    const dropped =
+      chunkSource_?.type === "chunks" ? chunkSource_.chunks.filter((c) => !c.included) : [];
     expect(dropped?.length).toBeGreaterThan(0);
     expect(dropped?.[0]?.reason).toBe("over_budget");
   });

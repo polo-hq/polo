@@ -213,10 +213,10 @@ policies: {
 {
   "sources": [
     { "key": "transcript", "type": "input", "sensitivity": "phi" },
-    { "key": "encounter", "type": "single", "sensitivity": "phi", "durationMs": 12 },
+    { "key": "encounter", "type": "value", "sensitivity": "phi", "durationMs": 12 },
     {
       "key": "priorNote",
-      "type": "single",
+      "type": "value",
       "sensitivity": "phi",
       "durationMs": 8
     },

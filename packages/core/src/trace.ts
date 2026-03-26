@@ -1,9 +1,9 @@
-import type { ChunkRecord, PolicyRecord, SourceRecord, Trace } from "./types.ts";
+import type { ChunkRecord, PolicyRecord, SourceRecord, SourceRecordType, Trace } from "./types.ts";
 import { generateRunId } from "./utils.ts";
 
 export interface SourceTiming {
   key: string;
-  type: "input" | "single" | "chunks";
+  type: SourceRecordType;
   sensitivity: import("./types.ts").Sensitivity;
   resolvedAt: Date;
   durationMs: number;
@@ -31,14 +31,18 @@ export function buildTrace(options: {
     budgetUsed,
   } = options;
 
-  const sources: SourceRecord[] = sourceTimings.map((t) => ({
-    key: t.key,
-    type: t.type,
-    resolvedAt: t.resolvedAt,
-    durationMs: t.durationMs,
-    sensitivity: t.sensitivity,
-    ...(t.chunkRecords ? { chunks: t.chunkRecords } : {}),
-  }));
+  const sources: SourceRecord[] = sourceTimings.map((t): SourceRecord => {
+    const base = {
+      key: t.key,
+      resolvedAt: t.resolvedAt,
+      durationMs: t.durationMs,
+      sensitivity: t.sensitivity,
+    };
+    if (t.type === "chunks") {
+      return { ...base, type: "chunks" as const, chunks: t.chunkRecords ?? [] };
+    }
+    return { ...base, type: t.type };
+  });
 
   return {
     runId: generateRunId(),

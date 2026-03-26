@@ -5,9 +5,9 @@ export { chunkSource } from "./polo.ts";
 // Public types
 export type {
   AnyInput,
-  Chunks,
   Chunk,
   ChunkRecord,
+  Chunks,
   Definition,
   DeriveFn,
   ExcludeDecision,
@@ -20,10 +20,11 @@ export type {
   PolicyRecord,
   Resolution,
   Sensitivity,
-  SingleSource,
   SourceOptions,
   SourceRecord,
+  SourceRecordType,
   Trace,
+  ValueSource,
 } from "./types.ts";
 
 // Errors

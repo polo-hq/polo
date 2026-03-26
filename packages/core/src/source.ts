@@ -1,4 +1,4 @@
-import type { AnyInput, Chunks, ChunkSource, SingleSource, SourceOptions } from "./types.ts";
+import type { AnyInput, Chunks, ChunkSource, SourceOptions, ValueSource } from "./types.ts";
 
 export function createSource<
   TInput extends AnyInput,
@@ -7,9 +7,9 @@ export function createSource<
 >(
   fn: (input: TInput, sources: TSources) => Promise<TResult>,
   options?: SourceOptions,
-): SingleSource<TInput, TSources, TResult> {
+): ValueSource<TInput, TSources, TResult> {
   return {
-    _type: "single",
+    _type: "value",
     _fn: fn,
     _sensitivity: options?.sensitivity ?? "internal",
   };

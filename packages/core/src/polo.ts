@@ -10,8 +10,8 @@ import type {
   InputSourceOptions,
   Policies,
   Resolution,
-  SingleSource,
   SourceOptions,
+  ValueSource,
 } from "./types.ts";
 import { createInput } from "./input.ts";
 import { createSource, createChunkSource } from "./source.ts";
@@ -59,12 +59,12 @@ interface Polo {
   ): InputSource<TInput, TKey>;
 
   /**
-   * Declare a source that resolves a single async value.
+   * Declare a source that resolves an async value.
    */
   source<TInput extends AnyInput, TSources extends Record<string, unknown>, TResult>(
     fn: (input: TInput, sources: TSources) => Promise<TResult>,
     options?: SourceOptions,
-  ): SingleSource<TInput, TSources, TResult>;
+  ): ValueSource<TInput, TSources, TResult>;
 
   /**
    * Wrap a ranked multi-block source result.

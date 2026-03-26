@@ -43,12 +43,12 @@ export interface InputSource<TInput extends AnyInput, TKey extends string & keyo
   _sensitivity: Sensitivity;
 }
 
-export interface SingleSource<
+export interface ValueSource<
   TInput extends AnyInput,
   TSources extends Record<string, unknown>,
   TResult,
 > {
-  _type: "single";
+  _type: "value";
   _fn(input: TInput, sources: TSources): Promise<TResult>;
   _sensitivity: Sensitivity;
 }
@@ -64,7 +64,7 @@ export type AnySource<
   TSources extends Record<string, unknown> = Record<string, unknown>,
 > =
   | InputSource<TInput, string & keyof TInput>
-  | SingleSource<TInput, TSources, unknown>
+  | ValueSource<TInput, TSources, unknown>
   | ChunkSource<TInput, TSources>;
 
 // ============================================================
@@ -74,7 +74,7 @@ export type AnySource<
 export type InferSource<TSource> =
   TSource extends InputSource<infer TInput, infer TKey>
     ? TInput[TKey]
-    : TSource extends SingleSource<AnyInput, Record<string, unknown>, infer TResult>
+    : TSource extends ValueSource<AnyInput, Record<string, unknown>, infer TResult>
       ? TResult
       : TSource extends ChunkSource<AnyInput, Record<string, unknown>>
         ? Chunk[]
@@ -83,18 +83,6 @@ export type InferSource<TSource> =
 export type InferSources<TSourceMap extends Record<string, AnySource>> = {
   [K in keyof TSourceMap]: InferSource<TSourceMap[K]>;
 };
-
-// type SourceMap<TInput extends AnyInput = AnyInput> = Record<
-//   string,
-//   AnySource<TInput, Record<string, unknown>>
-// >;
-
-// type ResolvedSources<TSourceMap extends Record<string, AnySource>> =
-//   InferSources<TSourceMap>;
-
-// type SourceMapFor<TInput extends AnyInput, TSourceMap extends Record<string, AnySource>> = {
-//   [K in keyof TSourceMap]: AnySource<TInput, InferSources<TSourceMap>>;
-// };
 
 // ============================================================
 // Derive
@@ -140,14 +128,19 @@ export interface ChunkRecord {
   reason?: string;
 }
 
-export interface SourceRecord {
+/** Discriminant for each entry in `Trace.sources`. */
+export type SourceRecordType = "input" | "value" | "chunks";
+
+type SourceRecordBase = {
   key: string;
-  type: "input" | "single" | "chunks";
   resolvedAt: Date;
   durationMs: number;
   sensitivity: Sensitivity;
-  chunks?: ChunkRecord[];
-}
+};
+
+export type SourceRecord =
+  | (SourceRecordBase & { type: "input" | "value"; chunks?: never })
+  | (SourceRecordBase & { type: "chunks"; chunks: ChunkRecord[] });
 
 export interface PolicyRecord {
   source: string;
