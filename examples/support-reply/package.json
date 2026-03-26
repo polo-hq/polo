@@ -1,0 +1,25 @@
+{
+  "name": "@polo/example-support-reply",
+  "private": true,
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "check": "vp check",
+    "demo": "node dist/index.mjs"
+  },
+  "dependencies": {
+    "@polo/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@typescript/native-preview": "7.0.0-dev.20260316.1",
+    "typescript": "^5.9.3"
+  }
+}

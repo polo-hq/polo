@@ -8,15 +8,31 @@ importers:
 
   .:
     devDependencies:
-      prettier:
-        specifier: ^3.7.4
-        version: 3.7.4
       turbo:
         specifier: ^2.8.20
         version: 2.8.20
       typescript:
         specifier: 5.9.2
         version: 5.9.2
+      vite-plus:
+        specifier: ^0.1.11
+        version: 0.1.14(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(jiti@2.6.1)(typescript@5.9.2)(vite@8.0.2(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.3))(yaml@2.8.3)
+
+  examples/support-reply:
+    dependencies:
+      '@polo/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: ^25.5.0
+        version: 25.5.0
+      '@typescript/native-preview':
+        specifier: 7.0.0-dev.20260316.1
+        version: 7.0.0-dev.20260316.1
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
   packages/core:
     devDependencies:
@@ -32,9 +48,6 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
-      vite-plus:
-        specifier: ^0.1.11
-        version: 0.1.14(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(jiti@2.6.1)(typescript@5.9.3)(vite@8.0.2(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.3))(yaml@2.8.3)
 
 packages:
 
@@ -815,10 +828,6 @@ packages:
     resolution: {integrity: sha512-OW/rX8O/jXnm82Ey1k44pObPtdblfiuWnrd8X7GJ7emImCOstunGbXUpp7HdBrFQX6rJzn3sPT397Wp5aCwCHg==}
     engines: {node: ^10 || ^12 || >=14}
 
-  prettier@3.7.4:
-    resolution: {integrity: sha512-v6UNi1+3hSlVvv8fSaoUbggEM5VErKmmpGA7Pl3HF8V6uKY7rvClBOJlH6yNwQtfTueNkGVpOv/mtWL9L4bgRA==}
-    engines: {node: '>=14'}
-
   quansync@1.0.0:
     resolution: {integrity: sha512-5xZacEEufv3HSTPQuchrvV6soaiACMFnq1H8wkVioctoH3TRha9Sz66lOxRwPK/qZj7HPiSveih9yAyh98gvqA==}
 
@@ -1251,7 +1260,7 @@ snapshots:
       '@typescript/native-preview-win32-arm64': 7.0.0-dev.20260316.1
       '@typescript/native-preview-win32-x64': 7.0.0-dev.20260316.1
 
-  '@voidzero-dev/vite-plus-core@0.1.14(@types/node@25.5.0)(jiti@2.6.1)(typescript@5.9.3)(yaml@2.8.3)':
+  '@voidzero-dev/vite-plus-core@0.1.14(@types/node@25.5.0)(jiti@2.6.1)(typescript@5.9.2)(yaml@2.8.3)':
     dependencies:
       '@oxc-project/runtime': 0.121.0
       '@oxc-project/types': 0.122.0
@@ -1261,7 +1270,7 @@ snapshots:
       '@types/node': 25.5.0
       fsevents: 2.3.3
       jiti: 2.6.1
-      typescript: 5.9.3
+      typescript: 5.9.2
       yaml: 2.8.3
 
   '@voidzero-dev/vite-plus-darwin-arm64@0.1.14':
@@ -1282,11 +1291,11 @@ snapshots:
   '@voidzero-dev/vite-plus-linux-x64-musl@0.1.14':
     optional: true
 
-  '@voidzero-dev/vite-plus-test@0.1.14(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(jiti@2.6.1)(typescript@5.9.3)(vite@8.0.2(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.3))(yaml@2.8.3)':
+  '@voidzero-dev/vite-plus-test@0.1.14(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(jiti@2.6.1)(typescript@5.9.2)(vite@8.0.2(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.3))(yaml@2.8.3)':
     dependencies:
       '@standard-schema/spec': 1.1.0
       '@types/chai': 5.2.3
-      '@voidzero-dev/vite-plus-core': 0.1.14(@types/node@25.5.0)(jiti@2.6.1)(typescript@5.9.3)(yaml@2.8.3)
+      '@voidzero-dev/vite-plus-core': 0.1.14(@types/node@25.5.0)(jiti@2.6.1)(typescript@5.9.2)(yaml@2.8.3)
       es-module-lexer: 1.7.0
       obug: 2.1.1
       pixelmatch: 7.1.0
@@ -1502,8 +1511,6 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  prettier@3.7.4: {}
-
   quansync@1.0.0: {}
 
   rolldown@1.0.0-rc.11:
@@ -1589,11 +1596,11 @@ snapshots:
 
   undici-types@7.18.2: {}
 
-  vite-plus@0.1.14(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(jiti@2.6.1)(typescript@5.9.3)(vite@8.0.2(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.3))(yaml@2.8.3):
+  vite-plus@0.1.14(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(jiti@2.6.1)(typescript@5.9.2)(vite@8.0.2(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.3))(yaml@2.8.3):
     dependencies:
       '@oxc-project/types': 0.122.0
-      '@voidzero-dev/vite-plus-core': 0.1.14(@types/node@25.5.0)(jiti@2.6.1)(typescript@5.9.3)(yaml@2.8.3)
-      '@voidzero-dev/vite-plus-test': 0.1.14(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(jiti@2.6.1)(typescript@5.9.3)(vite@8.0.2(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.3))(yaml@2.8.3)
+      '@voidzero-dev/vite-plus-core': 0.1.14(@types/node@25.5.0)(jiti@2.6.1)(typescript@5.9.2)(yaml@2.8.3)
+      '@voidzero-dev/vite-plus-test': 0.1.14(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(jiti@2.6.1)(typescript@5.9.2)(vite@8.0.2(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.3))(yaml@2.8.3)
       cac: 7.0.0
       cross-spawn: 7.0.6
       oxfmt: 0.42.0

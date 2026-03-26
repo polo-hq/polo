@@ -2,141 +2,14 @@ import type { AnyInput, AnySource } from "./types.ts";
 import { SourceResolutionError } from "./errors.ts";
 
 function stripCommentsAndLiterals(source: string): string {
-  let result = "";
-  let index = 0;
-  let state:
-    | "code"
-    | "single-quote"
-    | "double-quote"
-    | "template"
-    | "line-comment"
-    | "block-comment" = "code";
-  const templateExpressionStack: number[] = [];
-
-  while (index < source.length) {
-    const current = source[index] ?? "";
-    const next = source[index + 1] ?? "";
-
-    if (state === "code") {
-      if (current === "/" && next === "/") {
-        result += "  ";
-        state = "line-comment";
-        index += 2;
-        continue;
-      }
-
-      if (current === "/" && next === "*") {
-        result += "  ";
-        state = "block-comment";
-        index += 2;
-        continue;
-      }
-
-      if (current === "'") {
-        result += " ";
-        state = "single-quote";
-        index += 1;
-        continue;
-      }
-
-      if (current === '"') {
-        result += " ";
-        state = "double-quote";
-        index += 1;
-        continue;
-      }
-
-      if (current === "`") {
-        result += " ";
-        state = "template";
-        index += 1;
-        continue;
-      }
-
-      if (templateExpressionStack.length > 0) {
-        if (current === "{") {
-          templateExpressionStack[templateExpressionStack.length - 1] += 1;
-        } else if (current === "}") {
-          const depth = templateExpressionStack[templateExpressionStack.length - 1] ?? 0;
-          if (depth === 1) {
-            templateExpressionStack.pop();
-            result += current;
-            state = "template";
-            index += 1;
-            continue;
-          }
-
-          templateExpressionStack[templateExpressionStack.length - 1] = depth - 1;
-        }
-      }
-
-      result += current;
-      index += 1;
-      continue;
-    }
-
-    if (state === "line-comment") {
-      result += current === "\n" ? "\n" : " ";
-      if (current === "\n") {
-        state = "code";
-      }
-      index += 1;
-      continue;
-    }
-
-    if (state === "block-comment") {
-      if (current === "*" && next === "/") {
-        result += "  ";
-        state = "code";
-        index += 2;
-        continue;
-      }
-
-      result += current === "\n" ? "\n" : " ";
-      index += 1;
-      continue;
-    }
-
-    if (state === "single-quote" || state === "double-quote") {
-      const quote = state === "single-quote" ? "'" : '"';
-
-      if (current === "\\") {
-        result += next ? "  " : " ";
-        index += next ? 2 : 1;
-        continue;
-      }
-
-      result += current === "\n" ? "\n" : " ";
-      if (current === quote) {
-        state = "code";
-      }
-      index += 1;
-      continue;
-    }
-
-    // template
-    if (current === "\\") {
-      result += next ? "  " : " ";
-      index += next ? 2 : 1;
-      continue;
-    }
-
-    if (current === "$" && next === "{") {
-      result += "  ";
-      templateExpressionStack.push(1);
-      state = "code";
-      index += 2;
-      continue;
-    }
-
-    result += current === "\n" ? "\n" : " ";
-    if (current === "`") {
-      state = "code";
-    }
-    index += 1;
-  }
-
-  return result;
+  // Single regex handles (in priority order):
+  // 1. line comments  2. block comments  3. double-quoted strings
+  // 4. single-quoted strings  5. regex literals
+  // Template literals are left alone so ${sources.foo} expressions are detected.
+  return source.replace(
+    /\/\/[^\n]*|\/\*[\s\S]*?\*\/|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|\/(?:\\[\s\S]|[^/\\\n])+\/[gimsuvy]*/g,
+    (match) => match.replace(/[^\n]/g, " "),
+  );
 }
 
 function inferDestructuredDependencies(source: string, validKeys: Set<string>): Set<string> {

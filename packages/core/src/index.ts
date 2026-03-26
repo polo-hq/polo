@@ -4,8 +4,10 @@ export { chunkSource } from "./polo.ts";
 
 // Public types
 export type {
+  AnySource,
   AnyInput,
   Chunk,
+  ChunkSource,
   ChunkRecord,
   Chunks,
   Definition,
