@@ -7,25 +7,28 @@ LLM-Evaluators (LLM-as-a-Judge) are large language models designed to evaluate t
 ## Key Considerations
 
 ### Baseline Selection
+
 - **Human Annotators**: Aim for LLM-human correlation to match human-human correlation. LLM-evaluators are orders of magnitude faster and cheaper than human annotation.
 - **Finetuned Classifiers**: Goal is to achieve similar recall and precision as a finetuned classifier. More challenging baseline as these are optimized for specific tasks.
 
 ### Scoring Approaches
 
-| Approach | Use Case | Reliability |
-|----------|----------|-------------|
-| **Direct Scoring** | Objective tasks (factuality, toxicity, instruction-following) | More suitable for binary classification |
-| **Pairwise Comparison** | Subjective evaluations (tone, persuasiveness, coherence) | More reliable for preference tasks |
-| **Reference-Based** | Comparing against gold standard | Requires ground truth reference |
+| Approach                | Use Case                                                      | Reliability                             |
+| ----------------------- | ------------------------------------------------------------- | --------------------------------------- |
+| **Direct Scoring**      | Objective tasks (factuality, toxicity, instruction-following) | More suitable for binary classification |
+| **Pairwise Comparison** | Subjective evaluations (tone, persuasiveness, coherence)      | More reliable for preference tasks      |
+| **Reference-Based**     | Comparing against gold standard                               | Requires ground truth reference         |
 
 ### Evaluation Metrics
 
 **Classification Metrics** (Preferred for binary tasks):
+
 - Recall and Precision
 - F1 Score
 - Cohen's κ (Kappa)
 
 **Correlation Metrics** (For Likert scale tasks):
+
 - Spearman's ρ (rho)
 - Kendall's τ (tau)
 
@@ -47,7 +50,7 @@ LLM-Evaluators (LLM-as-a-Judge) are large language models designed to evaluate t
 
 ```typescript
 interface EvaluatorConfig {
-  scoringApproach: 'direct' | 'pairwise' | 'reference-based';
+  scoringApproach: "direct" | "pairwise" | "reference-based";
   criteria: EvaluationCriteria[];
   metrics: MetricType[];
   useCoT: boolean;
@@ -69,9 +72,9 @@ interface RubricLevel {
 ## References
 
 Key papers reviewed:
+
 - Constitutional AI (Anthropic)
 - G-Eval: NLG Evaluation using GPT-4
 - SelfCheckGPT: Zero-Resource Hallucination Detection
 - Prometheus: Fine-grained Evaluation Capability
 - MT-Bench and Chatbot Arena
-

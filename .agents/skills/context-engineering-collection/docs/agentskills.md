@@ -49,10 +49,10 @@ Agent Skills are a lightweight, open format for extending AI agent capabilities 
 
 At its core, a skill is a folder containing a SKILL.md file. This file includes metadata (name and description, at minimum) and instructions that tell an agent how to perform a specific task. Skills can also bundle scripts, templates, and reference materials.
 my-skill/
-├── SKILL.md          # Required: instructions + metadata
-├── scripts/          # Optional: executable code
-├── references/       # Optional: documentation
-└── assets/           # Optional: templates, resources
+├── SKILL.md # Required: instructions + metadata
+├── scripts/ # Optional: executable code
+├── references/ # Optional: documentation
+└── assets/ # Optional: templates, resources
 ​
 How skills work
 Skills use progressive disclosure to manage context efficiently:
@@ -63,20 +63,26 @@ This approach keeps agents fast while giving them access to more context on dema
 ​
 The SKILL.md file
 Every skill starts with a SKILL.md file containing YAML frontmatter and Markdown instructions:
+
 ---
+
 name: pdf-processing
 description: Extract text and tables from PDF files, fill forms, merge documents.
+
 ---
 
 # PDF Processing
 
 ## When to use this skill
+
 Use this skill when the user needs to work with PDF files...
 
 ## How to extract text
+
 1. Use pdfplumber for text extraction...
 
 ## How to fill forms
+
 ...
 The following frontmatter is required at the top of SKILL.md:
 name: A short identifier
@@ -105,33 +111,39 @@ This document defines the Agent Skills format.
 Directory structure
 A skill is a directory containing at minimum a SKILL.md file:
 skill-name/
-└── SKILL.md          # Required
+└── SKILL.md # Required
 You can optionally include additional directories such as scripts/, references/, and assets/ to support your skill.
 ​
 SKILL.md format
 The SKILL.md file must contain YAML frontmatter followed by Markdown content.
 ​
 Frontmatter (required)
+
 ---
+
 name: skill-name
 description: A description of what this skill does and when to use it.
+
 ---
-With optional fields:
----
+
+## With optional fields:
+
 name: pdf-processing
 description: Extract text and tables from PDF files, fill forms, merge documents.
 license: Apache-2.0
 metadata:
-  author: example-org
-  version: "1.0"
+author: example-org
+version: "1.0"
+
 ---
-Field	Required	Constraints
-name	Yes	Max 64 characters. Lowercase letters, numbers, and hyphens only. Must not start or end with a hyphen.
-description	Yes	Max 1024 characters. Non-empty. Describes what the skill does and when to use it.
-license	No	License name or reference to a bundled license file.
-compatibility	No	Max 500 characters. Indicates environment requirements (intended product, system packages, network access, etc.).
-metadata	No	Arbitrary key-value mapping for additional metadata.
-allowed-tools	No	Space-delimited list of pre-approved tools the skill may use. (Experimental)
+
+Field Required Constraints
+name Yes Max 64 characters. Lowercase letters, numbers, and hyphens only. Must not start or end with a hyphen.
+description Yes Max 1024 characters. Non-empty. Describes what the skill does and when to use it.
+license No License name or reference to a bundled license file.
+compatibility No Max 500 characters. Indicates environment requirements (intended product, system packages, network access, etc.).
+metadata No Arbitrary key-value mapping for additional metadata.
+allowed-tools No Space-delimited list of pre-approved tools the skill may use. (Experimental)
 ​
 name field
 The required name field:
@@ -145,9 +157,9 @@ name: pdf-processing
 name: data-analysis
 name: code-review
 Invalid examples:
-name: PDF-Processing  # uppercase not allowed
-name: -pdf  # cannot start with hyphen
-name: pdf--processing  # consecutive hyphens not allowed
+name: PDF-Processing # uppercase not allowed
+name: -pdf # cannot start with hyphen
+name: pdf--processing # consecutive hyphens not allowed
 ​
 description field
 The required description field:
@@ -183,15 +195,15 @@ Clients can use this to store additional properties not defined by the Agent Ski
 We recommend making your key names reasonably unique to avoid accidental conflicts
 Example:
 metadata:
-  author: example-org
-  version: "1.0"
+author: example-org
+version: "1.0"
 ​
 allowed-tools field
 The optional allowed-tools field:
 A space-delimited list of tools that are pre-approved to run
 Experimental. Support for this field may vary between agent implementations
 Example:
-allowed-tools: Bash(git:*) Bash(jq:*) Read
+allowed-tools: Bash(git:_) Bash(jq:_) Read
 ​
 Body content
 The Markdown body after the frontmatter contains the skill instructions. There are no format restrictions. Write whatever helps agents perform the task effectively.
@@ -272,29 +284,30 @@ At startup, parse only the frontmatter of each SKILL.md file. This keeps initial
 ​
 Parsing frontmatter
 function parseMetadata(skillPath):
-    content = readFile(skillPath + "/SKILL.md")
-    frontmatter = extractYAMLFrontmatter(content)
+content = readFile(skillPath + "/SKILL.md")
+frontmatter = extractYAMLFrontmatter(content)
 
     return {
         name: frontmatter.name,
         description: frontmatter.description,
         path: skillPath
     }
+
 ​
 Injecting into context
 Include skill metadata in the system prompt so the model knows what skills are available.
 Follow your platform’s guidance for system prompt updates. For example, for Claude models, the recommended format uses XML:
 <available_skills>
-  <skill>
-    <name>pdf-processing</name>
-    <description>Extracts text and tables from PDF files, fills forms, merges documents.</description>
-    <location>/path/to/skills/pdf-processing/SKILL.md</location>
-  </skill>
-  <skill>
-    <name>data-analysis</name>
-    <description>Analyzes datasets, generates charts, and creates summary reports.</description>
-    <location>/path/to/skills/data-analysis/SKILL.md</location>
-  </skill>
+<skill>
+<name>pdf-processing</name>
+<description>Extracts text and tables from PDF files, fills forms, merges documents.</description>
+<location>/path/to/skills/pdf-processing/SKILL.md</location>
+</skill>
+<skill>
+<name>data-analysis</name>
+<description>Analyzes datasets, generates charts, and creates summary reports.</description>
+<location>/path/to/skills/data-analysis/SKILL.md</location>
+</skill>
 </available_skills>
 For filesystem-based agents, include the location field with the absolute path to the SKILL.md file. For tool-based agents, the location can be omitted.
 Keep metadata concise. Each skill should add roughly 50-100 tokens to the context.
@@ -353,6 +366,7 @@ import pdfplumber
 with pdfplumber.open("file.pdf") as pdf:
     text = pdf.pages[0].extract_text()
 ```
+
 Bad example: Too verbose (approximately 150 tokens):
 
 ## Extract PDF text
@@ -382,7 +396,7 @@ Example:
 2. Check for potential bugs or edge cases
 3. Suggest improvements for readability and maintainability
 4. Verify adherence to project conventions
-Medium freedom (pseudocode or scripts with parameters):
+   Medium freedom (pseudocode or scripts with parameters):
 
 Use when:
 
@@ -401,6 +415,7 @@ def generate_report(data, format="markdown", include_charts=True):
     # Generate output in specified format
     # Optionally include visualizations
 ```
+
 Low freedom (specific scripts, few or no parameters):
 
 Use when:
@@ -526,18 +541,21 @@ Bundling additional reference files like reference.md and forms.md.
 The complete Skill directory structure might look like this:
 
 pdf/
-├── SKILL.md              # Main instructions (loaded when triggered)
-├── FORMS.md              # Form-filling guide (loaded as needed)
-├── reference.md          # API reference (loaded as needed)
-├── examples.md           # Usage examples (loaded as needed)
+├── SKILL.md # Main instructions (loaded when triggered)
+├── FORMS.md # Form-filling guide (loaded as needed)
+├── reference.md # API reference (loaded as needed)
+├── examples.md # Usage examples (loaded as needed)
 └── scripts/
-    ├── analyze_form.py   # Utility script (executed, not loaded)
-    ├── fill_form.py      # Form filling script
-    └── validate.py       # Validation script
+├── analyze_form.py # Utility script (executed, not loaded)
+├── fill_form.py # Form filling script
+└── validate.py # Validation script
 Pattern 1: High-level guide with references
+
 ---
+
 name: pdf-processing
 description: Extracts text and tables from PDF files, fills forms, and merges documents. Use when working with PDF files or when the user mentions PDFs, forms, or document extraction.
+
 ---
 
 # PDF Processing
@@ -545,6 +563,7 @@ description: Extracts text and tables from PDF files, fills forms, and merges do
 ## Quick start
 
 Extract text with pdfplumber:
+
 ```python
 import pdfplumber
 with pdfplumber.open("file.pdf") as pdf:
@@ -564,11 +583,12 @@ For Skills with multiple domains, organize content by domain to avoid loading ir
 bigquery-skill/
 ├── SKILL.md (overview and navigation)
 └── reference/
-    ├── finance.md (revenue, billing metrics)
-    ├── sales.md (opportunities, pipeline)
-    ├── product.md (API usage, features)
-    └── marketing.md (campaigns, attribution)
+├── finance.md (revenue, billing metrics)
+├── sales.md (opportunities, pipeline)
+├── product.md (API usage, features)
+└── marketing.md (campaigns, attribution)
 SKILL.md
+
 # BigQuery Data Analysis
 
 ## Available datasets
@@ -587,6 +607,7 @@ grep -i "revenue" reference/finance.md
 grep -i "pipeline" reference/sales.md
 grep -i "api usage" reference/product.md
 ```
+
 Pattern 3: Conditional details
 Show basic content, link to advanced content:
 
@@ -612,12 +633,15 @@ Keep references one level deep from SKILL.md. All reference files should link di
 Bad example: Too deep:
 
 # SKILL.md
+
 See [advanced.md](advanced.md)...
 
 # advanced.md
+
 See [details.md](details.md)...
 
 # details.md
+
 Here's the actual information...
 Good example: One level deep:
 
@@ -635,6 +659,7 @@ Example:
 # API Reference
 
 ## Contents
+
 - Authentication and setup
 - Core methods (create, read, update, delete)
 - Advanced features (batch operations, webhooks)
@@ -642,9 +667,11 @@ Example:
 - Code examples
 
 ## Authentication and setup
+
 ...
 
 ## Core methods
+
 ...
 Claude can then read the complete file or jump to specific sections as needed.
 
@@ -684,6 +711,7 @@ For each major claim, verify it appears in the source material. Note which sourc
 **Step 4: Create structured summary**
 
 Organize findings by theme. Include:
+
 - Main claim
 - Supporting evidence from sources
 - Conflicting viewpoints (if any)
@@ -755,7 +783,7 @@ Example 1: Style guide compliance (for Skills without code):
    - Review the checklist again
 4. Only proceed when all requirements are met
 5. Finalize and save the document
-This shows the validation loop pattern using reference documents instead of scripts. The "validator" is STYLE_GUIDE.md, and Claude performs the check by reading and comparing.
+   This shows the validation loop pattern using reference documents instead of scripts. The "validator" is STYLE_GUIDE.md, and Claude performs the check by reading and comparing.
 
 Example 2: Document editing process (for Skills with code):
 
@@ -770,7 +798,7 @@ Example 2: Document editing process (for Skills with code):
 4. **Only proceed when validation passes**
 5. Rebuild: `python ooxml/scripts/pack.py unpacked_dir/ output.docx`
 6. Test the output document
-The validation loop catches errors early.
+   The validation loop catches errors early.
 
 Content guidelines
 Avoid time-sensitive information
@@ -794,6 +822,7 @@ Use the v2 API endpoint: `api.example.com/v2/messages`
 The v1 API used: `api.example.com/v1/messages`
 
 This endpoint is no longer supported.
+
 </details>
 The old patterns section provides historical context without cluttering the main content.
 
@@ -826,17 +855,21 @@ ALWAYS use this exact template structure:
 # [Analysis Title]
 
 ## Executive summary
+
 [One-paragraph overview of key findings]
 
 ## Key findings
+
 - Finding 1 with supporting data
 - Finding 2 with supporting data
 - Finding 3 with supporting data
 
 ## Recommendations
+
 1. Specific actionable recommendation
 2. Specific actionable recommendation
 ```
+
 For flexible guidance (when adaptation is useful):
 
 ## Report structure
@@ -847,12 +880,15 @@ Here is a sensible default format, but use your best judgment based on the analy
 # [Analysis Title]
 
 ## Executive summary
+
 [Overview]
 
 ## Key findings
+
 [Adapt sections based on what you discover]
 
 ## Recommendations
+
 [Tailor to the specific context]
 ```
 
@@ -867,6 +903,7 @@ Generate commit messages following these examples:
 **Example 1:**
 Input: Added user authentication with JWT tokens
 Output:
+
 ```
 feat(auth): implement JWT-based authentication
 
@@ -876,6 +913,7 @@ Add login endpoint and token validation middleware
 **Example 2:**
 Input: Fixed bug where dates displayed incorrectly in reports
 Output:
+
 ```
 fix(reports): correct date formatting in timezone conversion
 
@@ -885,6 +923,7 @@ Use UTC timestamps consistently across report generation
 **Example 3:**
 Input: Updated dependencies and refactored error handling
 Output:
+
 ```
 chore: update dependencies and refactor error handling
 
@@ -915,7 +954,7 @@ Guide Claude through decision points:
    - Modify XML directly
    - Validate after each change
    - Repack when complete
-If workflows become large or complicated with many steps, consider pushing them into separate files and tell Claude to read the appropriate file based on the task at hand.
+     If workflows become large or complicated with many steps, consider pushing them into separate files and tell Claude to read the appropriate file based on the task at hand.
 
 Evaluation and iteration
 Build evaluations first
@@ -933,14 +972,14 @@ This approach ensures you're solving actual problems rather than anticipating re
 Evaluation structure:
 
 {
-  "skills": ["pdf-processing"],
-  "query": "Extract all text from this PDF file and save it to output.txt",
-  "files": ["test-files/document.pdf"],
-  "expected_behavior": [
-    "Successfully reads the PDF file using an appropriate PDF processing library or command-line tool",
-    "Extracts text content from all pages in the document without missing any pages",
-    "Saves the extracted text to a file named output.txt in a clear, readable format"
-  ]
+"skills": ["pdf-processing"],
+"query": "Extract all text from this PDF file and save it to output.txt",
+"files": ["test-files/document.pdf"],
+"expected_behavior": [
+"Successfully reads the PDF file using an appropriate PDF processing library or command-line tool",
+"Extracts text content from all pages in the document without missing any pages",
+"Saves the extracted text to a file named output.txt in a clear, readable format"
+]
 }
 This example demonstrates a data-driven evaluation with a simple testing rubric. We do not currently provide a built-in way to run these evaluations. Users can create their own evaluation system. Evaluations are your source of truth for measuring Skill effectiveness.
 
@@ -1020,6 +1059,7 @@ Don't present multiple approaches unless necessary:
 
 **Good example: Provide a default** (with escape hatch):
 "Use pdfplumber for text extraction:
+
 ```python
 import pdfplumber
 ```
@@ -1034,40 +1074,41 @@ When writing scripts for Skills, handle error conditions rather than punting to 
 Good example: Handle errors explicitly:
 
 def process_file(path):
-    """Process a file, creating it if it doesn't exist."""
-    try:
-        with open(path) as f:
-            return f.read()
-    except FileNotFoundError:
-        # Create file with default content instead of failing
-        print(f"File {path} not found, creating default")
-        with open(path, 'w') as f:
-            f.write('')
-        return ''
-    except PermissionError:
-        # Provide alternative instead of failing
-        print(f"Cannot access {path}, using default")
-        return ''
+"""Process a file, creating it if it doesn't exist."""
+try:
+with open(path) as f:
+return f.read()
+except FileNotFoundError: # Create file with default content instead of failing
+print(f"File {path} not found, creating default")
+with open(path, 'w') as f:
+f.write('')
+return ''
+except PermissionError: # Provide alternative instead of failing
+print(f"Cannot access {path}, using default")
+return ''
 Bad example: Punt to Claude:
 
-def process_file(path):
-    # Just fail and let Claude figure it out
-    return open(path).read()
+def process_file(path): # Just fail and let Claude figure it out
+return open(path).read()
 Configuration parameters should also be justified and documented to avoid "voodoo constants" (Ousterhout's law). If you don't know the right value, how will Claude determine it?
 
 Good example: Self-documenting:
 
 # HTTP requests typically complete within 30 seconds
+
 # Longer timeout accounts for slow connections
+
 REQUEST_TIMEOUT = 30
 
 # Three retries balances reliability vs speed
+
 # Most intermittent failures resolve by the second retry
+
 MAX_RETRIES = 3
 Bad example: Magic numbers:
 
-TIMEOUT = 47  # Why 47?
-RETRIES = 5   # Why 5?
+TIMEOUT = 47 # Why 47?
+RETRIES = 5 # Why 5?
 Provide utility scripts
 Even if Claude could write a script, pre-made scripts offer advantages:
 
@@ -1098,10 +1139,11 @@ python scripts/analyze_form.py input.pdf > fields.json
 ```
 
 Output format:
+
 ```json
 {
-  "field_name": {"type": "text", "x": 100, "y": 200},
-  "signature": {"type": "sig", "x": 150, "y": 500}
+  "field_name": { "type": "text", "x": 100, "y": 200 },
+  "signature": { "type": "sig", "x": 150, "y": 500 }
 }
 ```
 
@@ -1117,19 +1159,21 @@ python scripts/validate_boxes.py fields.json
 ```bash
 python scripts/fill_form.py input.pdf fields.json output.pdf
 ```
+
 Use visual analysis
 When inputs can be rendered as images, have Claude analyze them:
 
 ## Form layout analysis
 
 1. Convert PDF to images:
+
    ```bash
    python scripts/pdf_to_images.py form.pdf
    ```
 
 2. Analyze each page image to identify form fields
 3. Claude can see field locations and types visually
-In this example, you'd need to write the pdf_to_images.py script.
+   In this example, you'd need to write the pdf_to_images.py script.
 
 Claude's vision capabilities help understand layouts and structures.
 
@@ -1184,9 +1228,9 @@ Example:
 bigquery-skill/
 ├── SKILL.md (overview, points to reference files)
 └── reference/
-    ├── finance.md (revenue metrics)
-    ├── sales.md (pipeline data)
-    └── product.md (usage analytics)
+├── finance.md (revenue metrics)
+├── sales.md (pipeline data)
+└── product.md (usage analytics)
 When the user asks about revenue, Claude reads SKILL.md, sees the reference to reference/finance.md, and invokes bash to read just that file. The sales.md and product.md files remain on the filesystem, consuming zero context tokens until needed. This filesystem-based model is what enables progressive disclosure. Claude can navigate and selectively load exactly what each task requires.
 
 For complete details on the technical architecture, see How Skills work in the Skills overview.
@@ -1216,7 +1260,8 @@ Don't assume packages are available:
 "Install required package: `pip install pypdf`
 
 Then use it:
-```python
+
+````python
 from pypdf import PdfReader
 reader = PdfReader("file.pdf")
 ```"
@@ -1262,3 +1307,4 @@ Testing
 
 
  https://github.com/anthropics/skills
+````

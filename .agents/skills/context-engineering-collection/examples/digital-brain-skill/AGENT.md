@@ -26,10 +26,10 @@ This is a Digital Brain personal operating system. When working in this project:
 
 ## When User Asks To...
 
-| Request | Action |
-|---------|--------|
-| "Write a post about X" | Read voice.md → Draft → Match voice patterns |
+| Request                      | Action                                         |
+| ---------------------------- | ---------------------------------------------- |
+| "Write a post about X"       | Read voice.md → Draft → Match voice patterns   |
 | "Prepare for meeting with Y" | Look up contact → Get interactions → Summarize |
-| "What should I create?" | Run content_ideas.py → Check calendar |
-| "Add contact Z" | Append to contacts.jsonl with full schema |
-| "Weekly review" | Run weekly_review.py → Present insights |
+| "What should I create?"      | Run content_ideas.py → Check calendar          |
+| "Add contact Z"              | Append to contacts.jsonl with full schema      |
+| "Weekly review"              | Run weekly_review.py → Present insights        |

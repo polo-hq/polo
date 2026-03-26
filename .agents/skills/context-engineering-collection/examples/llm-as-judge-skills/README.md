@@ -18,9 +18,11 @@ This repository demonstrates how to build **production-ready LLM evaluation skil
 ### Part of the Context Engineering Ecosystem
 
 This project is an example implementation to be added to:
+
 - 📁 [`Agent-Skills-for-Context-Engineering/examples/`](https://github.com/muratcankoylan/Agent-Skills-for-Context-Engineering/tree/main/examples)
 
 It builds upon the foundational skills from:
+
 - 📚 [`skills/context-fundamentals`](https://github.com/muratcankoylan/Agent-Skills-for-Context-Engineering/tree/main/skills/context-fundamentals) - Context engineering principles
 - 🔧 [`skills/tool-design`](https://github.com/muratcankoylan/Agent-Skills-for-Context-Engineering/tree/main/skills/tool-design) - Tool design best practices
 
@@ -34,13 +36,13 @@ Evaluating AI-generated content is challenging. Traditional metrics (BLEU, ROUGE
 
 **Key insights we implemented:**
 
-| Insight | Implementation |
-|---------|----------------|
-| Direct scoring works best for objective criteria | `directScore` tool with rubric support |
-| Pairwise comparison is more reliable for preferences | `pairwiseCompare` tool with position swapping |
-| Position bias affects pairwise judgments | Automatic position swapping in comparisons |
-| Chain-of-thought improves reliability | All evaluations require justification with evidence |
-| Clear rubrics reduce variance | `generateRubric` tool for consistent standards |
+| Insight                                              | Implementation                                      |
+| ---------------------------------------------------- | --------------------------------------------------- |
+| Direct scoring works best for objective criteria     | `directScore` tool with rubric support              |
+| Pairwise comparison is more reliable for preferences | `pairwiseCompare` tool with position swapping       |
+| Position bias affects pairwise judgments             | Automatic position swapping in comparisons          |
+| Chain-of-thought improves reliability                | All evaluations require justification with evidence |
+| Clear rubrics reduce variance                        | `generateRubric` tool for consistent standards      |
 
 ### Vercel AI SDK 6 Patterns
 
@@ -156,6 +158,7 @@ llm-as-judge-skills/
 **Purpose**: Evaluate a single response against defined criteria with numerical scores.
 
 **When to Use**:
+
 - Factual accuracy checks
 - Instruction following assessment
 - Content quality grading
@@ -177,6 +180,7 @@ Be objective and consistent. Base scores on explicit evidence.`;
 ```
 
 **Key Features**:
+
 - Weighted criteria support
 - Chain-of-thought justification required
 - Evidence extraction from response
@@ -187,14 +191,14 @@ Be objective and consistent. Base scores on explicit evidence.`;
 
 ```typescript
 const result = await executeDirectScore({
-  response: 'Quantum entanglement is like having two magical coins...',
-  prompt: 'Explain quantum entanglement to a high school student',
+  response: "Quantum entanglement is like having two magical coins...",
+  prompt: "Explain quantum entanglement to a high school student",
   criteria: [
-    { name: 'Accuracy', description: 'Scientific correctness', weight: 0.4 },
-    { name: 'Clarity', description: 'Understandable for audience', weight: 0.3 },
-    { name: 'Engagement', description: 'Interesting and memorable', weight: 0.3 }
+    { name: "Accuracy", description: "Scientific correctness", weight: 0.4 },
+    { name: "Clarity", description: "Understandable for audience", weight: 0.3 },
+    { name: "Engagement", description: "Interesting and memorable", weight: 0.3 },
   ],
-  rubric: { scale: '1-5' }
+  rubric: { scale: "1-5" },
 });
 
 // Output:
@@ -218,6 +222,7 @@ const result = await executeDirectScore({
 **Purpose**: Compare two responses and determine which is better, with position bias mitigation.
 
 **When to Use**:
+
 - A/B testing responses
 - Preference evaluation
 - Style and tone assessment
@@ -230,14 +235,14 @@ const result = await executeDirectScore({
 if (input.swapPositions) {
   // First pass: A first, B second
   const pass1 = await evaluatePair(input.responseA, input.responseB, ...);
-  
+
   // Second pass: B first, A second
   const pass2 = await evaluatePair(input.responseB, input.responseA, ...);
-  
+
   // Map pass2 result back and check consistency
   const pass2WinnerMapped = pass2.winner === 'A' ? 'B' : pass2.winner === 'B' ? 'A' : 'TIE';
   const consistent = pass1.winner === pass2WinnerMapped;
-  
+
   // If inconsistent, return TIE with lower confidence
   if (!consistent) {
     finalWinner = 'TIE';
@@ -247,6 +252,7 @@ if (input.swapPositions) {
 ```
 
 **Key Features**:
+
 - **Position Swapping**: Automatically runs evaluation twice with swapped positions
 - **Consistency Check**: Detects when position affects judgment
 - **Confidence Scoring**: 0-1 confidence based on consistency
@@ -259,10 +265,10 @@ if (input.swapPositions) {
 const result = await executePairwiseCompare({
   responseA: GOOD_RESPONSE,
   responseB: POOR_RESPONSE,
-  prompt: 'Explain quantum entanglement',
-  criteria: ['accuracy', 'clarity', 'completeness', 'engagement'],
+  prompt: "Explain quantum entanglement",
+  criteria: ["accuracy", "clarity", "completeness", "engagement"],
   allowTie: true,
-  swapPositions: true  // Enable position bias mitigation
+  swapPositions: true, // Enable position bias mitigation
 });
 
 // Output:
@@ -286,6 +292,7 @@ const result = await executePairwiseCompare({
 **Purpose**: Create detailed scoring rubrics for consistent evaluation standards.
 
 **When to Use**:
+
 - Establishing evaluation criteria
 - Training human evaluators
 - Ensuring consistency across evaluations
@@ -314,6 +321,7 @@ Generate:
 ```
 
 **Key Features**:
+
 - Domain-specific terminology
 - Configurable strictness levels
 - Example generation for each level
@@ -324,12 +332,12 @@ Generate:
 
 ```typescript
 const result = await executeGenerateRubric({
-  criterionName: 'Code Readability',
-  criterionDescription: 'How easy the code is to understand and maintain',
-  scale: '1-5',
-  domain: 'software engineering',
+  criterionName: "Code Readability",
+  criterionDescription: "How easy the code is to understand and maintain",
+  scale: "1-5",
+  domain: "software engineering",
   includeExamples: true,
-  strictness: 'balanced'
+  strictness: "balanced",
 });
 
 // Output:
@@ -427,14 +435,14 @@ All 19 tests pass successfully. Here are the actual test logs from our test run:
 
 ### Test Coverage Summary
 
-| Test Category | Tests | Pass Rate | Avg Duration |
-|--------------|-------|-----------|--------------|
-| Direct Scoring | 4 | 100% | 9.9s |
-| Pairwise Comparison | 4 | 100% | 17.9s |
-| Rubric Generation | 4 | 100% | 33.2s |
-| Context Integration | 1 | 100% | 11.1s |
-| Agent Integration | 2 | 100% | 26.3s |
-| Schema Validation | 4 | 100% | 8.8s |
+| Test Category       | Tests | Pass Rate | Avg Duration |
+| ------------------- | ----- | --------- | ------------ |
+| Direct Scoring      | 4     | 100%      | 9.9s         |
+| Pairwise Comparison | 4     | 100%      | 17.9s        |
+| Rubric Generation   | 4     | 100%      | 33.2s        |
+| Context Integration | 1     | 100%      | 11.1s        |
+| Agent Integration   | 2     | 100%      | 26.3s        |
+| Schema Validation   | 4     | 100%      | 8.8s         |
 
 ---
 
@@ -503,7 +511,7 @@ Create a `.env` file:
 
 ```bash
 OPENAI_API_KEY=your_openai_api_key_here
-OPENAI_MODEL=gpt-5.2  
+OPENAI_MODEL=gpt-5.2
 ```
 
 ### Run Tests
@@ -515,29 +523,27 @@ npm test
 ### Basic Usage
 
 ```typescript
-import { EvaluatorAgent } from './src/agents/evaluator';
+import { EvaluatorAgent } from "./src/agents/evaluator";
 
 const agent = new EvaluatorAgent();
 
 // Score a response
 const scoreResult = await agent.score({
-  response: 'Your AI-generated response',
-  prompt: 'The original prompt',
-  criteria: [
-    { name: 'Accuracy', description: 'Factual correctness', weight: 1 }
-  ]
+  response: "Your AI-generated response",
+  prompt: "The original prompt",
+  criteria: [{ name: "Accuracy", description: "Factual correctness", weight: 1 }],
 });
 
 console.log(`Score: ${scoreResult.overallScore}/5`);
 
 // Compare two responses
 const compareResult = await agent.compare({
-  responseA: 'First response',
-  responseB: 'Second response',
-  prompt: 'The prompt',
-  criteria: ['quality', 'completeness'],
+  responseA: "First response",
+  responseB: "Second response",
+  prompt: "The prompt",
+  criteria: ["quality", "completeness"],
   allowTie: true,
-  swapPositions: true
+  swapPositions: true,
 });
 
 console.log(`Winner: ${compareResult.winner} (confidence: ${compareResult.confidence})`);
@@ -578,16 +584,16 @@ Agent-Skills-for-Context-Engineering/
 
 ```typescript
 interface DirectScoreInput {
-  response: string;              // The response to evaluate
-  prompt: string;                // Original prompt
-  context?: string;              // Additional context
+  response: string; // The response to evaluate
+  prompt: string; // Original prompt
+  context?: string; // Additional context
   criteria: Array<{
-    name: string;                // Criterion name
-    description: string;         // What it measures
-    weight: number;              // Relative importance (0-1)
+    name: string; // Criterion name
+    description: string; // What it measures
+    weight: number; // Relative importance (0-1)
   }>;
   rubric?: {
-    scale: '1-3' | '1-5' | '1-10';
+    scale: "1-3" | "1-5" | "1-10";
     levelDescriptions?: Record<string, string>;
   };
 }
@@ -597,13 +603,13 @@ interface DirectScoreInput {
 
 ```typescript
 interface PairwiseCompareInput {
-  responseA: string;             // First response
-  responseB: string;             // Second response
-  prompt: string;                // Original prompt
-  context?: string;              // Additional context
-  criteria: string[];            // Comparison aspects
-  allowTie?: boolean;            // Allow tie verdict (default: true)
-  swapPositions?: boolean;       // Mitigate position bias (default: true)
+  responseA: string; // First response
+  responseB: string; // Second response
+  prompt: string; // Original prompt
+  context?: string; // Additional context
+  criteria: string[]; // Comparison aspects
+  allowTie?: boolean; // Allow tie verdict (default: true)
+  swapPositions?: boolean; // Mitigate position bias (default: true)
 }
 ```
 
@@ -611,12 +617,12 @@ interface PairwiseCompareInput {
 
 ```typescript
 interface GenerateRubricInput {
-  criterionName: string;         // Name of criterion
-  criterionDescription: string;  // What it measures
-  scale?: '1-3' | '1-5' | '1-10';
-  domain?: string;               // Domain for terminology
-  includeExamples?: boolean;     // Generate examples
-  strictness?: 'lenient' | 'balanced' | 'strict';
+  criterionName: string; // Name of criterion
+  criterionDescription: string; // What it measures
+  scale?: "1-3" | "1-5" | "1-10";
+  domain?: string; // Domain for terminology
+  includeExamples?: boolean; // Generate examples
+  strictness?: "lenient" | "balanced" | "strict";
 }
 ```
 

@@ -22,48 +22,48 @@ This repository is cited in academic research as foundational work on static ski
 
 These skills establish the foundational understanding required for all subsequent context engineering work.
 
-| Skill | Description |
-|-------|-------------|
-| [context-fundamentals](skills/context-fundamentals/) | Understand what context is, why it matters, and the anatomy of context in agent systems |
-| [context-degradation](skills/context-degradation/) | Recognize patterns of context failure: lost-in-middle, poisoning, distraction, and clash |
-| [context-compression](skills/context-compression/) | Design and evaluate compression strategies for long-running sessions |
+| Skill                                                | Description                                                                              |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| [context-fundamentals](skills/context-fundamentals/) | Understand what context is, why it matters, and the anatomy of context in agent systems  |
+| [context-degradation](skills/context-degradation/)   | Recognize patterns of context failure: lost-in-middle, poisoning, distraction, and clash |
+| [context-compression](skills/context-compression/)   | Design and evaluate compression strategies for long-running sessions                     |
 
 ### Architectural Skills
 
 These skills cover the patterns and structures for building effective agent systems.
 
-| Skill | Description |
-|-------|-------------|
-| [multi-agent-patterns](skills/multi-agent-patterns/) | Master orchestrator, peer-to-peer, and hierarchical multi-agent architectures |
-| [memory-systems](skills/memory-systems/) | Design short-term, long-term, and graph-based memory architectures |
-| [tool-design](skills/tool-design/) | Build tools that agents can use effectively |
-| [filesystem-context](skills/filesystem-context/) | Use filesystems for dynamic context discovery, tool output offloading, and plan persistence |
-| [hosted-agents](skills/hosted-agents/) | **NEW** Build background coding agents with sandboxed VMs, pre-built images, multiplayer support, and multi-client interfaces |
+| Skill                                                | Description                                                                                                                   |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| [multi-agent-patterns](skills/multi-agent-patterns/) | Master orchestrator, peer-to-peer, and hierarchical multi-agent architectures                                                 |
+| [memory-systems](skills/memory-systems/)             | Design short-term, long-term, and graph-based memory architectures                                                            |
+| [tool-design](skills/tool-design/)                   | Build tools that agents can use effectively                                                                                   |
+| [filesystem-context](skills/filesystem-context/)     | Use filesystems for dynamic context discovery, tool output offloading, and plan persistence                                   |
+| [hosted-agents](skills/hosted-agents/)               | **NEW** Build background coding agents with sandboxed VMs, pre-built images, multiplayer support, and multi-client interfaces |
 
 ### Operational Skills
 
 These skills address the ongoing operation and optimization of agent systems.
 
-| Skill | Description |
-|-------|-------------|
-| [context-optimization](skills/context-optimization/) | Apply compaction, masking, and caching strategies |
-| [evaluation](skills/evaluation/) | Build evaluation frameworks for agent systems |
-| [advanced-evaluation](skills/advanced-evaluation/) | Master LLM-as-a-Judge techniques: direct scoring, pairwise comparison, rubric generation, and bias mitigation |
+| Skill                                                | Description                                                                                                   |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| [context-optimization](skills/context-optimization/) | Apply compaction, masking, and caching strategies                                                             |
+| [evaluation](skills/evaluation/)                     | Build evaluation frameworks for agent systems                                                                 |
+| [advanced-evaluation](skills/advanced-evaluation/)   | Master LLM-as-a-Judge techniques: direct scoring, pairwise comparison, rubric generation, and bias mitigation |
 
 ### Development Methodology
 
 These skills cover the meta-level practices for building LLM-powered projects.
 
-| Skill | Description |
-|-------|-------------|
+| Skill                                              | Description                                                                                                                                            |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | [project-development](skills/project-development/) | Design and build LLM projects from ideation through deployment, including task-model fit analysis, pipeline architecture, and structured output design |
 
 ### Cognitive Architecture Skills
 
 These skills cover formal cognitive modeling for rational agent systems.
 
-| Skill | Description |
-|-------|-------------|
+| Skill                                          | Description                                                                                                                                                                     |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [bdi-mental-states](skills/bdi-mental-states/) | **NEW** Transform external RDF context into agent mental states (beliefs, desires, intentions) using formal BDI ontology patterns for deliberative reasoning and explainability |
 
 ## Design Philosophy
@@ -99,6 +99,7 @@ Run this command in Claude Code to register this repository as a plugin source:
 **Step 2: Install the Plugin**
 
 Option A - Browse and install:
+
 1. Select `Browse and install plugins`
 2. Select `context-engineering-marketplace`
 3. Select `context-engineering`
@@ -114,21 +115,21 @@ This installs all 13 skills in a single plugin. Skills are activated automatical
 
 ### Skill Triggers
 
-| Skill | Triggers On |
-|-------|-------------|
-| `context-fundamentals` | "understand context", "explain context windows", "design agent architecture" |
-| `context-degradation` | "diagnose context problems", "fix lost-in-middle", "debug agent failures" |
-| `context-compression` | "compress context", "summarize conversation", "reduce token usage" |
-| `context-optimization` | "optimize context", "reduce token costs", "implement KV-cache" |
-| `multi-agent-patterns` | "design multi-agent system", "implement supervisor pattern" |
-| `memory-systems` | "implement agent memory", "build knowledge graph", "track entities" |
-| `tool-design` | "design agent tools", "reduce tool complexity", "implement MCP tools" |
-| `filesystem-context` | "offload context to files", "dynamic context discovery", "agent scratch pad", "file-based context" |
-| `hosted-agents` | "build background agent", "create hosted coding agent", "sandboxed execution", "multiplayer agent", "Modal sandboxes" |
-| `evaluation` | "evaluate agent performance", "build test framework", "measure quality" |
-| `advanced-evaluation` | "implement LLM-as-judge", "compare model outputs", "mitigate bias" |
-| `project-development` | "start LLM project", "design batch pipeline", "evaluate task-model fit" |
-| `bdi-mental-states` | "model agent mental states", "implement BDI architecture", "transform RDF to beliefs", "build cognitive agent" |
+| Skill                  | Triggers On                                                                                                           |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `context-fundamentals` | "understand context", "explain context windows", "design agent architecture"                                          |
+| `context-degradation`  | "diagnose context problems", "fix lost-in-middle", "debug agent failures"                                             |
+| `context-compression`  | "compress context", "summarize conversation", "reduce token usage"                                                    |
+| `context-optimization` | "optimize context", "reduce token costs", "implement KV-cache"                                                        |
+| `multi-agent-patterns` | "design multi-agent system", "implement supervisor pattern"                                                           |
+| `memory-systems`       | "implement agent memory", "build knowledge graph", "track entities"                                                   |
+| `tool-design`          | "design agent tools", "reduce tool complexity", "implement MCP tools"                                                 |
+| `filesystem-context`   | "offload context to files", "dynamic context discovery", "agent scratch pad", "file-based context"                    |
+| `hosted-agents`        | "build background agent", "create hosted coding agent", "sandboxed execution", "multiplayer agent", "Modal sandboxes" |
+| `evaluation`           | "evaluate agent performance", "build test framework", "measure quality"                                               |
+| `advanced-evaluation`  | "implement LLM-as-judge", "compare model outputs", "mitigate bias"                                                    |
+| `project-development`  | "start LLM project", "design batch pipeline", "evaluate task-model fit"                                               |
+| `bdi-mental-states`    | "model agent mental states", "implement BDI architecture", "transform RDF to beliefs", "build cognitive agent"        |
 
 <img width="1014" height="894" alt="Screenshot 2025-12-26 at 12 34 47 PM" src="https://github.com/user-attachments/assets/f79aaf03-fd2d-4c71-a630-7027adeb9bfe" />
 
@@ -159,14 +160,15 @@ Extract the principles and patterns from any skill and implement them in your ag
 
 The [examples](examples/) folder contains complete system designs that demonstrate how multiple skills work together in practice.
 
-| Example | Description | Skills Applied |
-|---------|-------------|----------------|
-| [digital-brain-skill](examples/digital-brain-skill/) | **NEW** Personal operating system for founders and creators. Complete Claude Code skill with 6 modules, 4 automation scripts | context-fundamentals, context-optimization, memory-systems, tool-design, multi-agent-patterns, evaluation, project-development |
-| [x-to-book-system](examples/x-to-book-system/) | Multi-agent system that monitors X accounts and generates daily synthesized books | multi-agent-patterns, memory-systems, context-optimization, tool-design, evaluation |
-| [llm-as-judge-skills](examples/llm-as-judge-skills/) | Production-ready LLM evaluation tools with TypeScript implementation, 19 passing tests | advanced-evaluation, tool-design, context-fundamentals, evaluation |
-| [book-sft-pipeline](examples/book-sft-pipeline/) | Train models to write in any author's style. Includes Gertrude Stein case study with 70% human score on Pangram, $2 total cost | project-development, context-compression, multi-agent-patterns, evaluation |
+| Example                                              | Description                                                                                                                    | Skills Applied                                                                                                                 |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| [digital-brain-skill](examples/digital-brain-skill/) | **NEW** Personal operating system for founders and creators. Complete Claude Code skill with 6 modules, 4 automation scripts   | context-fundamentals, context-optimization, memory-systems, tool-design, multi-agent-patterns, evaluation, project-development |
+| [x-to-book-system](examples/x-to-book-system/)       | Multi-agent system that monitors X accounts and generates daily synthesized books                                              | multi-agent-patterns, memory-systems, context-optimization, tool-design, evaluation                                            |
+| [llm-as-judge-skills](examples/llm-as-judge-skills/) | Production-ready LLM evaluation tools with TypeScript implementation, 19 passing tests                                         | advanced-evaluation, tool-design, context-fundamentals, evaluation                                                             |
+| [book-sft-pipeline](examples/book-sft-pipeline/)     | Train models to write in any author's style. Includes Gertrude Stein case study with 70% human score on Pangram, $2 total cost | project-development, context-compression, multi-agent-patterns, evaluation                                                     |
 
 Each example includes:
+
 - Complete PRD with architecture decisions
 - Skills mapping showing which concepts informed each decision
 - Implementation guidance
@@ -203,6 +205,7 @@ The [book-sft-pipeline](examples/book-sft-pipeline/) example demonstrates traini
 Integrates with context engineering skills: project-development, context-compression, multi-agent-patterns, evaluation.
 
 ## Star History
+
 <img width="3664" height="2648" alt="star-history-2026317" src="https://github.com/user-attachments/assets/0fe53d8d-7fdd-45be-9c28-057881b23b44" />
 
 ## Structure

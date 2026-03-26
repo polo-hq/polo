@@ -10,10 +10,6 @@ By Factory Research - December 16, 2025 - 10 minute read -
 
 Share
 
-
-
-
-
 Engineering
 
 Research
@@ -24,39 +20,21 @@ We built an evaluation framework to measure how much context different compressi
 
 Table of Contents
 
-
-
-
-
-
-
-
-
-
-
 01 The problem
-
 
 02 Measuring context quality
 
-
 03 Three approaches to compression
-
 
 04 A concrete example
 
-
 05 How the LLM judge works
-
 
 06 Results
 
-
 07 What we learned
 
-
 08 Methodology details
-
 
 09 Appendix: LLM Judge Prompts and Rubrics
 
@@ -82,22 +60,22 @@ We designed a probe-based evaluation that directly measures functional quality. 
 
 We use four probe types:
 
-Probe type	What it tests	Example question
-Recall	Factual retention	"What was the original error message?"
-Artifact	File tracking	"Which files have we modified? Describe what changed in each."
-Continuation	Task planning	"What should we do next?"
-Decision	Reasoning chain	"We discussed options for the Redis issue. What did we decide?"
+Probe type What it tests Example question
+Recall Factual retention "What was the original error message?"
+Artifact File tracking "Which files have we modified? Describe what changed in each."
+Continuation Task planning "What should we do next?"
+Decision Reasoning chain "We discussed options for the Redis issue. What did we decide?"
 Recall probes test whether specific facts survive compression. Artifact probes test whether the agent knows what files it touched. Continuation probes test whether the agent can pick up where it left off. Decision probes test whether the reasoning behind past choices is preserved.
 
 We grade responses using an LLM judge (GPT-5.2) across six dimensions:
 
-Dimension	What it measures
-Accuracy	Are technical details correct? File paths, function names, errors
-Context awareness	Does the response reflect current conversation state?
-Artifact trail	Does the agent know which files were read or modified?
-Completeness	Does the response address all parts of the question?
-Continuity	Can work continue without re-fetching information?
-Instruction following	Does the response follow the probe format?
+Dimension What it measures
+Accuracy Are technical details correct? File paths, function names, errors
+Context awareness Does the response reflect current conversation state?
+Artifact trail Does the agent know which files were read or modified?
+Completeness Does the response address all parts of the question?
+Continuity Can work continue without re-fetching information?
+Instruction following Does the response follow the probe format?
 Each dimension is scored 0-5 using detailed rubrics. The rubrics specify what constitutes a 0 ("Completely fails"), 3 ("Adequately meets with minor issues"), and 5 ("Excellently meets with no issues") for each criterion.
 
 Why these dimensions matter for software development
@@ -166,29 +144,29 @@ The judge receives the probe question, the model's response, the compacted conve
 Here is an abbreviated example of judge output for the Factory response above:
 
 {
-  "criterionResults": [
-    {
-      "criterionId": "accuracy_factual",
-      "score": 5,
-      "reasoning": "Response correctly identifies the 401 error, the specific endpoint (/api/auth/login), and the root cause (Redis connection issue)."
-    },
-    {
-      "criterionId": "accuracy_technical",
-      "score": 5,
-      "reasoning": "Technical details are accurate - JWT generation, session persistence, and the causal chain are correctly described."
-    },
-    {
-      "criterionId": "context_artifact_state",
-      "score": 4,
-      "reasoning": "Response demonstrates awareness of the debugging journey but does not enumerate all files examined."
-    },
-    {
-      "criterionId": "completeness_coverage",
-      "score": 5,
-      "reasoning": "Fully addresses the probe question with the error code, endpoint, symptom, and root cause."
-    }
-  ],
-  "aggregateScore": 4.8
+"criterionResults": [
+{
+"criterionId": "accuracy_factual",
+"score": 5,
+"reasoning": "Response correctly identifies the 401 error, the specific endpoint (/api/auth/login), and the root cause (Redis connection issue)."
+},
+{
+"criterionId": "accuracy_technical",
+"score": 5,
+"reasoning": "Technical details are accurate - JWT generation, session persistence, and the causal chain are correctly described."
+},
+{
+"criterionId": "context_artifact_state",
+"score": 4,
+"reasoning": "Response demonstrates awareness of the debugging journey but does not enumerate all files examined."
+},
+{
+"criterionId": "completeness_coverage",
+"score": 5,
+"reasoning": "Fully addresses the probe question with the error code, endpoint, symptom, and root cause."
+}
+],
+"aggregateScore": 4.8
 }
 
 The judge does not know which compression method produced the response. It evaluates purely on response quality against the rubric.
@@ -196,10 +174,10 @@ The judge does not know which compression method produced the response. It evalu
 Results
 We evaluated all three methods on over 36,000 messages from production sessions spanning PR review, testing, bug fixes, feature implementation, and refactoring. For each compression point, we generated four probe responses per method and graded them across six dimensions.
 
-Method	Overall	Accuracy	Context	Artifact	Complete	Continuity	Instruction
-Factory	3.70	4.04	4.01	2.45	4.44	3.80	4.99
-Anthropic	3.44	3.74	3.56	2.33	4.37	3.67	4.95
-OpenAI	3.35	3.43	3.64	2.19	4.37	3.77	4.92
+Method Overall Accuracy Context Artifact Complete Continuity Instruction
+Factory 3.70 4.04 4.01 2.45 4.44 3.80 4.99
+Anthropic 3.44 3.74 3.56 2.33 4.37 3.67 4.95
+OpenAI 3.35 3.43 3.64 2.19 4.37 3.77 4.92
 Factory scores 0.35 points higher than OpenAI and 0.26 higher than Anthropic overall.
 
 Radar chart showing quality profile comparison across all three methods
@@ -245,6 +223,7 @@ The judge receives this system prompt:
 You are an expert evaluator assessing AI assistant responses in software development conversations.
 
 Your task is to grade responses against specific rubric criteria. For each criterion:
+
 1. Read the criterion question carefully
 2. Examine the response for evidence
 3. Assign a score from 0-5 based on the scoring guide
@@ -257,36 +236,36 @@ Each dimension contains 2-3 criteria. Here are the key criteria with their scori
 
 Accuracy
 
-Criterion	Question	0	3	5
-accuracy_factual	Are facts, file paths, and technical details correct?	Completely incorrect or fabricated	Mostly accurate with minor errors	Perfectly accurate
-accuracy_technical	Are code references and technical concepts correct?	Major technical errors	Generally correct with minor issues	Technically precise
+Criterion Question 0 3 5
+accuracy_factual Are facts, file paths, and technical details correct? Completely incorrect or fabricated Mostly accurate with minor errors Perfectly accurate
+accuracy_technical Are code references and technical concepts correct? Major technical errors Generally correct with minor issues Technically precise
 Context Awareness
 
-Criterion	Question	0	3	5
-context_conversation_state	Does the response reflect current conversation state?	No awareness of prior context	General awareness with gaps	Full awareness of conversation history
-context_artifact_state	Does the response reflect which files/artifacts were accessed?	No awareness of artifacts	Partial artifact awareness	Complete artifact state awareness
+Criterion Question 0 3 5
+context_conversation_state Does the response reflect current conversation state? No awareness of prior context General awareness with gaps Full awareness of conversation history
+context_artifact_state Does the response reflect which files/artifacts were accessed? No awareness of artifacts Partial artifact awareness Complete artifact state awareness
 Artifact Trail Integrity
 
-Criterion	Question	0	3	5
-artifact_files_created	Does the agent know which files were created?	No knowledge	Knows most files	Perfect knowledge
-artifact_files_modified	Does the agent know which files were modified and what changed?	No knowledge	Good knowledge of most modifications	Perfect knowledge of all modifications
-artifact_key_details	Does the agent remember function names, variable names, error messages?	No recall	Recalls most key details	Perfect recall
+Criterion Question 0 3 5
+artifact_files_created Does the agent know which files were created? No knowledge Knows most files Perfect knowledge
+artifact_files_modified Does the agent know which files were modified and what changed? No knowledge Good knowledge of most modifications Perfect knowledge of all modifications
+artifact_key_details Does the agent remember function names, variable names, error messages? No recall Recalls most key details Perfect recall
 Continuity Preservation
 
-Criterion	Question	0	3	5
-continuity_work_state	Can the agent continue without re-fetching previously accessed information?	Cannot continue without re-fetching all context	Can continue with minimal re-fetching	Can continue seamlessly
-continuity_todo_state	Does the agent maintain awareness of pending tasks?	Lost track of all TODOs	Good awareness with some gaps	Perfect task awareness
-continuity_reasoning	Does the agent retain rationale behind previous decisions?	No memory of reasoning	Generally remembers reasoning	Excellent retention
+Criterion Question 0 3 5
+continuity_work_state Can the agent continue without re-fetching previously accessed information? Cannot continue without re-fetching all context Can continue with minimal re-fetching Can continue seamlessly
+continuity_todo_state Does the agent maintain awareness of pending tasks? Lost track of all TODOs Good awareness with some gaps Perfect task awareness
+continuity_reasoning Does the agent retain rationale behind previous decisions? No memory of reasoning Generally remembers reasoning Excellent retention
 Completeness
 
-Criterion	Question	0	3	5
-completeness_coverage	Does the response address all parts of the question?	Ignores most parts	Addresses most parts	Addresses all parts thoroughly
-completeness_depth	Is sufficient detail provided?	Superficial or missing detail	Adequate detail	Comprehensive detail
+Criterion Question 0 3 5
+completeness_coverage Does the response address all parts of the question? Ignores most parts Addresses most parts Addresses all parts thoroughly
+completeness_depth Is sufficient detail provided? Superficial or missing detail Adequate detail Comprehensive detail
 Instruction Following
 
-Criterion	Question	0	3	5
-instruction_format	Does the response follow the requested format?	Ignores format	Generally follows format	Perfectly follows format
-instruction_constraints	Does the response respect stated constraints?	Ignores constraints	Mostly respects constraints	Fully respects all constraints
+Criterion Question 0 3 5
+instruction_format Does the response follow the requested format? Ignores format Generally follows format Perfectly follows format
+instruction_constraints Does the response respect stated constraints? Ignores constraints Mostly respects constraints Fully respects all constraints
 Grading Process
 For each probe response, the judge:
 

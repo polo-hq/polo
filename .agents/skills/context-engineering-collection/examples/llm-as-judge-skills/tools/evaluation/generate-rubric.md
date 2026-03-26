@@ -16,74 +16,77 @@ Creates detailed descriptions for each score level.
 Use when you need to establish consistent evaluation standards.`,
 
   parameters: z.object({
-    criterionName: z.string()
-      .describe("Name of the criterion (e.g., 'Factual Accuracy')"),
-    
-    criterionDescription: z.string()
-      .describe("What this criterion measures"),
-    
-    scale: z.enum(["1-3", "1-5", "1-10"]).default("1-5")
-      .describe("Scoring scale to use"),
-    
-    domain: z.string().optional()
+    criterionName: z.string().describe("Name of the criterion (e.g., 'Factual Accuracy')"),
+
+    criterionDescription: z.string().describe("What this criterion measures"),
+
+    scale: z.enum(["1-3", "1-5", "1-10"]).default("1-5").describe("Scoring scale to use"),
+
+    domain: z
+      .string()
+      .optional()
       .describe("Domain context (e.g., 'medical writing', 'code review')"),
-    
-    includeExamples: z.boolean().default(true)
+
+    includeExamples: z
+      .boolean()
+      .default(true)
       .describe("Include example text for each score level"),
-    
-    strictness: z.enum(["lenient", "balanced", "strict"]).default("balanced")
-      .describe("How strictly to define score boundaries")
+
+    strictness: z
+      .enum(["lenient", "balanced", "strict"])
+      .default("balanced")
+      .describe("How strictly to define score boundaries"),
   }),
 
   execute: async (input) => {
     return generateRubricWithLLM(input);
-  }
+  },
 });
 ```
 
 ## Input Schema
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| criterionName | string | Yes | Name of criterion |
-| criterionDescription | string | Yes | What criterion measures |
-| scale | enum | No | Scoring scale (default: 1-5) |
-| domain | string | No | Domain for context |
-| includeExamples | boolean | No | Include examples (default: true) |
-| strictness | enum | No | Score boundary strictness |
+| Field                | Type    | Required | Description                      |
+| -------------------- | ------- | -------- | -------------------------------- |
+| criterionName        | string  | Yes      | Name of criterion                |
+| criterionDescription | string  | Yes      | What criterion measures          |
+| scale                | enum    | No       | Scoring scale (default: 1-5)     |
+| domain               | string  | No       | Domain for context               |
+| includeExamples      | boolean | No       | Include examples (default: true) |
+| strictness           | enum    | No       | Score boundary strictness        |
 
 ## Output Schema
 
 ```typescript
 interface GeneratedRubric {
   success: boolean;
-  
+
   criterion: {
     name: string;
     description: string;
   };
-  
+
   scale: {
     min: number;
     max: number;
     type: string;
   };
-  
+
   levels: {
     score: number;
-    label: string;        // e.g., "Excellent", "Poor"
-    description: string;  // Detailed description
-    characteristics: string[];  // Key characteristics
-    example?: string;     // Example text at this level
+    label: string; // e.g., "Excellent", "Poor"
+    description: string; // Detailed description
+    characteristics: string[]; // Key characteristics
+    example?: string; // Example text at this level
   }[];
-  
+
   scoringGuidelines: string[];
-  
+
   edgeCases: {
     situation: string;
     guidance: string;
   }[];
-  
+
   metadata: {
     domain: string | null;
     strictness: string;
@@ -101,7 +104,7 @@ const rubric = await generateRubric.execute({
   scale: "1-5",
   domain: "code review",
   includeExamples: true,
-  strictness: "balanced"
+  strictness: "balanced",
 });
 
 // Result:
@@ -153,6 +156,7 @@ const rubric = await generateRubric.execute({
 ## Rubric Templates
 
 ### Factual Accuracy (1-5)
+
 ```
 5: All claims factually correct, properly sourced
 4: Minor factual issues, non-critical
@@ -162,6 +166,7 @@ const rubric = await generateRubric.execute({
 ```
 
 ### Clarity (1-5)
+
 ```
 5: Immediately understandable, well-structured
 4: Clear with minor ambiguities
@@ -171,6 +176,7 @@ const rubric = await generateRubric.execute({
 ```
 
 ### Completeness (1-5)
+
 ```
 5: Addresses all aspects comprehensively
 4: Covers main points, minor gaps
@@ -186,4 +192,3 @@ const rubric = await generateRubric.execute({
 3. **Example Quality**: Examples should be realistic, not strawmen
 4. **Edge Case Coverage**: Anticipate common ambiguous situations
 5. **Calibration**: Test rubric against known samples before use
-

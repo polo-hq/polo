@@ -7,6 +7,7 @@ A multi-agent system that monitors target X (Twitter) accounts daily, synthesize
 ## Problem Statement
 
 Manual curation of insights from X accounts is time-consuming and inconsistent. Existing tools dump raw data without synthesis. We need a system that:
+
 - Continuously monitors specified X accounts
 - Extracts meaningful patterns and insights across time
 - Produces structured, coherent daily book outputs
@@ -17,6 +18,7 @@ Manual curation of insights from X accounts is time-consuming and inconsistent. 
 ### Multi-Agent Pattern Selection: Supervisor/Orchestrator
 
 Based on the context engineering patterns, we use a **supervisor architecture** because:
+
 1. Book production has clear sequential phases (scrape, analyze, synthesize, write, edit)
 2. Quality gates require central coordination
 3. Human oversight points are well-defined
@@ -29,11 +31,13 @@ User Config -> Orchestrator -> [Scraper, Analyzer, Synthesizer, Writer, Editor] 
 ### Agent Definitions
 
 #### 1. Orchestrator Agent
+
 **Purpose**: Central coordinator that manages workflow, maintains state, routes to specialists.
 
 **Context Budget**: Reserved for task decomposition, quality gates, and synthesis coordination. Does not carry raw tweet data.
 
 **Responsibilities**:
+
 - Decompose daily book task into subtasks
 - Route to appropriate specialist agents
 - Implement checkpoint/resume for long-running operations
@@ -50,11 +54,13 @@ class OrchestratorState(TypedDict):
 ```
 
 #### 2. Scraper Agent
+
 **Purpose**: Fetch and normalize content from target X accounts.
 
 **Context Budget**: Minimal. Operates on one account at a time, outputs to file system.
 
 **Tools**:
+
 - `fetch_timeline(account_id, since_date, until_date)` - Retrieve tweets in date range
 - `fetch_thread(tweet_id)` - Expand full thread context
 - `fetch_engagement_metrics(tweet_ids)` - Get likes/retweets/replies
@@ -63,11 +69,13 @@ class OrchestratorState(TypedDict):
 **Output**: Structured JSON per account, written to file system (not passed through context).
 
 #### 3. Analyzer Agent
+
 **Purpose**: Extract patterns, themes, and insights from raw content.
 
 **Context Budget**: Moderate. Processes one account's data at a time via file system reads.
 
 **Responsibilities**:
+
 - Topic extraction and clustering
 - Sentiment analysis over time
 - Key insight identification
@@ -75,34 +83,40 @@ class OrchestratorState(TypedDict):
 - Controversy/debate identification
 
 **Output**: Structured analysis per account with:
+
 - Top themes (ranked by frequency and engagement)
 - Notable quotes (with context)
 - Narrative arcs (multi-tweet threads)
 - Temporal patterns (time-of-day, response patterns)
 
 #### 4. Synthesizer Agent
+
 **Purpose**: Cross-account pattern recognition and theme consolidation.
 
 **Context Budget**: High. Receives summaries from all analyzed accounts.
 
 **Responsibilities**:
+
 - Identify cross-account themes
 - Detect agreement/disagreement patterns
 - Build narrative connections
 - Generate book outline with chapter structure
 
 **Output**: Book outline with:
+
 - Chapter structure
 - Theme assignments per chapter
 - Source attribution map
 - Suggested narrative flow
 
 #### 5. Writer Agent
+
 **Purpose**: Generate book content from outline and source material.
 
 **Context Budget**: Per-chapter allocation. Works on one chapter at a time.
 
 **Responsibilities**:
+
 - Draft chapter content following outline
 - Integrate quotes with proper attribution
 - Maintain consistent voice and style
@@ -111,11 +125,13 @@ class OrchestratorState(TypedDict):
 **Output**: Draft chapters in markdown format.
 
 #### 6. Editor Agent
+
 **Purpose**: Quality assurance and refinement.
 
 **Context Budget**: Per-chapter. Reviews one chapter at a time.
 
 **Responsibilities**:
+
 - Fact-check against source material
 - Verify quote accuracy
 - Check narrative coherence
@@ -130,6 +146,7 @@ class OrchestratorState(TypedDict):
 ### Architecture: Temporal Knowledge Graph
 
 Based on the memory-systems skill, we need a **temporal knowledge graph** because:
+
 - Facts about accounts change over time (opinions shift, topics evolve)
 - We need time-travel queries ("What was @account's position on X in January?")
 - Cross-account relationships require graph traversal
@@ -223,6 +240,7 @@ X data is high-volume. A target account with 20 tweets/day across 10 accounts = 
 ### Optimization Techniques
 
 #### 1. Observation Masking
+
 Raw tweet data is processed by Scraper, written to file system, and never passed through Orchestrator context.
 
 ```python
@@ -296,23 +314,23 @@ def x_data_tool(
 ) -> Dict:
     """
     Unified X data retrieval tool.
-    
+
     Use when:
     - Fetching timeline for target account monitoring
     - Expanding thread context for full conversation
     - Getting engagement metrics for content prioritization
     - Searching for specific topics across accounts
-    
+
     Actions:
     - fetch_timeline: Get tweets from account in date range
     - fetch_thread: Expand full thread from single tweet
     - fetch_engagement: Get likes/retweets/replies
     - search: Search across accounts for query
-    
+
     Returns:
     - concise: tweet_id, content_preview, timestamp, engagement_score
     - detailed: full content, thread context, all engagement metrics, reply preview
-    
+
     Errors:
     - RATE_LIMITED: Wait {retry_after} seconds
     - ACCOUNT_PRIVATE: Cannot access private account
@@ -333,19 +351,19 @@ def memory_tool(
 ) -> Dict:
     """
     Unified memory system tool.
-    
+
     Use when:
     - Storing new facts discovered from X data
     - Querying historical information about accounts/themes
     - Updating validity periods when facts change
     - Running consolidation to merge duplicate facts
-    
+
     Actions:
     - store: Add new entity or relationship
     - query: Retrieve entities/relationships matching params
     - update_validity: Mark fact as expired with valid_until
     - consolidate: Merge duplicates and cleanup
-    
+
     Returns entity/relationship data or query results.
     """
 ```
@@ -362,13 +380,13 @@ def writing_tool(
 ) -> Dict:
     """
     Unified book writing tool.
-    
+
     Use when:
     - Drafting new chapter content
     - Editing existing content for quality
     - Formatting content for output
     - Exporting final book
-    
+
     Actions:
     - draft: Create initial chapter draft
     - edit: Apply revisions to existing content
@@ -385,37 +403,37 @@ def writing_tool(
 
 Based on the evaluation skill, we define quality dimensions:
 
-| Dimension | Weight | Excellent | Acceptable | Failed |
-|-----------|--------|-----------|------------|--------|
-| Source Accuracy | 30% | All quotes verified, proper attribution | Minor attribution errors | Fabricated quotes |
-| Thematic Coherence | 25% | Clear narrative thread, logical flow | Some disconnected sections | No coherent narrative |
-| Completeness | 20% | Covers all major themes from sources | Misses some themes | Major gaps |
-| Insight Quality | 15% | Novel synthesis across sources | Restates obvious points | No synthesis |
-| Readability | 10% | Engaging, well-structured prose | Adequate but dry | Unreadable |
+| Dimension          | Weight | Excellent                               | Acceptable                 | Failed                |
+| ------------------ | ------ | --------------------------------------- | -------------------------- | --------------------- |
+| Source Accuracy    | 30%    | All quotes verified, proper attribution | Minor attribution errors   | Fabricated quotes     |
+| Thematic Coherence | 25%    | Clear narrative thread, logical flow    | Some disconnected sections | No coherent narrative |
+| Completeness       | 20%    | Covers all major themes from sources    | Misses some themes         | Major gaps            |
+| Insight Quality    | 15%    | Novel synthesis across sources          | Restates obvious points    | No synthesis          |
+| Readability        | 10%    | Engaging, well-structured prose         | Adequate but dry           | Unreadable            |
 
 ### Automated Evaluation Pipeline
 
 ```python
 def evaluate_daily_book(book: Book, source_data: Dict) -> EvaluationResult:
     scores = {}
-    
+
     # Source accuracy: verify quotes against original tweets
     scores["source_accuracy"] = verify_quotes(book.chapters, source_data)
-    
+
     # Thematic coherence: LLM-as-judge for narrative flow
     scores["thematic_coherence"] = judge_coherence(book)
-    
+
     # Completeness: check theme coverage
     scores["completeness"] = calculate_theme_coverage(book, source_data)
-    
+
     # Insight quality: LLM-as-judge for synthesis
     scores["insight_quality"] = judge_insights(book, source_data)
-    
+
     # Readability: automated metrics + LLM judge
     scores["readability"] = assess_readability(book)
-    
+
     overall = weighted_average(scores, DIMENSION_WEIGHTS)
-    
+
     return EvaluationResult(
         passed=overall >= 0.7,
         scores=scores,
@@ -499,33 +517,42 @@ def evaluate_daily_book(book: Book, source_data: Dict) -> EvaluationResult:
 ## Failure Modes and Mitigations
 
 ### Failure: Orchestrator Context Saturation
+
 **Symptom**: Orchestrator accumulates phase outputs, degrading routing decisions.
 **Mitigation**: Phase outputs stored in file system, Orchestrator receives only summaries. Implement checkpointing to persist state.
 
 ### Failure: X API Rate Limiting
+
 **Symptom**: Scraper hits rate limits, incomplete data.
-**Mitigation**: 
+**Mitigation**:
+
 - Implement circuit breaker with exponential backoff
 - Checkpoint partial scrapes for resume
 - Schedule scraping across time windows
 
 ### Failure: Quote Hallucination
+
 **Symptom**: Writer generates quotes not in source material.
 **Mitigation**:
+
 - Strict source attribution in writing prompt
 - Editor agent verifies all quotes against source
 - Automated quote verification in evaluation
 
 ### Failure: Theme Drift
+
 **Symptom**: Book themes diverge from actual source content.
 **Mitigation**:
+
 - Synthesizer receives grounded summaries only
 - Writer tool includes source verification step
 - Evaluation checks theme-source alignment
 
 ### Failure: Coordination Overhead
+
 **Symptom**: Agent communication latency exceeds content value.
 **Mitigation**:
+
 - Batch phase outputs
 - Use file system for inter-agent data (no context passing for large payloads)
 - Parallelize where possible (Scraper can run per-account in parallel)
@@ -545,7 +572,7 @@ target_accounts:
     themes_of_interest: ["regulation", "policy"]
 
 schedule:
-  scrape_time: "06:00"  # UTC
+  scrape_time: "06:00" # UTC
   publish_time: "08:00"
   timezone: "UTC"
 
@@ -553,7 +580,7 @@ book_settings:
   target_word_count: 5000
   min_chapters: 3
   max_chapters: 7
-  style: "analytical"  # analytical | narrative | summary
+  style: "analytical" # analytical | narrative | summary
 
 quality_thresholds:
   min_overall_score: 0.7
@@ -563,7 +590,7 @@ quality_thresholds:
 memory:
   retention_days: 90
   consolidation_frequency: "weekly"
-  
+
 context_limits:
   orchestrator: 50000
   scraper: 20000
@@ -578,27 +605,32 @@ context_limits:
 ## Implementation Phases
 
 ### Phase 1: Core Pipeline (Week 1-2)
+
 - Orchestrator with basic routing
 - Scraper with X API integration
 - File system storage
 - Basic Writer producing markdown output
 
 ### Phase 2: Analysis Layer (Week 3-4)
+
 - Analyzer agent with theme extraction
 - Synthesizer with cross-account patterns
 - Book outline generation
 
 ### Phase 3: Memory System (Week 5-6)
+
 - Temporal knowledge graph implementation
 - Entity and relationship storage
 - Temporal queries for historical context
 
 ### Phase 4: Quality Layer (Week 7-8)
+
 - Editor agent
 - Evaluation pipeline
 - Human review interface
 
 ### Phase 5: Production Hardening (Week 9-10)
+
 - Checkpoint/resume
 - Circuit breakers
 - Monitoring and alerting
@@ -608,14 +640,14 @@ context_limits:
 
 ## Technical Stack (Recommended)
 
-| Component | Technology | Rationale |
-|-----------|------------|-----------|
-| Agent Framework | LangGraph | Graph-based state machines with explicit nodes/edges |
-| Knowledge Graph | Neo4j or Memgraph | Native temporal queries, relationship traversal |
-| Vector Store | Weaviate or Pinecone | Hybrid search (semantic + metadata filtering) |
-| X API | Official API or Scraping fallback | Rate limits require careful management |
-| Storage | PostgreSQL + S3 | Structured data + blob storage for content |
-| Orchestration | Temporal.io | Durable workflows with checkpoint/resume |
+| Component       | Technology                        | Rationale                                            |
+| --------------- | --------------------------------- | ---------------------------------------------------- |
+| Agent Framework | LangGraph                         | Graph-based state machines with explicit nodes/edges |
+| Knowledge Graph | Neo4j or Memgraph                 | Native temporal queries, relationship traversal      |
+| Vector Store    | Weaviate or Pinecone              | Hybrid search (semantic + metadata filtering)        |
+| X API           | Official API or Scraping fallback | Rate limits require careful management               |
+| Storage         | PostgreSQL + S3                   | Structured data + blob storage for content           |
+| Orchestration   | Temporal.io                       | Durable workflows with checkpoint/resume             |
 
 ---
 
@@ -641,4 +673,3 @@ context_limits:
 - Context optimization skill - Observation masking and compaction strategies
 - Tool design skill - Consolidation principle for tools
 - Evaluation skill - Multi-dimensional rubrics
-

@@ -15,6 +15,7 @@ You want to write a Twitter thread about "lessons from building in public."
 **User Input**: "Help me write a thread about lessons from building in public"
 
 **Agent Recognition**:
+
 - Trigger: "write a thread" → content creation
 - Topic: "building in public" → likely matches brand pillars
 - Action: Load Digital Brain skill
@@ -60,7 +61,7 @@ Agent scans `content/posts.jsonl`:
 {
   "type": "thread",
   "pillar": "building_in_public",
-  "metrics": {"likes": 234, "reposts": 45},
+  "metrics": { "likes": 234, "reposts": 45 },
   "notes": "Story format worked well"
 }
 ```
@@ -92,6 +93,7 @@ Agent uses `content/templates/thread.md` as scaffold:
 
 ```markdown
 ## 1/ Hook
+
 Unpopular opinion: Building in public isn't about the wins.
 
 Here's the thing - it's about the messy middle.
@@ -99,21 +101,26 @@ Here's the thing - it's about the messy middle.
 Let me break it down 🧵
 
 ## 2/ Context
+
 I've been building in public for 18 months.
 
 Here's what I wish someone told me on day 1:
 
 ## 3-7/ Main Points
+
 [5 specific lessons with stories]
 
 ## 8/ Takeaway
+
 The compound effect of transparency beats any marketing strategy.
 
 ## 9/ CTA
+
 Follow for more founder lessons as I ship @handle
 ```
 
 **Voice Alignment Check**:
+
 - ✓ Uses "Here's the thing" (signature phrase)
 - ✓ Uses "Let me break it down" (signature phrase)
 - ✓ Casual but substantive tone (7/10)
@@ -127,6 +134,7 @@ Follow for more founder lessons as I ship @handle
 User: "Can you make point 3 about the fear of judgment?"
 
 Agent:
+
 1. Keeps same voice/structure
 2. Rewrites point 3 with fear angle
 3. Maintains thread flow
@@ -182,14 +190,14 @@ After user publishes, agent appends to `content/posts.jsonl`:
 
 ## Files Accessed
 
-| File | Purpose | Tokens (~) |
-|------|---------|------------|
-| `SKILL.md` | Routing | 50 |
-| `identity/voice.md` | Voice patterns | 200 |
-| `identity/brand.md` | Topic validation | 150 |
-| `content/posts.jsonl` | Past performance | 100 |
-| `content/ideas.jsonl` | Existing ideas | 50 |
-| `content/templates/thread.md` | Structure | 100 |
+| File                          | Purpose          | Tokens (~) |
+| ----------------------------- | ---------------- | ---------- |
+| `SKILL.md`                    | Routing          | 50         |
+| `identity/voice.md`           | Voice patterns   | 200        |
+| `identity/brand.md`           | Topic validation | 150        |
+| `content/posts.jsonl`         | Past performance | 100        |
+| `content/ideas.jsonl`         | Existing ideas   | 50         |
+| `content/templates/thread.md` | Structure        | 100        |
 
 **Total**: ~650 tokens vs loading entire brain (~5000 tokens)
 

@@ -7,6 +7,7 @@ Thank you for your interest in contributing to this collection of Agent Skills f
 ### Reporting Issues
 
 If you find errors, unclear explanations, or missing topics, please open an issue with:
+
 - A clear description of the problem
 - The skill and section where the issue was found
 - Suggested improvements if you have them
@@ -60,6 +61,7 @@ Optional additions:
 ### Avoiding Platform Specificity
 
 Skills should work across agent platforms. Avoid:
+
 - Platform-specific tool names without abstraction
 - Vendor-locked examples
 - Features specific to one agent product
@@ -75,4 +77,3 @@ This project follows a professional, technical collaboration model. Be respectfu
 ## Questions
 
 For questions about contributing, please open an issue for discussion.
-

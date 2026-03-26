@@ -1,14 +1,14 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import { 
-  executeDirectScore, 
-  executePairwiseCompare, 
+import { describe, it, expect, beforeAll } from "vitest";
+import {
+  executeDirectScore,
+  executePairwiseCompare,
   executeGenerateRubric,
-  EvaluatorAgent
-} from '../src/index.js';
-import { validateConfig } from '../src/config/index.js';
+  EvaluatorAgent,
+} from "../src/index.js";
+import { validateConfig } from "../src/config/index.js";
 
 // Test fixtures
-const TEST_PROMPT = 'Explain quantum entanglement to a high school student';
+const TEST_PROMPT = "Explain quantum entanglement to a high school student";
 
 const GOOD_RESPONSE = `Quantum entanglement is like having two magical coins that are connected in a special way. 
 When you flip one coin and it lands on heads, the other coin will instantly show tails, 
@@ -35,31 +35,31 @@ beforeAll(() => {
   validateConfig();
 });
 
-describe('Direct Score Tool', () => {
-  it('should score a response against criteria', async () => {
+describe("Direct Score Tool", () => {
+  it("should score a response against criteria", async () => {
     const result = await executeDirectScore({
       response: GOOD_RESPONSE,
       prompt: TEST_PROMPT,
       criteria: [
         {
-          name: 'Accuracy',
-          description: 'Scientific correctness of the explanation',
-          weight: 0.4
+          name: "Accuracy",
+          description: "Scientific correctness of the explanation",
+          weight: 0.4,
         },
         {
-          name: 'Clarity',
-          description: 'Understandable for a high school student',
-          weight: 0.3
+          name: "Clarity",
+          description: "Understandable for a high school student",
+          weight: 0.3,
         },
         {
-          name: 'Engagement',
-          description: 'Interesting and memorable',
-          weight: 0.3
-        }
+          name: "Engagement",
+          description: "Interesting and memorable",
+          weight: 0.3,
+        },
       ],
       rubric: {
-        scale: '1-5'
-      }
+        scale: "1-5",
+      },
     });
 
     expect(result.success).toBe(true);
@@ -67,26 +67,22 @@ describe('Direct Score Tool', () => {
     expect(result.overallScore).toBeGreaterThan(0);
     expect(result.overallScore).toBeLessThanOrEqual(5);
     expect(result.metadata.criteriaCount).toBe(3);
-    
+
     // Good response should score reasonably well
     expect(result.overallScore).toBeGreaterThanOrEqual(3);
   }, 60000);
 
-  it('should provide lower scores for poor responses', async () => {
+  it("should provide lower scores for poor responses", async () => {
     const goodResult = await executeDirectScore({
       response: GOOD_RESPONSE,
       prompt: TEST_PROMPT,
-      criteria: [
-        { name: 'Quality', description: 'Overall quality', weight: 1 }
-      ]
+      criteria: [{ name: "Quality", description: "Overall quality", weight: 1 }],
     });
 
     const poorResult = await executeDirectScore({
       response: POOR_RESPONSE,
       prompt: TEST_PROMPT,
-      criteria: [
-        { name: 'Quality', description: 'Overall quality', weight: 1 }
-      ]
+      criteria: [{ name: "Quality", description: "Overall quality", weight: 1 }],
     });
 
     expect(goodResult.success).toBe(true);
@@ -95,66 +91,66 @@ describe('Direct Score Tool', () => {
   }, 120000);
 });
 
-describe('Pairwise Compare Tool', () => {
-  it('should correctly identify the better response', async () => {
+describe("Pairwise Compare Tool", () => {
+  it("should correctly identify the better response", async () => {
     const result = await executePairwiseCompare({
       responseA: GOOD_RESPONSE,
       responseB: POOR_RESPONSE,
       prompt: TEST_PROMPT,
-      criteria: ['accuracy', 'clarity', 'completeness', 'engagement'],
+      criteria: ["accuracy", "clarity", "completeness", "engagement"],
       allowTie: true,
-      swapPositions: true
+      swapPositions: true,
     });
 
     expect(result.success).toBe(true);
-    expect(result.winner).toBe('A');
+    expect(result.winner).toBe("A");
     expect(result.confidence).toBeGreaterThan(0.5);
   }, 120000);
 
-  it('should handle similar responses appropriately', async () => {
+  it("should handle similar responses appropriately", async () => {
     const result = await executePairwiseCompare({
       responseA: MEDIUM_RESPONSE,
       responseB: MEDIUM_RESPONSE,
       prompt: TEST_PROMPT,
-      criteria: ['quality'],
+      criteria: ["quality"],
       allowTie: true,
-      swapPositions: true
+      swapPositions: true,
     });
 
     expect(result.success).toBe(true);
     // Same response should tie
-    expect(result.winner).toBe('TIE');
+    expect(result.winner).toBe("TIE");
   }, 120000);
 
-  it('should provide comparison details for each criterion', async () => {
+  it("should provide comparison details for each criterion", async () => {
     const result = await executePairwiseCompare({
       responseA: GOOD_RESPONSE,
       responseB: MEDIUM_RESPONSE,
       prompt: TEST_PROMPT,
-      criteria: ['accuracy', 'completeness'],
+      criteria: ["accuracy", "completeness"],
       allowTie: true,
-      swapPositions: false
+      swapPositions: false,
     });
 
     expect(result.success).toBe(true);
     expect(result.comparison).toHaveLength(2);
-    result.comparison.forEach(c => {
+    result.comparison.forEach((c) => {
       expect(c.criterion).toBeDefined();
-      expect(['A', 'B', 'TIE']).toContain(c.winner);
+      expect(["A", "B", "TIE"]).toContain(c.winner);
       expect(c.reasoning).toBeDefined();
     });
   }, 60000);
 });
 
-describe('Generate Rubric Tool', () => {
-  it('should generate a complete rubric', async () => {
+describe("Generate Rubric Tool", () => {
+  it("should generate a complete rubric", async () => {
     const result = await executeGenerateRubric({
-      criterionName: 'Factual Accuracy',
-      criterionDescription: 'How factually correct is the content',
-      scale: '1-5',
-      domain: 'educational content',
+      criterionName: "Factual Accuracy",
+      criterionDescription: "How factually correct is the content",
+      scale: "1-5",
+      domain: "educational content",
       includeExamples: true,
-      strictness: 'balanced'
+      strictness: "balanced",
     });
 
     expect(result.success).toBe(true);
@@ -165,7 +161,7 @@ describe('Generate Rubric Tool', () => {
     expect(result.edgeCases.length).toBeGreaterThan(0);
 
     // Check level structure
-    result.levels.forEach(level => {
+    result.levels.forEach((level) => {
       expect(level.score).toBeGreaterThanOrEqual(1);
       expect(level.score).toBeLessThanOrEqual(5);
       expect(level.label).toBeDefined();
@@ -174,52 +170,48 @@ describe('Generate Rubric Tool', () => {
     });
   }, 60000);
 
-  it('should respect strictness setting', async () => {
+  it("should respect strictness setting", async () => {
     const lenient = await executeGenerateRubric({
-      criterionName: 'Code Quality',
-      criterionDescription: 'Quality of code implementation',
-      scale: '1-5',
+      criterionName: "Code Quality",
+      criterionDescription: "Quality of code implementation",
+      scale: "1-5",
       includeExamples: false,
-      strictness: 'lenient'
+      strictness: "lenient",
     });
 
     const strict = await executeGenerateRubric({
-      criterionName: 'Code Quality',
-      criterionDescription: 'Quality of code implementation',
-      scale: '1-5',
+      criterionName: "Code Quality",
+      criterionDescription: "Quality of code implementation",
+      scale: "1-5",
       includeExamples: false,
-      strictness: 'strict'
+      strictness: "strict",
     });
 
     expect(lenient.success).toBe(true);
     expect(strict.success).toBe(true);
-    expect(lenient.metadata.strictness).toBe('lenient');
-    expect(strict.metadata.strictness).toBe('strict');
+    expect(lenient.metadata.strictness).toBe("lenient");
+    expect(strict.metadata.strictness).toBe("strict");
   }, 120000);
 });
 
-describe('Evaluator Agent', () => {
+describe("Evaluator Agent", () => {
   let agent: EvaluatorAgent;
 
   beforeAll(() => {
     agent = new EvaluatorAgent();
   });
 
-  it('should provide integrated evaluation workflow', async () => {
-    const result = await agent.evaluateWithGeneratedRubric(
-      GOOD_RESPONSE,
-      TEST_PROMPT,
-      [
-        { name: 'Accuracy', description: 'Scientific correctness' },
-        { name: 'Accessibility', description: 'Appropriate for audience' }
-      ]
-    );
+  it("should provide integrated evaluation workflow", async () => {
+    const result = await agent.evaluateWithGeneratedRubric(GOOD_RESPONSE, TEST_PROMPT, [
+      { name: "Accuracy", description: "Scientific correctness" },
+      { name: "Accessibility", description: "Appropriate for audience" },
+    ]);
 
     expect(result.success).toBe(true);
     expect(result.scores.length).toBeGreaterThan(0);
   }, 120000);
 
-  it('should support chat-based evaluation', async () => {
+  it("should support chat-based evaluation", async () => {
     const result = await agent.chat(`
       Please evaluate this response for accuracy:
       

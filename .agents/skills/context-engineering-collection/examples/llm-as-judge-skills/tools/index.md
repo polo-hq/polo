@@ -5,46 +5,49 @@ Tools provide specific capabilities that agents can use to accomplish tasks.
 ## Tool Categories
 
 ### Evaluation Tools
+
 **Path**: `tools/evaluation/`
 
 Tools for assessing LLM output quality.
 
-| Tool | Purpose | Approval |
-|------|---------|----------|
-| `directScore` | Score response against criteria | No |
-| `pairwiseCompare` | Compare two responses | No |
-| `generateRubric` | Generate scoring rubric | No |
-| `extractCriteria` | Extract criteria from task | No |
+| Tool              | Purpose                         | Approval |
+| ----------------- | ------------------------------- | -------- |
+| `directScore`     | Score response against criteria | No       |
+| `pairwiseCompare` | Compare two responses           | No       |
+| `generateRubric`  | Generate scoring rubric         | No       |
+| `extractCriteria` | Extract criteria from task      | No       |
 
 ---
 
 ### Research Tools
+
 **Path**: `tools/research/`
 
 Tools for gathering and processing information.
 
-| Tool | Purpose | Approval |
-|------|---------|----------|
-| `webSearch` | Search the web | No |
-| `readUrl` | Extract content from URL | No |
-| `extractClaims` | Identify claims in text | No |
-| `verifyClaim` | Cross-reference a claim | No |
-| `synthesize` | Combine findings | No |
+| Tool            | Purpose                  | Approval |
+| --------------- | ------------------------ | -------- |
+| `webSearch`     | Search the web           | No       |
+| `readUrl`       | Extract content from URL | No       |
+| `extractClaims` | Identify claims in text  | No       |
+| `verifyClaim`   | Cross-reference a claim  | No       |
+| `synthesize`    | Combine findings         | No       |
 
 ---
 
 ### Orchestration Tools
+
 **Path**: `tools/orchestration/`
 
 Tools for managing multi-agent workflows.
 
-| Tool | Purpose | Approval |
-|------|---------|----------|
-| `delegateToAgent` | Route task to agent | No |
-| `parallelExecution` | Run tasks concurrently | No |
-| `waitForCompletion` | Wait for async tasks | No |
-| `synthesizeResults` | Combine agent outputs | No |
-| `handleError` | Manage failures | No |
+| Tool                | Purpose                | Approval |
+| ------------------- | ---------------------- | -------- |
+| `delegateToAgent`   | Route task to agent    | No       |
+| `parallelExecution` | Run tasks concurrently | No       |
+| `waitForCompletion` | Wait for async tasks   | No       |
+| `synthesizeResults` | Combine agent outputs  | No       |
+| `handleError`       | Manage failures        | No       |
 
 ## Tool Design Patterns
 
@@ -53,22 +56,21 @@ Tools for managing multi-agent workflows.
 ```typescript
 export const toolName = tool({
   description: "Clear description of what tool does",
-  
+
   parameters: z.object({
     // Required parameters first
     requiredParam: z.string().describe("What this parameter is for"),
-    
+
     // Optional parameters with defaults
-    optionalParam: z.number().default(10)
-      .describe("What this parameter controls")
+    optionalParam: z.number().default(10).describe("What this parameter controls"),
   }),
-  
+
   // Approval for dangerous operations
   needsApproval: false, // or true, or function
-  
+
   // Strict mode for guaranteed schema compliance
   strict: true,
-  
+
   execute: async (input) => {
     try {
       const result = await performOperation(input);
@@ -79,17 +81,17 @@ export const toolName = tool({
         error: {
           code: error.code ?? "UNKNOWN",
           message: error.message,
-          retryable: isRetryable(error)
-        }
+          retryable: isRetryable(error),
+        },
       };
     }
   },
-  
+
   // Optional: control what model sees
   toModelOutput: (result) => ({
     summary: result.data.summary,
-    truncated: result.data.full.length > 5000
-  })
+    truncated: result.data.full.length > 5000,
+  }),
 });
 ```
 
@@ -97,10 +99,10 @@ export const toolName = tool({
 
 ```typescript
 interface ToolError {
-  code: string;       // Machine-readable error code
-  message: string;    // Human-readable message
+  code: string; // Machine-readable error code
+  message: string; // Human-readable message
   retryable: boolean; // Whether retry might help
-  details?: object;   // Additional context
+  details?: object; // Additional context
 }
 
 interface ToolResult<T> {
@@ -131,11 +133,10 @@ interface ToolResult<T> {
 
 ### When Agent Needs To...
 
-| Action | Tool Category | Suggested Tools |
-|--------|---------------|-----------------|
-| Assess quality | Evaluation | directScore, pairwiseCompare |
-| Find information | Research | webSearch, readUrl |
-| Verify facts | Research | verifyClaim, extractClaims |
-| Coordinate work | Orchestration | delegateToAgent |
-| Wait for results | Orchestration | waitForCompletion |
-
+| Action           | Tool Category | Suggested Tools              |
+| ---------------- | ------------- | ---------------------------- |
+| Assess quality   | Evaluation    | directScore, pairwiseCompare |
+| Find information | Research      | webSearch, readUrl           |
+| Verify facts     | Research      | verifyClaim, extractClaims   |
+| Coordinate work  | Orchestration | delegateToAgent              |
+| Wait for results | Orchestration | waitForCompletion            |

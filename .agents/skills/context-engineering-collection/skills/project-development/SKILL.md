@@ -10,6 +10,7 @@ This skill covers the principles for identifying tasks suited to LLM processing,
 ## When to Activate
 
 Activate this skill when:
+
 - Starting a new project that might benefit from LLM processing
 - Evaluating whether a task is well-suited for agents versus traditional code
 - Designing the architecture for an LLM-powered application
@@ -25,25 +26,25 @@ Evaluate task-model fit before writing any code, because building automation on 
 
 **Proceed when the task has these characteristics:**
 
-| Characteristic | Rationale |
-|----------------|-----------|
-| Synthesis across sources | LLMs combine information from multiple inputs better than rule-based alternatives |
+| Characteristic                   | Rationale                                                                                 |
+| -------------------------------- | ----------------------------------------------------------------------------------------- |
+| Synthesis across sources         | LLMs combine information from multiple inputs better than rule-based alternatives         |
 | Subjective judgment with rubrics | Grading, evaluation, and classification with criteria map naturally to language reasoning |
-| Natural language output | When the goal is human-readable text, LLMs deliver it natively |
-| Error tolerance | Individual failures do not break the overall system, so LLM non-determinism is acceptable |
-| Batch processing | No conversational state required between items, which keeps context clean |
-| Domain knowledge in training | The model already has relevant context, reducing prompt engineering overhead |
+| Natural language output          | When the goal is human-readable text, LLMs deliver it natively                            |
+| Error tolerance                  | Individual failures do not break the overall system, so LLM non-determinism is acceptable |
+| Batch processing                 | No conversational state required between items, which keeps context clean                 |
+| Domain knowledge in training     | The model already has relevant context, reducing prompt engineering overhead              |
 
 **Stop when the task has these characteristics:**
 
-| Characteristic | Rationale |
-|----------------|-----------|
-| Precise computation | Math, counting, and exact algorithms are unreliable in language models |
-| Real-time requirements | LLM latency is too high for sub-second responses |
-| Perfect accuracy requirements | Hallucination risk makes 100% accuracy impossible |
-| Proprietary data dependence | The model lacks necessary context and cannot acquire it from prompts alone |
-| Sequential dependencies | Each step depends heavily on the previous result, compounding errors |
-| Deterministic output requirements | Same input must produce identical output, which LLMs cannot guarantee |
+| Characteristic                    | Rationale                                                                  |
+| --------------------------------- | -------------------------------------------------------------------------- |
+| Precise computation               | Math, counting, and exact algorithms are unreliable in language models     |
+| Real-time requirements            | LLM latency is too high for sub-second responses                           |
+| Perfect accuracy requirements     | Hallucination risk makes 100% accuracy impossible                          |
+| Proprietary data dependence       | The model lacks necessary context and cannot acquire it from prompts alone |
+| Sequential dependencies           | Each step depends heavily on the previous result, compounding errors       |
+| Deterministic output requirements | Same input must produce identical output, which LLMs cannot guarantee      |
 
 ### The Manual Prototype Step
 
@@ -109,6 +110,7 @@ Build parsers that handle LLM output variations gracefully, because LLMs do not 
 Use agent-capable models to accelerate development through rapid iteration: describe the project goal and constraints, let the agent generate initial implementation, test and iterate on specific failures, then refine prompts and architecture based on results.
 
 Adopt these practices because they keep agent output focused and high-quality:
+
 - Provide clear, specific requirements upfront to reduce revision cycles
 - Break large projects into discrete components so each can be validated independently
 - Test each component before moving to the next to catch failures early
@@ -147,12 +149,14 @@ Start with minimal architecture and add complexity only when production evidence
 Vercel's d0 agent achieved 100% success rate (up from 80%) by reducing from 17 specialized tools to 2 primitives: bash command execution and SQL. The file system agent pattern uses standard Unix utilities (grep, cat, find, ls) instead of custom exploration tools.
 
 **Reduce when:**
+
 - The data layer is well-documented and consistently structured
 - The model has sufficient reasoning capability
 - Specialized tools are constraining rather than enabling
 - More time is spent maintaining scaffolding than improving outcomes
 
 **Add complexity when:**
+
 - The underlying data is messy, inconsistent, or poorly documented
 - The domain requires specialized knowledge the model lacks
 - Safety constraints require limiting agent capabilities
@@ -165,6 +169,7 @@ See `tool-design` skill for detailed tool architecture guidance.
 Plan for multiple architectural iterations from the start, because production agent systems at scale always require refactoring. Manus refactored their agent framework five times since launch. The Bitter Lesson suggests that structures added for current model limitations become constraints as models improve.
 
 Build for change by following these practices:
+
 - Keep architecture simple and unopinionated so refactoring is cheap
 - Test across model generations to verify the harness is not limiting performance
 - Design systems that benefit from model improvements rather than locking in limitations
@@ -212,6 +217,7 @@ Follow this template in order, because each step validates assumptions before th
 Task: Analyze 930 HN discussions from 10 years ago with hindsight grading.
 
 Architecture:
+
 - 5-stage pipeline: fetch -> prompt -> analyze -> parse -> render
 - File system state: data/{date}/{item_id}/ with stage output files
 - Structured output: 6 sections with explicit format requirements
@@ -258,6 +264,7 @@ See [Case Studies](./references/case-studies.md) for detailed analysis.
 ## Integration
 
 This skill connects to:
+
 - context-fundamentals - Understanding context constraints for prompt design
 - tool-design - Designing tools for agent systems within pipelines
 - multi-agent-patterns - When to use multi-agent versus single pipelines
@@ -267,15 +274,18 @@ This skill connects to:
 ## References
 
 Internal references:
+
 - [Case Studies](./references/case-studies.md) - Read when: evaluating architecture tradeoffs or reviewing real-world pipeline implementations (Karpathy HN Capsule, Vercel d0, Manus patterns)
 - [Pipeline Patterns](./references/pipeline-patterns.md) - Read when: designing a new pipeline stage layout, choosing caching strategies, or debugging stage boundaries
 
 Related skills in this collection:
+
 - tool-design - Tool architecture and reduction patterns
 - multi-agent-patterns - When to use multi-agent architectures
 - evaluation - Output evaluation frameworks
 
 External resources:
+
 - Karpathy's HN Time Capsule project: https://github.com/karpathy/hn-time-capsule
 - Vercel d0 architectural reduction: https://vercel.com/blog/we-removed-80-percent-of-our-agents-tools
 - Manus context engineering: Peak Ji's blog on context engineering lessons

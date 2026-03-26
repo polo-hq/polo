@@ -58,10 +58,9 @@ type Test = RemovePostSuffix<"attribute:post">; // "attribute"
 ### Split on Delimiter
 
 ```typescript
-type Split<S extends string, D extends string> =
-  S extends `${infer Head}${D}${infer Tail}`
-    ? [Head, ...Split<Tail, D>]
-    : S extends ""
+type Split<S extends string, D extends string> = S extends `${infer Head}${D}${infer Tail}`
+  ? [Head, ...Split<Tail, D>]
+  : S extends ""
     ? []
     : [S];
 
@@ -84,10 +83,9 @@ type Uncap = Uncapitalize<"Hello">; // "hello"
 ### CSS Property to Camel Case
 
 ```typescript
-type CamelCase<S extends string> =
-  S extends `${infer P1}-${infer P2}${infer P3}`
-    ? `${Lowercase<P1>}${Uppercase<P2>}${CamelCase<P3>}`
-    : Lowercase<S>;
+type CamelCase<S extends string> = S extends `${infer P1}-${infer P2}${infer P3}`
+  ? `${Lowercase<P1>}${Uppercase<P2>}${CamelCase<P3>}`
+  : Lowercase<S>;
 
 type Test = CamelCase<"background-color">; // "backgroundColor"
 type Test2 = CamelCase<"border-top-width">; // "borderTopWidth"
@@ -151,10 +149,9 @@ type NewData = AddSuffix<Data, "_new">;
 ### Transform Keys from snake_case to camelCase
 
 ```typescript
-type SnakeToCamel<S extends string> =
-  S extends `${infer P1}_${infer P2}${infer P3}`
-    ? `${Lowercase<P1>}${Uppercase<P2>}${SnakeToCamel<P3>}`
-    : S;
+type SnakeToCamel<S extends string> = S extends `${infer P1}_${infer P2}${infer P3}`
+  ? `${Lowercase<P1>}${Uppercase<P2>}${SnakeToCamel<P3>}`
+  : S;
 
 type CamelizeKeys<T> = {
   [K in keyof T as K extends string ? SnakeToCamel<K> : K]: T[K];
@@ -173,10 +170,9 @@ type CamelResponse = CamelizeKeys<ApiResponse>;
 ## Route Parameter Extraction
 
 ```typescript
-type ExtractRouteParams<T extends string> =
-  T extends `${string}:${infer Param}/${infer Rest}`
-    ? Param | ExtractRouteParams<`/${Rest}`>
-    : T extends `${string}:${infer Param}`
+type ExtractRouteParams<T extends string> = T extends `${string}:${infer Param}/${infer Rest}`
+  ? Param | ExtractRouteParams<`/${Rest}`>
+  : T extends `${string}:${infer Param}`
     ? Param
     : never;
 
@@ -199,9 +195,7 @@ type UserPostParams = RouteParams<"/users/:userId/posts/:postId">;
 ```typescript
 type ValidEmail = `${string}@${string}.${string}`;
 
-function validateEmail<T extends string>(
-  email: T extends ValidEmail ? T : never
-): T {
+function validateEmail<T extends string>(email: T extends ValidEmail ? T : never): T {
   return email;
 }
 
@@ -228,10 +222,9 @@ fetchUrl("ftp://files.example.com"); // Error
 ### Parse Query String Type
 
 ```typescript
-type ParseQueryString<T extends string> =
-  T extends `${infer Key}=${infer Value}&${infer Rest}`
-    ? { [K in Key]: Value } & ParseQueryString<Rest>
-    : T extends `${infer Key}=${infer Value}`
+type ParseQueryString<T extends string> = T extends `${infer Key}=${infer Value}&${infer Rest}`
+  ? { [K in Key]: Value } & ParseQueryString<Rest>
+  : T extends `${infer Key}=${infer Value}`
     ? { [K in Key]: Value }
     : {};
 
@@ -242,10 +235,9 @@ type QueryParams = ParseQueryString<"name=John&age=30&city=NYC">;
 ### Parse Dot Notation Path
 
 ```typescript
-type ParsePath<T extends string> =
-  T extends `${infer Key}.${infer Rest}`
-    ? [Key, ...ParsePath<Rest>]
-    : [T];
+type ParsePath<T extends string> = T extends `${infer Key}.${infer Rest}`
+  ? [Key, ...ParsePath<Rest>]
+  : [T];
 
 type Path = ParsePath<"user.address.city">; // ["user", "address", "city"]
 ```
@@ -267,9 +259,7 @@ TypeScript has recursion limits. Very deep template literal operations may fail:
 
 ```typescript
 // May hit recursion limit with very long strings
-type DeepSplit<S extends string> = S extends `${infer H}${infer T}`
-  ? [H, ...DeepSplit<T>]
-  : [];
+type DeepSplit<S extends string> = S extends `${infer H}${infer T}` ? [H, ...DeepSplit<T>] : [];
 ```
 
 ### Greedy Matching

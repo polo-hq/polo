@@ -17,6 +17,7 @@
 ## The Problem
 
 Traditional AI agents fail in opaque ways. You see the final output, but not **why** decisions were made. When an agent:
+
 - Calls the wrong tool
 - Loses track of the goal
 - Makes up information
@@ -47,6 +48,7 @@ M2.1:         Think → Act → Think → Act → Think → Act → Done
 ```
 
 This matters for agents because:
+
 - **Long tasks** require maintaining focus across many turns
 - **Tool outputs** introduce unexpected information requiring adaptation
 - **Debugging** needs visibility into decision-making, not just outputs
@@ -57,30 +59,31 @@ The `thinking` block (Anthropic SDK) or `reasoning_details` field (OpenAI SDK) e
 
 ## Key Features
 
-| Component | Description |
-|-----------|-------------|
-| **TraceCapture** | Wrap M2.1 API to capture all thinking blocks with full context |
-| **TraceAnalyzer** | Detect patterns like context degradation, tool confusion, instruction drift |
-| **PromptOptimizer** | Generate improved prompts based on analysis using M2.1 |
-| **OptimizationLoop** | Automated capture → analyze → improve → re-run cycle |
-| **SkillGenerator** | Convert learnings into shareable Agent Skills |
+| Component            | Description                                                                 |
+| -------------------- | --------------------------------------------------------------------------- |
+| **TraceCapture**     | Wrap M2.1 API to capture all thinking blocks with full context              |
+| **TraceAnalyzer**    | Detect patterns like context degradation, tool confusion, instruction drift |
+| **PromptOptimizer**  | Generate improved prompts based on analysis using M2.1                      |
+| **OptimizationLoop** | Automated capture → analyze → improve → re-run cycle                        |
+| **SkillGenerator**   | Convert learnings into shareable Agent Skills                               |
 
 ### Pattern Detection
 
 The analyzer automatically identifies these failure patterns:
 
-| Pattern | Description | Severity |
-|---------|-------------|----------|
-| `context_degradation` | Model loses information over long contexts | High |
-| `tool_confusion` | Model misunderstands tool capabilities | High |
-| `instruction_drift` | Model deviates from original instructions | Medium |
-| `hallucination` | Model generates unsupported information | Critical |
-| `goal_abandonment` | Model stops pursuing the original goal | High |
-| `circular_reasoning` | Model repeats similar actions without progress | Medium |
-| `premature_conclusion` | Model concludes before completing task | Medium |
-| `missing_validation` | Model doesn't verify results | High |
+| Pattern                | Description                                    | Severity |
+| ---------------------- | ---------------------------------------------- | -------- |
+| `context_degradation`  | Model loses information over long contexts     | High     |
+| `tool_confusion`       | Model misunderstands tool capabilities         | High     |
+| `instruction_drift`    | Model deviates from original instructions      | Medium   |
+| `hallucination`        | Model generates unsupported information        | Critical |
+| `goal_abandonment`     | Model stops pursuing the original goal         | High     |
+| `circular_reasoning`   | Model repeats similar actions without progress | Medium   |
+| `premature_conclusion` | Model concludes before completing task         | Medium   |
+| `missing_validation`   | Model doesn't verify results                   | High     |
 
 Each detected pattern includes:
+
 - **Evidence** - Specific excerpts from thinking blocks
 - **Severity** - Critical/High/Medium/Low
 - **Suggestion** - Concrete improvement for the prompt
@@ -441,13 +444,14 @@ result = loop.run(task, initial_prompt, tools, tool_executor)
 
 **Score Expectations:**
 
-| Task Complexity | Typical Score Range | Notes |
-|-----------------|---------------------|-------|
-| Simple (1-2 tools) | 80-95 | Straightforward tasks converge quickly |
-| Medium (3-5 tools) | 70-85 | Multiple tool coordination adds variability |
-| Complex (6+ tools, multi-step) | 60-75 | Inherent variance in long reasoning chains |
+| Task Complexity                | Typical Score Range | Notes                                       |
+| ------------------------------ | ------------------- | ------------------------------------------- |
+| Simple (1-2 tools)             | 80-95               | Straightforward tasks converge quickly      |
+| Medium (3-5 tools)             | 70-85               | Multiple tool coordination adds variability |
+| Complex (6+ tools, multi-step) | 60-75               | Inherent variance in long reasoning chains  |
 
 Complex research tasks with many tools and steps typically plateau around **65-75** due to:
+
 - Tool output variability affecting reasoning paths
 - Multiple valid approaches leading to different scoring
 - The stochastic nature of multi-step agent execution
@@ -490,15 +494,15 @@ rto generate-skill my-skill-name --artifacts-dir ./optimization_artifacts
 
 Example 3 uses real documentation URLs for realistic simulation:
 
-| Source | URL |
-|--------|-----|
-| Anthropic Docs | `docs.anthropic.com/en/docs/build-with-claude/*` |
+| Source             | URL                                                |
+| ------------------ | -------------------------------------------------- |
+| Anthropic Docs     | `docs.anthropic.com/en/docs/build-with-claude/*`   |
 | Anthropic Research | `anthropic.com/research/building-effective-agents` |
-| OpenAI Docs | `platform.openai.com/docs/guides/*` |
-| MiniMax M2.1 | `minimax.io/platform/docs/M2.1` |
-| DAIR.AI | `promptingguide.ai/techniques` |
-| LangChain | `python.langchain.com/docs/how_to/debugging` |
-| arXiv Papers | `arxiv.org/abs/2307.03172` (Lost in the Middle) |
+| OpenAI Docs        | `platform.openai.com/docs/guides/*`                |
+| MiniMax M2.1       | `minimax.io/platform/docs/M2.1`                    |
+| DAIR.AI            | `promptingguide.ai/techniques`                     |
+| LangChain          | `python.langchain.com/docs/how_to/debugging`       |
+| arXiv Papers       | `arxiv.org/abs/2307.03172` (Lost in the Middle)    |
 
 ---
 
@@ -510,11 +514,11 @@ The optimizer includes several safeguards to handle real-world variability:
 
 LLM responses don't always produce valid JSON. The system handles this gracefully:
 
-| Component | Fallback Behavior |
-|-----------|-------------------|
-| **Analyzer** | Extracts scores via regex patterns when JSON fails; defaults to 50/100 (not 0) |
+| Component     | Fallback Behavior                                                               |
+| ------------- | ------------------------------------------------------------------------------- |
+| **Analyzer**  | Extracts scores via regex patterns when JSON fails; defaults to 50/100 (not 0)  |
 | **Optimizer** | Multi-strategy prompt extraction: JSON → regex → marker detection → code blocks |
-| **Loop** | Warns when final prompt is unchanged; tracks best-performing iteration |
+| **Loop**      | Warns when final prompt is unchanged; tracks best-performing iteration          |
 
 ### Extended Test Results (10 iterations)
 
@@ -538,6 +542,7 @@ Iteration  Score   Patterns  Tool Calls  Notes
 ```
 
 **Key Learnings:**
+
 - Scores fluctuate ±15 points between iterations due to stochastic model behavior
 - Best score (72) was achieved mid-run, not at the end
 - `use_best_prompt=True` correctly selected iteration 4's prompt

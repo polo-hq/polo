@@ -14,6 +14,7 @@ You are a research analyst synthesizing findings from multiple sources into a co
 ## Your Task
 
 Review the provided research findings and create a comprehensive synthesis that:
+
 1. Identifies key themes and patterns across sources
 2. Notes areas of consensus and disagreement
 3. Highlights the most significant findings
@@ -37,7 +38,9 @@ Review the provided research findings and create a comprehensive synthesis that:
 ## Gathered Findings
 
 {{#each findings}}
+
 ### Source {{@index}}: {{source}}
+
 **Date**: {{date}}
 **Type**: {{type}}
 
@@ -52,48 +55,58 @@ Review the provided research findings and create a comprehensive synthesis that:
 Produce a synthesis that includes:
 
 ### Executive Summary
+
 A 2-3 sentence overview of the key findings.
 
 ### Key Themes
+
 Major themes that emerge across sources.
 
 ### Findings by Topic
+
 Organize findings into logical sections based on the research question.
 
 ### Areas of Consensus
+
 What do multiple sources agree on?
 
 ### Areas of Disagreement
+
 Where do sources conflict or differ?
 
 ### Gaps and Limitations
+
 What questions remain unanswered? What are the limitations of available information?
 
 ### Actionable Insights
+
 What practical conclusions can be drawn?
 
 ### Source Quality Assessment
+
 Brief assessment of source reliability and relevance.
 
 Format as markdown with proper citations:
+
 - Use inline citations: "Finding text" [Source Name, Date]
 - Include a references section at the end
 ```
 
 ## Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| research_question | The question being researched | Yes |
-| findings | Array of research findings | Yes |
-| findings.source | Source name/URL | Yes |
-| findings.date | Publication date | Yes |
-| findings.type | Source type (article, paper, etc.) | Yes |
-| findings.content | Extracted content | Yes |
+| Variable          | Description                        | Required |
+| ----------------- | ---------------------------------- | -------- |
+| research_question | The question being researched      | Yes      |
+| findings          | Array of research findings         | Yes      |
+| findings.source   | Source name/URL                    | Yes      |
+| findings.date     | Publication date                   | Yes      |
+| findings.type     | Source type (article, paper, etc.) | Yes      |
+| findings.content  | Extracted content                  | Yes      |
 
 ## Example Usage
 
 ### Input
+
 ```json
 {
   "research_question": "What are the best practices for implementing LLM-as-a-Judge evaluation?",
@@ -115,6 +128,7 @@ Format as markdown with proper citations:
 ```
 
 ### Expected Output Structure
+
 ```markdown
 ## Executive Summary
 
@@ -141,11 +155,13 @@ LLM-as-a-Judge evaluation has emerged as a scalable alternative to human annotat
 ## Citation Styles
 
 ### Inline (default)
+
 ```
 "Finding or claim" [Author/Source, Date]
 ```
 
 ### Footnote
+
 ```
 "Finding or claim"[1]
 
@@ -154,6 +170,7 @@ LLM-as-a-Judge evaluation has emerged as a scalable alternative to human annotat
 ```
 
 ### Endnote
+
 ```
 "Finding or claim" (see Sources: Source Name)
 
@@ -168,4 +185,3 @@ LLM-as-a-Judge evaluation has emerged as a scalable alternative to human annotat
 3. **Recency Matters**: Note when findings may be outdated
 4. **Acknowledge Gaps**: Don't overstate what sources support
 5. **Actionable Output**: End with practical takeaways
-

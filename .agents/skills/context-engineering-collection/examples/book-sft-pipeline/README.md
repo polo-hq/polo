@@ -47,25 +47,25 @@ book-sft-pipeline/
 
 Trained Qwen3-8B-Base on Gertrude Stein's "Three Lives" (1909):
 
-| Metric | Value |
-|--------|-------|
-| Training examples | 592 |
-| Loss reduction | 97% |
-| Pangram AI detector | 70% Human |
-| Training time | 15 minutes |
-| Total cost | $2 |
+| Metric              | Value      |
+| ------------------- | ---------- |
+| Training examples   | 592        |
+| Loss reduction      | 97%        |
+| Pangram AI detector | 70% Human  |
+| Training time       | 15 minutes |
+| Total cost          | $2         |
 
 ## Related Context Engineering Skills
 
 This skill applies patterns from the [Agent Skills for Context Engineering](../../README.md) collection:
 
-| Skill | Application |
-|-------|-------------|
-| [project-development](../../skills/project-development/) | Staged pipeline architecture |
-| [context-compression](../../skills/context-compression/) | Segmentation strategy |
-| [multi-agent-patterns](../../skills/multi-agent-patterns/) | Orchestrator pattern |
-| [evaluation](../../skills/evaluation/) | Modern scenario testing |
-| [context-fundamentals](../../skills/context-fundamentals/) | Prompt diversity |
+| Skill                                                      | Application                  |
+| ---------------------------------------------------------- | ---------------------------- |
+| [project-development](../../skills/project-development/)   | Staged pipeline architecture |
+| [context-compression](../../skills/context-compression/)   | Segmentation strategy        |
+| [multi-agent-patterns](../../skills/multi-agent-patterns/) | Orchestrator pattern         |
+| [evaluation](../../skills/evaluation/)                     | Modern scenario testing      |
+| [context-fundamentals](../../skills/context-fundamentals/) | Prompt diversity             |
 
 ## Resources
 
@@ -75,4 +75,3 @@ This skill applies patterns from the [Agent Skills for Context Engineering](../.
 ## License
 
 MIT
-

@@ -76,16 +76,17 @@ execute: async (input) => {
       error: {
         code: error.code ?? "UNKNOWN_ERROR",
         message: error.message,
-        retryable: isRetryable(error)
-      }
+        retryable: isRetryable(error),
+      },
     };
   }
-}
+};
 ```
 
 ## Tool Categories
 
 ### Read-Only Tools
+
 - Database queries
 - API fetches
 - File reads
@@ -94,6 +95,7 @@ execute: async (input) => {
 Safe to execute without approval. Return data but don't mutate state.
 
 ### State-Modifying Tools
+
 - Database writes
 - File modifications
 - API POST/PUT/DELETE
@@ -102,6 +104,7 @@ Safe to execute without approval. Return data but don't mutate state.
 May require human approval. Consider `needsApproval` flag.
 
 ### Dangerous Tools
+
 - File deletion
 - Payment processing
 - Production deployments
@@ -112,6 +115,7 @@ Should always require approval and audit logging.
 ## AI SDK 6 Tool Features
 
 ### Tool Execution Approval
+
 ```typescript
 const deleteTool = tool({
   description: "Delete a file from the system",
@@ -136,7 +140,9 @@ const commandTool = tool({
 ```
 
 ### Strict Mode
+
 Enable native strict mode for guaranteed schema compliance:
+
 ```typescript
 const strictTool = tool({
   description: "...",
@@ -147,7 +153,9 @@ const strictTool = tool({
 ```
 
 ### Input Examples
+
 Help the model understand expected input format:
+
 ```typescript
 const complexTool = tool({
   description: "Create a calendar event",
@@ -166,13 +174,15 @@ const complexTool = tool({
 ```
 
 ### toModelOutput
+
 Control what gets sent back to the model:
+
 ```typescript
 const readFileTool = tool({
   description: "Read file contents",
   parameters: z.object({ path: z.string() }),
   execute: async ({ path }) => {
-    const content = await fs.readFile(path, 'utf-8');
+    const content = await fs.readFile(path, "utf-8");
     return { path, content, size: content.length };
   },
   toModelOutput: (result) => {
@@ -180,9 +190,9 @@ const readFileTool = tool({
     return {
       path: result.path,
       content: result.content.slice(0, 5000),
-      truncated: result.content.length > 5000
+      truncated: result.content.length > 5000,
     };
-  }
+  },
 });
 ```
 
@@ -195,4 +205,3 @@ const readFileTool = tool({
 5. **Timeout Handling**: Implement timeouts for external operations
 6. **Rate Limiting**: Protect against runaway tool execution
 7. **Logging**: Log all tool invocations for debugging and audit
-

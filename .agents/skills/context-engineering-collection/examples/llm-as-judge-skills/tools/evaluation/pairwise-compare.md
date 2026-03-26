@@ -17,26 +17,24 @@ More reliable than direct scoring for preferences.
 Returns winner selection with detailed comparison.`,
 
   parameters: z.object({
-    responseA: z.string()
-      .describe("First response to compare"),
-    
-    responseB: z.string()
-      .describe("Second response to compare"),
-    
-    prompt: z.string()
-      .describe("The original prompt both responses address"),
-    
-    context: z.string().optional()
-      .describe("Additional context if relevant"),
-    
-    criteria: z.array(z.string())
+    responseA: z.string().describe("First response to compare"),
+
+    responseB: z.string().describe("Second response to compare"),
+
+    prompt: z.string().describe("The original prompt both responses address"),
+
+    context: z.string().optional().describe("Additional context if relevant"),
+
+    criteria: z
+      .array(z.string())
       .describe("Aspects to compare on, e.g., ['clarity', 'engagement', 'accuracy']"),
-    
-    allowTie: z.boolean().default(true)
-      .describe("Whether to allow a tie verdict"),
-    
-    swapPositions: z.boolean().default(true)
-      .describe("Evaluate twice with positions swapped to reduce position bias")
+
+    allowTie: z.boolean().default(true).describe("Whether to allow a tie verdict"),
+
+    swapPositions: z
+      .boolean()
+      .default(true)
+      .describe("Evaluate twice with positions swapped to reduce position bias"),
   }),
 
   execute: async (input) => {
@@ -44,31 +42,31 @@ Returns winner selection with detailed comparison.`,
       return evaluateWithPositionSwap(input);
     }
     return evaluatePairwise(input);
-  }
+  },
 });
 ```
 
 ## Input Schema
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| responseA | string | Yes | First response |
-| responseB | string | Yes | Second response |
-| prompt | string | Yes | Original prompt |
-| context | string | No | Additional context |
-| criteria | string[] | Yes | Comparison dimensions |
-| allowTie | boolean | No | Allow tie verdict (default: true) |
-| swapPositions | boolean | No | Swap positions to reduce bias (default: true) |
+| Field         | Type     | Required | Description                                   |
+| ------------- | -------- | -------- | --------------------------------------------- |
+| responseA     | string   | Yes      | First response                                |
+| responseB     | string   | Yes      | Second response                               |
+| prompt        | string   | Yes      | Original prompt                               |
+| context       | string   | No       | Additional context                            |
+| criteria      | string[] | Yes      | Comparison dimensions                         |
+| allowTie      | boolean  | No       | Allow tie verdict (default: true)             |
+| swapPositions | boolean  | No       | Swap positions to reduce bias (default: true) |
 
 ## Output Schema
 
 ```typescript
 interface PairwiseCompareResult {
   success: boolean;
-  
+
   winner: "A" | "B" | "TIE";
   confidence: number; // 0-1
-  
+
   comparison: {
     criterion: string;
     winner: "A" | "B" | "TIE";
@@ -76,21 +74,21 @@ interface PairwiseCompareResult {
     aStrength: string;
     bStrength: string;
   }[];
-  
+
   overallReasoning: string;
-  
+
   differentiators: {
     aAdvantages: string[];
     bAdvantages: string[];
   };
-  
+
   // If swapPositions was true
   positionConsistency?: {
     firstPassWinner: "A" | "B" | "TIE";
     secondPassWinner: "A" | "B" | "TIE";
     consistent: boolean;
   };
-  
+
   metadata: {
     evaluationTimeMs: number;
     positionsSwapped: boolean;
@@ -102,16 +100,17 @@ interface PairwiseCompareResult {
 
 ```typescript
 const result = await pairwiseCompare.execute({
-  responseA: "Exercise improves cardiovascular health, builds muscle, and boosts mental wellbeing...",
-  
+  responseA:
+    "Exercise improves cardiovascular health, builds muscle, and boosts mental wellbeing...",
+
   responseB: "Working out regularly has many benefits. You'll feel better and look better...",
-  
+
   prompt: "Explain the benefits of regular exercise",
-  
+
   criteria: ["accuracy", "specificity", "engagement", "completeness"],
-  
+
   allowTie: true,
-  swapPositions: true
+  swapPositions: true,
 });
 
 // Result:
@@ -144,17 +143,17 @@ async function evaluateWithPositionSwap(input) {
     second: input.responseB,
     ...input
   });
-  
+
   // Second pass: Swapped order
   const pass2 = await evaluate({
     first: input.responseB,
     second: input.responseA,
     ...input
   });
-  
+
   // Reconcile results
   const pass2Adjusted = pass2.winner === "A" ? "B" : pass2.winner === "B" ? "A" : "TIE";
-  
+
   if (pass1.winner === pass2Adjusted) {
     return {
       ...pass1,
@@ -179,4 +178,3 @@ async function evaluateWithPositionSwap(input) {
 3. **Tie Handling**: Consider domain - some tasks should rarely tie
 4. **Confidence Calibration**: Lower confidence when evaluations are close
 5. **Length Considerations**: Note if one response is significantly longer
-

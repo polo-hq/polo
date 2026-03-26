@@ -10,6 +10,7 @@ Design every tool as a contract between a deterministic system and a non-determi
 ## When to Activate
 
 Activate this skill when:
+
 - Creating new tools for agent systems
 - Debugging tool-related failures or misuse
 - Optimizing existing tool sets for better agent performance
@@ -155,6 +156,7 @@ Evaluate tool designs against five criteria: unambiguity, completeness, recovera
 ### Tool Selection Framework
 
 When designing tool collections:
+
 1. Identify distinct workflows agents must accomplish
 2. Group related actions into comprehensive tools
 3. Ensure each tool has a clear, unambiguous purpose
@@ -164,6 +166,7 @@ When designing tool collections:
 ## Examples
 
 **Example 1: Well-Designed Tool**
+
 ```python
 def get_customer(customer_id: str, format: str = "concise"):
     """
@@ -206,6 +209,7 @@ def search(query):
 5. **No error handling**: What happens if the database is unavailable?
 
 **Failure modes:**
+
 - Agents may call this tool when they should use a more specific tool
 - Agents cannot determine correct query format
 - Agents cannot interpret results
@@ -241,6 +245,7 @@ def search(query):
 ## Integration
 
 This skill connects to:
+
 - context-fundamentals - How tools interact with context
 - multi-agent-patterns - Specialized tools per agent
 - evaluation - Evaluating tool effectiveness
@@ -248,14 +253,17 @@ This skill connects to:
 ## References
 
 Internal references:
+
 - [Best Practices Reference](./references/best_practices.md) - Read when: designing a new tool from scratch or auditing an existing tool collection for quality gaps
 - [Architectural Reduction Case Study](./references/architectural_reduction.md) - Read when: considering removing specialized tools in favor of primitives, or evaluating whether a complex tool architecture is justified
 
 Related skills in this collection:
+
 - context-fundamentals - Tool context interactions
 - evaluation - Tool testing patterns
 
 External resources:
+
 - MCP (Model Context Protocol) documentation - Read when: implementing tools for multi-server agent environments or debugging tool routing failures
 - Framework tool conventions - Read when: adopting a new agent framework and need to map tool design principles to framework-specific APIs
 - API design best practices for agents - Read when: translating existing human-facing APIs into agent-facing tool interfaces

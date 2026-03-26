@@ -12,6 +12,7 @@ Prefer dynamic context discovery -- pulling relevant context on demand -- over s
 ## When to Activate
 
 Activate this skill when:
+
 - Tool outputs are bloating the context window
 - Agents need to persist state across long trajectories
 - Sub-agents must share information without direct message passing
@@ -66,6 +67,7 @@ Use grep to search the offloaded file and read_file with line ranges to retrieve
 Write plans to the filesystem because long-horizon tasks lose coherence when plans fall out of attention or get summarized away. The agent re-reads its plan at any point, restoring awareness of the objective and progress.
 
 Store plans in structured format so they are both human-readable and machine-parseable:
+
 ```yaml
 # scratch/current_plan.yaml
 objective: "Refactor authentication module"
@@ -89,6 +91,7 @@ Re-read the plan at the start of each turn or after any context refresh to re-or
 Route sub-agent findings through the filesystem instead of message passing, because multi-hop message chains degrade information through summarization at each hop ("game of telephone").
 
 Have each sub-agent write directly to its own workspace directory. The coordinator reads these files directly, preserving full fidelity:
+
 ```
 workspace/
   agents/
@@ -161,6 +164,7 @@ Use filesystem search for structural and exact-match queries, and semantic searc
 Apply filesystem patterns when the situation matches these criteria, because they add I/O overhead that is only justified by token savings or persistence needs:
 
 **Use when:**
+
 - Tool outputs exceed ~2000 tokens
 - Tasks span multiple conversation turns
 - Multiple agents need shared state
@@ -168,6 +172,7 @@ Apply filesystem patterns when the situation matches these criteria, because the
 - Logs or terminal output need selective querying
 
 **Avoid when:**
+
 - Tasks complete in single turns (overhead not justified)
 - Context fits comfortably in window (no problem to solve)
 - Latency is critical (file I/O adds measurable delay)
@@ -176,6 +181,7 @@ Apply filesystem patterns when the situation matches these criteria, because the
 ### File Organization
 
 Structure files for agent discoverability, because agents navigate by listing and reading directory names:
+
 ```
 project/
   scratch/           # Temporary working files
@@ -193,6 +199,7 @@ Use consistent naming conventions and include timestamps or IDs in scratch files
 ### Token Accounting
 
 Measure where tokens originate before and after applying filesystem patterns, because optimizing without measurement leads to wasted effort:
+
 - Track static vs dynamic context ratio
 - Monitor tool output sizes before and after offloading
 - Measure how often dynamically-loaded context is actually used
@@ -200,6 +207,7 @@ Measure where tokens originate before and after applying filesystem patterns, be
 ## Examples
 
 **Example 1: Tool Output Offloading**
+
 ```
 Input: Web search returns 8000 tokens
 Before: 8000 tokens added to message history
@@ -211,6 +219,7 @@ Result: ~100 tokens in context, 8000 tokens accessible on demand
 ```
 
 **Example 2: Dynamic Skill Loading**
+
 ```
 Input: User asks about database indexing
 Static context: "database-optimization: Query tuning and indexing"
@@ -219,6 +228,7 @@ Result: Full skill loaded only when relevant
 ```
 
 **Example 3: Chat History as File Reference**
+
 ```
 Trigger: Context window limit reached, summarization required
 Action:
@@ -265,14 +275,17 @@ This skill connects to:
 ## References
 
 Internal reference:
+
 - [Implementation Patterns](./references/implementation-patterns.md) - Read when: implementing scratch pad, plan persistence, or tool output offloading and need concrete code beyond the inline examples
 
 Related skills in this collection:
+
 - context-optimization - Read when: applying token reduction techniques alongside filesystem offloading
 - memory-systems - Read when: building persistent storage that outlasts a single session
 - multi-agent-patterns - Read when: designing agent coordination with shared file workspaces
 
 External resources:
+
 - LangChain Deep Agents — Read when: implementing filesystem-based context patterns in LangChain/LangGraph pipelines
 - Cursor context discovery — Read when: studying how production IDEs implement dynamic context loading
 - Anthropic Agent Skills specification — Read when: building skills that leverage filesystem progressive disclosure

@@ -16,6 +16,7 @@ Memory provides the persistence layer that allows agents to maintain continuity 
 ## When to Activate
 
 Activate this skill when:
+
 - Building agents that must persist knowledge across sessions
 - Choosing between memory frameworks (Mem0, Zep/Graphiti, Letta, LangMem, Cognee)
 - Needing to maintain entity consistency across conversations
@@ -34,14 +35,14 @@ Think of memory as a spectrum from volatile context window to persistent storage
 
 Select a framework based on the dominant retrieval pattern the agent requires. Use this table to narrow the shortlist, then validate with the benchmark data below.
 
-| Framework | Architecture | Best For | Trade-off |
-|-----------|-------------|----------|-----------|
-| **Mem0** | Vector store + graph memory, pluggable backends | Multi-tenant systems, broad integrations | Less specialized for multi-agent |
-| **Zep/Graphiti** | Temporal knowledge graph, bi-temporal model | Enterprise requiring relationship modeling + temporal reasoning | Advanced features cloud-locked |
-| **Letta** | Self-editing memory with tiered storage (in-context/core/archival) | Full agent introspection, stateful services | Complexity for simple use cases |
-| **Cognee** | Multi-layer semantic graph via customizable ECL pipeline with customizable Tasks | Evolving agent memory that adapts and learns; multi-hop reasoning | Heavier ingest-time processing |
-| **LangMem** | Memory tools for LangGraph workflows | Teams already on LangGraph | Tightly coupled to LangGraph |
-| **File-system** | Plain files with naming conventions | Simple agents, prototyping | No semantic search, no relationships |
+| Framework        | Architecture                                                                     | Best For                                                          | Trade-off                            |
+| ---------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------ |
+| **Mem0**         | Vector store + graph memory, pluggable backends                                  | Multi-tenant systems, broad integrations                          | Less specialized for multi-agent     |
+| **Zep/Graphiti** | Temporal knowledge graph, bi-temporal model                                      | Enterprise requiring relationship modeling + temporal reasoning   | Advanced features cloud-locked       |
+| **Letta**        | Self-editing memory with tiered storage (in-context/core/archival)               | Full agent introspection, stateful services                       | Complexity for simple use cases      |
+| **Cognee**       | Multi-layer semantic graph via customizable ECL pipeline with customizable Tasks | Evolving agent memory that adapts and learns; multi-hop reasoning | Heavier ingest-time processing       |
+| **LangMem**      | Memory tools for LangGraph workflows                                             | Teams already on LangGraph                                        | Tightly coupled to LangGraph         |
+| **File-system**  | Plain files with naming conventions                                              | Simple agents, prototyping                                        | No semantic search, no relationships |
 
 Choose Zep/Graphiti when the agent needs bi-temporal modeling (tracking both when events occurred and when they were ingested) because its three-tier knowledge graph (episode, semantic entity, community subgraphs) excels at temporal queries. Choose Mem0 when the priority is fast time-to-production with managed infrastructure. Choose Letta when the agent needs deep self-introspection through its Agent Development Environment. Choose Cognee when the agent must build dense multi-layer semantic graphs — it layers text chunks and entity types as nodes with detailed relationship edges, and every core piece (ingestion, entity extraction, post-processing, retrieval) is customizable.
 
@@ -49,15 +50,15 @@ Choose Zep/Graphiti when the agent needs bi-temporal modeling (tracking both whe
 
 Consult these benchmarks to set expectations, but treat them as signals for specific retrieval dimensions rather than absolute rankings. No single benchmark is definitive.
 
-| System | DMR Accuracy | LoCoMo | HotPotQA (multi-hop) | Latency |
-|--------|-------------|--------|---------------------|---------|
-| Cognee | — | — | Highest on EM, F1, Correctness | Variable |
-| Zep (Temporal KG) | 94.8% | — | Mid-range across metrics | 2.58s |
-| Letta (filesystem) | — | 74.0% | — | — |
-| Mem0 | — | 68.5% | Lowest across metrics | — |
-| MemGPT | 93.4% | — | — | Variable |
-| GraphRAG | ~75-85% | — | — | Variable |
-| Vector RAG baseline | ~60-70% | — | — | Fast |
+| System              | DMR Accuracy | LoCoMo | HotPotQA (multi-hop)           | Latency  |
+| ------------------- | ------------ | ------ | ------------------------------ | -------- |
+| Cognee              | —            | —      | Highest on EM, F1, Correctness | Variable |
+| Zep (Temporal KG)   | 94.8%        | —      | Mid-range across metrics       | 2.58s    |
+| Letta (filesystem)  | —            | 74.0%  | —                              | —        |
+| Mem0                | —            | 68.5%  | Lowest across metrics          | —        |
+| MemGPT              | 93.4%        | —      | —                              | Variable |
+| GraphRAG            | ~75-85%      | —      | —                              | Variable |
+| Vector RAG baseline | ~60-70%      | —      | —                              | Fast     |
 
 Key takeaways: Zep achieves up to 18.5% accuracy improvement on LongMemEval while reducing latency by 90%. Cognee outperformed Mem0, Graphiti, and LightRAG on HotPotQA multi-hop reasoning benchmarks across Exact Match, F1, and human-like correctness metrics. Letta's filesystem-based agents achieved 74% on LoCoMo using basic file operations, confirming that reliable retrieval beats tool sophistication.
 
@@ -65,24 +66,24 @@ Key takeaways: Zep achieves up to 18.5% accuracy improvement on LongMemEval whil
 
 Pick the shallowest memory layer that satisfies the persistence requirement. Each deeper layer adds infrastructure cost and operational complexity, so only escalate when the shallower layer cannot meet the retrieval or durability need.
 
-| Layer | Persistence | Implementation | When to Use |
-|-------|------------|----------------|-------------|
-| **Working** | Context window only | Scratchpad in system prompt | Always — optimize with attention-favored positions |
-| **Short-term** | Session-scoped | File-system, in-memory cache | Intermediate tool results, conversation state |
-| **Long-term** | Cross-session | Key-value store → graph DB | User preferences, domain knowledge, entity registries |
-| **Entity** | Cross-session | Entity registry + properties | Maintaining identity ("John Doe" = same person across conversations) |
+| Layer           | Persistence             | Implementation                | When to Use                                                                |
+| --------------- | ----------------------- | ----------------------------- | -------------------------------------------------------------------------- |
+| **Working**     | Context window only     | Scratchpad in system prompt   | Always — optimize with attention-favored positions                         |
+| **Short-term**  | Session-scoped          | File-system, in-memory cache  | Intermediate tool results, conversation state                              |
+| **Long-term**   | Cross-session           | Key-value store → graph DB    | User preferences, domain knowledge, entity registries                      |
+| **Entity**      | Cross-session           | Entity registry + properties  | Maintaining identity ("John Doe" = same person across conversations)       |
 | **Temporal KG** | Cross-session + history | Graph with validity intervals | Facts that change over time, time-travel queries, preventing context clash |
 
 ### Retrieval Strategies
 
 Match the retrieval strategy to the query shape. Semantic search handles direct factual lookups well but degrades on multi-hop reasoning; entity-based traversal handles "everything about X" queries but requires graph structure; temporal filtering handles changing facts but requires validity metadata. When accuracy is paramount and infrastructure budget allows, combine strategies into hybrid retrieval.
 
-| Strategy | Use When | Limitation |
-|----------|----------|------------|
-| **Semantic** (embedding similarity) | Direct factual queries | Degrades on multi-hop reasoning |
-| **Entity-based** (graph traversal) | "Tell me everything about X" | Requires graph structure |
-| **Temporal** (validity filter) | Facts change over time | Requires validity metadata |
-| **Hybrid** (semantic + keyword + graph) | Best overall accuracy | Most infrastructure |
+| Strategy                                | Use When                     | Limitation                      |
+| --------------------------------------- | ---------------------------- | ------------------------------- |
+| **Semantic** (embedding similarity)     | Direct factual queries       | Degrades on multi-hop reasoning |
+| **Entity-based** (graph traversal)      | "Tell me everything about X" | Requires graph structure        |
+| **Temporal** (validity filter)          | Facts change over time       | Requires validity metadata      |
+| **Hybrid** (semantic + keyword + graph) | Best overall accuracy        | Most infrastructure             |
 
 Zep's hybrid approach achieves 90% latency reduction (2.58s vs 28.9s) by retrieving only relevant subgraphs. Cognee implements hybrid retrieval through its 14 search modes — each mode combines different strategies from its three-store architecture (graph, vector, relational), letting agents select the retrieval strategy that fits the query type rather than using a one-size-fits-all approach.
 
@@ -117,6 +118,7 @@ Handle retrieval failures gracefully because memory systems are inherently noisy
 ## Examples
 
 **Example 1: Mem0 Integration**
+
 ```python
 from mem0 import Memory
 
@@ -129,6 +131,7 @@ results = m.search("What theme does the user prefer?", user_id="alice")
 ```
 
 **Example 2: Temporal Query**
+
 ```python
 # Track entity with validity periods
 graph.create_temporal_relationship(
@@ -147,6 +150,7 @@ results = graph.query_at_time(
 ```
 
 **Example 3: Cognee Memory Ingestion and Search**
+
 ```python
 import cognee
 from cognee.modules.search.types import SearchType
@@ -199,13 +203,16 @@ This skill builds on context-fundamentals. It connects to:
 ## References
 
 Internal references:
+
 - [Implementation Reference](./references/implementation.md) - Read when: implementing vector stores, property graphs, temporal queries, or memory consolidation logic from scratch
 
 Related skills in this collection:
+
 - context-fundamentals - Read when: designing the context layer that memory feeds into
 - multi-agent-patterns - Read when: multiple agents need to share or coordinate memory state
 
 External resources:
+
 - Zep temporal knowledge graph paper (arXiv:2501.13956) - Read when: evaluating bi-temporal modeling or Graphiti's architecture
 - Mem0 production architecture paper (arXiv:2504.19413) - Read when: assessing managed memory infrastructure trade-offs
 - Cognee optimized knowledge graph + LLM reasoning paper (arXiv:2505.24478) - Read when: comparing multi-layer semantic graph approaches

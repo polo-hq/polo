@@ -114,7 +114,19 @@ export async function resolveDefinition<
   const context: Record<string, unknown> = {};
   let budgetUsed = 0;
 
-  for (const key of allowed) {
+  const requiredKeys = new Set((policies.require ?? []).map(String));
+  const preferredKeys = new Set((policies.prefer ?? []).map(String));
+
+  // Iterate in priority order so required sources consume budget first,
+  // then preferred, then default-included. This ensures budget gating
+  // drops lower-priority sources before higher-priority ones.
+  const orderedKeys = [
+    ...(policies.require ?? []).map(String).filter((k) => allowed.has(k)),
+    ...(policies.prefer ?? []).map(String).filter((k) => allowed.has(k) && !requiredKeys.has(k)),
+    ...[...allowed].filter((k) => !requiredKeys.has(k) && !preferredKeys.has(k)),
+  ];
+
+  for (const key of orderedKeys) {
     const raw = resolvedRaw.get(key);
 
     if (isChunks(raw)) {
@@ -128,9 +140,15 @@ export async function resolveDefinition<
       const timing = sourceTimings.find((t) => t.key === key);
       if (timing) timing.chunkRecords = packed.records;
     } else {
-      // For non-chunk sources, rough-estimate tokens from stringified value
       const str = raw === null || raw === undefined ? "" : JSON.stringify(raw);
-      budgetUsed += estimateTokens(str);
+      const tokens = estimateTokens(str);
+
+      if (!requiredKeys.has(key) && budget !== Infinity && budgetUsed + tokens > budget) {
+        policyRecords.push({ source: key, action: "dropped", reason: "over_budget" });
+        continue;
+      }
+
+      budgetUsed += tokens;
       context[key] = raw;
     }
   }

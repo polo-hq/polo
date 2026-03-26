@@ -8,24 +8,24 @@ M2.1 natively supports Interleaved Thinking, enabling it to reason between each 
 
 This ability allows M2.1 to excel at long-horizon and complex tasks, achieving state-of-the-art (SOTA) results on benchmarks such as SWE, BrowseCamp, and xBench, which test both coding and agentic reasoning performance.
 
-In the following examples, we’ll illustrate best practices for Tool Use and Interleaved Thinking with M2.1. The key principle is to return the model’s full response each time—especially the internal reasoning fields (e.g., thinking or reasoning\_details).
+In the following examples, we’ll illustrate best practices for Tool Use and Interleaved Thinking with M2.1. The key principle is to return the model’s full response each time—especially the internal reasoning fields (e.g., thinking or reasoning_details).
 
 ## Parameters
 
 ### Request Parameters
 
-* `tools`: Defines the list of callable functions, including function names, descriptions, and parameter schemas
+- `tools`: Defines the list of callable functions, including function names, descriptions, and parameter schemas
 
 ### Response Parameters
 
 Key fields in Tool Use responses:
 
-* `thinking/reasoning_details`: The model's thinking/reasoning process
-* `text/content`: The text content output by the model
-* `tool_calls`: Contains information about functions the model has decided to invoke
-* `function.name`: The name of the function being called
-* `function.arguments`: Function call parameters (JSON string format)
-* `id`: Unique identifier for the tool call
+- `thinking/reasoning_details`: The model's thinking/reasoning process
+- `text/content`: The text content output by the model
+- `tool_calls`: Contains information about functions the model has decided to invoke
+- `function.name`: The name of the function being called
+- `function.arguments`: Function call parameters (JSON string format)
+- `id`: Unique identifier for the tool call
 
 ## Important Note
 
@@ -33,13 +33,13 @@ In multi-turn function call conversations, the complete model response (i.e., th
 
 **OpenAI SDK:**
 
-* Append the full `response_message` object (including the `tool_calls` field) to the message history
-  * When using MiniMax-M2.1, the `content` field contains `<think>` tags which will be automatically preserved
-  * In the Interleaved Thinking Compatible Format, by using the additional parameter (`reasoning_split=True`), the model's thinking content is separated into the `reasoning_details` field. This content also needs to be added to historical messages.
+- Append the full `response_message` object (including the `tool_calls` field) to the message history
+  - When using MiniMax-M2.1, the `content` field contains `<think>` tags which will be automatically preserved
+  - In the Interleaved Thinking Compatible Format, by using the additional parameter (`reasoning_split=True`), the model's thinking content is separated into the `reasoning_details` field. This content also needs to be added to historical messages.
 
 **Anthropic SDK:**
 
-* Append the full `response.content` list to the message history (includes all content blocks: thinking/text/tool\_use)
+- Append the full `response.content` list to the message history (includes all content blocks: thinking/text/tool_use)
 
 See examples below for implementation details.
 
@@ -51,14 +51,14 @@ See examples below for implementation details.
 
 For international users, use `https://api.minimax.io/anthropic`; for users in China, use `https://api.minimaxi.com/anthropic`
 
-```bash  theme={null}
+```bash theme={null}
 export ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic
 export ANTHROPIC_API_KEY=${YOUR_API_KEY}
 ```
 
 #### Example
 
-```python  theme={null}
+```python theme={null}
 import anthropic
 import json
 
@@ -155,7 +155,7 @@ if tool_use_blocks:
 
 **Output:**
 
-```nushell  theme={null}
+```nushell theme={null}
 👤 User>         How's the weather in San Francisco?
 💭 Thinking>
 Okay, so the user is asking about the weather in San Francisco. This is a straightforward request that requires me to get current weather information for a specific location.
@@ -195,36 +195,36 @@ The most straightforward way to present this information is to state the tempera
 
 **Response Body**
 
-```json  theme={null}
+```json theme={null}
 {
-    "id": "05566b15ee32962663694a2772193ac7",
-    "type": "message",
-    "role": "assistant",
-    "model": "MiniMax-M2.1",
-    "content": [
-        {
-            "thinking": "Let me think about this request. The user is asking about the weather in San Francisco. This is a straightforward request that requires current weather information.\n\nTo provide accurate weather information, I need to use the appropriate tool. Looking at the tools available to me, I see there's a \"get_weather\" tool that seems perfect for this task. This tool requires a location parameter, which should include both the city and state/region.\n\nThe user has specified \"San Francisco\" as the location, but they haven't included the state. For the US, it's common practice to include the state when specifying a city, especially for well-known cities like San Francisco that exist in multiple states (though there's really only one San Francisco that's famous).\n\nAccording to the tool description, I need to provide the location in the format \"San Francisco, US\" - with the city, comma, and the country code for the United States. This follows the standard format specified in the tool's parameter description: \"The city and state, e.g. San Francisco, US\".\n\nSo I need to call the get_weather tool with the location parameter set to \"San Francisco, US\". This will retrieve the current weather information for San Francisco, which I can then share with the user.\n\nI'll format my response using the required XML tags for tool calls, providing the tool name \"get_weather\" and the arguments as a JSON object with the location parameter set to \"San Francisco, US\".",
-            "signature": "cfa12f9d651953943c7a33278051b61f586e2eae016258ad6b824836778406bd",
-            "type": "thinking"
-        },
-        {
-            "type": "tool_use",
-            "id": "call_function_3679004591_1",
-            "name": "get_weather",
-            "input": {
-                "location": "San Francisco, US"
-            }
-        }
-    ],
-    "usage": {
-        "input_tokens": 222,
-        "output_tokens": 321
+  "id": "05566b15ee32962663694a2772193ac7",
+  "type": "message",
+  "role": "assistant",
+  "model": "MiniMax-M2.1",
+  "content": [
+    {
+      "thinking": "Let me think about this request. The user is asking about the weather in San Francisco. This is a straightforward request that requires current weather information.\n\nTo provide accurate weather information, I need to use the appropriate tool. Looking at the tools available to me, I see there's a \"get_weather\" tool that seems perfect for this task. This tool requires a location parameter, which should include both the city and state/region.\n\nThe user has specified \"San Francisco\" as the location, but they haven't included the state. For the US, it's common practice to include the state when specifying a city, especially for well-known cities like San Francisco that exist in multiple states (though there's really only one San Francisco that's famous).\n\nAccording to the tool description, I need to provide the location in the format \"San Francisco, US\" - with the city, comma, and the country code for the United States. This follows the standard format specified in the tool's parameter description: \"The city and state, e.g. San Francisco, US\".\n\nSo I need to call the get_weather tool with the location parameter set to \"San Francisco, US\". This will retrieve the current weather information for San Francisco, which I can then share with the user.\n\nI'll format my response using the required XML tags for tool calls, providing the tool name \"get_weather\" and the arguments as a JSON object with the location parameter set to \"San Francisco, US\".",
+      "signature": "cfa12f9d651953943c7a33278051b61f586e2eae016258ad6b824836778406bd",
+      "type": "thinking"
     },
-    "stop_reason": "tool_use",
-    "base_resp": {
-        "status_code": 0,
-        "status_msg": ""
+    {
+      "type": "tool_use",
+      "id": "call_function_3679004591_1",
+      "name": "get_weather",
+      "input": {
+        "location": "San Francisco, US"
+      }
     }
+  ],
+  "usage": {
+    "input_tokens": 222,
+    "output_tokens": 321
+  },
+  "stop_reason": "tool_use",
+  "base_resp": {
+    "status_code": 0,
+    "status_msg": ""
+  }
 }
 ```
 
@@ -234,7 +234,7 @@ The most straightforward way to present this information is to state the tempera
 
 For international users, use `https://api.minimax.io/v1`; for users in China, use `https://api.minimaxi.com/v1`
 
-```bash  theme={null}
+```bash theme={null}
 export OPENAI_BASE_URL=https://api.minimax.io/v1
 export OPENAI_API_KEY=${YOUR_API_KEY}
 ```
@@ -249,7 +249,7 @@ When calling MiniMax-M2.1 via the OpenAI SDK, you can pass the extra parameter `
 
 Be sure to review how your API request and response handling function (e.g., `send_messages`) is implemented, as well as how you append the historical messages with `messages.append(response_message)`.
 
-```python  theme={null}
+```python theme={null}
 import json
 
 from openai import OpenAI
@@ -337,7 +337,7 @@ The user has clearly specified they want weather information for "San Francisco"
 Since I need to use the tool to get the current weather information, I'll need to call the "get_weather" tool with "San Francisco, CA" as the location parameter. This will provide the user with the most accurate and up-to-date weather information for their query.
 
 I'll format my response using the required tool_calls XML tags and include the tool name and arguments in the specified JSON format.
-💬 Model>        
+💬 Model>
 
 🔧 Tool>         get_weather(San Francisco, US)
 💭 Thinking>     Okay, I've received the user's question about the weather in San Francisco, and I've used the get_weather tool to retrieve the current conditions.
@@ -358,59 +358,59 @@ My response will be a single sentence stating the current temperature and weathe
 
 **Response Body**
 
-```json  theme={null}
+```json theme={null}
 {
-    "id": "05566b8d51ded3a3016d6cc100685cad",
-    "choices": [
-        {
-            "finish_reason": "tool_calls",
+  "id": "05566b8d51ded3a3016d6cc100685cad",
+  "choices": [
+    {
+      "finish_reason": "tool_calls",
+      "index": 0,
+      "message": {
+        "content": "\n",
+        "role": "assistant",
+        "name": "MiniMax AI",
+        "tool_calls": [
+          {
+            "id": "call_function_2831178524_1",
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"location\": \"San Francisco, US\"}"
+            },
+            "index": 0
+          }
+        ],
+        "audio_content": "",
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "id": "reasoning-text-1",
+            "format": "MiniMax-response-v1",
             "index": 0,
-            "message": {
-                "content": "\n",
-                "role": "assistant",
-                "name": "MiniMax AI",
-                "tool_calls": [
-                    {
-                        "id": "call_function_2831178524_1",
-                        "type": "function",
-                        "function": {
-                            "name": "get_weather",
-                            "arguments": "{\"location\": \"San Francisco, US\"}"
-                        },
-                        "index": 0
-                    }
-                ],
-                "audio_content": "",
-                "reasoning_details": [
-                    {
-                        "type": "reasoning.text",
-                        "id": "reasoning-text-1",
-                        "format": "MiniMax-response-v1",
-                        "index": 0,
-                        "text": "Let me think about this request. The user is asking about the weather in San Francisco. This is a straightforward request where they want to know current weather conditions in a specific location.\n\nLooking at the tools available to me, I have access to a \"get_weather\" tool that can retrieve weather information for a location. The tool requires a location parameter in the format of \"city, state\" or \"city, country\". In this case, the user has specified \"San Francisco\" which is a city in the United States.\n\nTo properly use the tool, I need to format the location parameter correctly. The tool description mentions examples like \"San Francisco, US\" which follows the format of city, country code. However, since the user just mentioned \"San Francisco\" without specifying the state, and San Francisco is a well-known city that is specifically in California, I could use \"San Francisco, CA\" as the parameter value instead.\n\nActually, \"San Francisco, US\" would also work since the user is asking about the famous San Francisco in the United States, and there aren't other well-known cities with the same name that would cause confusion. The US country code is explicit and clear.\n\nBoth \"San Francisco, CA\" and \"San Francisco, US\" would be valid inputs for the tool. I'll go with \"San Francisco, US\" since it follows the exact format shown in the tool description example and is unambiguous.\n\nSo I'll need to call the get_weather tool with the location parameter set to \"San Francisco, US\". This will retrieve the current weather information for San Francisco, which I can then present to the user."
-                    }
-                ]
-            }
-        }
-    ],
-    "created": 1762080909,
-    "model": "MiniMax-M2.1",
-    "object": "chat.completion",
-    "usage": {
-        "total_tokens": 560,
-        "total_characters": 0,
-        "prompt_tokens": 203,
-        "completion_tokens": 357
-    },
-    "input_sensitive": false,
-    "output_sensitive": false,
-    "input_sensitive_type": 0,
-    "output_sensitive_type": 0,
-    "output_sensitive_int": 0,
-    "base_resp": {
-        "status_code": 0,
-        "status_msg": ""
+            "text": "Let me think about this request. The user is asking about the weather in San Francisco. This is a straightforward request where they want to know current weather conditions in a specific location.\n\nLooking at the tools available to me, I have access to a \"get_weather\" tool that can retrieve weather information for a location. The tool requires a location parameter in the format of \"city, state\" or \"city, country\". In this case, the user has specified \"San Francisco\" which is a city in the United States.\n\nTo properly use the tool, I need to format the location parameter correctly. The tool description mentions examples like \"San Francisco, US\" which follows the format of city, country code. However, since the user just mentioned \"San Francisco\" without specifying the state, and San Francisco is a well-known city that is specifically in California, I could use \"San Francisco, CA\" as the parameter value instead.\n\nActually, \"San Francisco, US\" would also work since the user is asking about the famous San Francisco in the United States, and there aren't other well-known cities with the same name that would cause confusion. The US country code is explicit and clear.\n\nBoth \"San Francisco, CA\" and \"San Francisco, US\" would be valid inputs for the tool. I'll go with \"San Francisco, US\" since it follows the exact format shown in the tool description example and is unambiguous.\n\nSo I'll need to call the get_weather tool with the location parameter set to \"San Francisco, US\". This will retrieve the current weather information for San Francisco, which I can then present to the user."
+          }
+        ]
+      }
     }
+  ],
+  "created": 1762080909,
+  "model": "MiniMax-M2.1",
+  "object": "chat.completion",
+  "usage": {
+    "total_tokens": 560,
+    "total_characters": 0,
+    "prompt_tokens": 203,
+    "completion_tokens": 357
+  },
+  "input_sensitive": false,
+  "output_sensitive": false,
+  "input_sensitive_type": 0,
+  "output_sensitive_type": 0,
+  "output_sensitive_int": 0,
+  "base_resp": {
+    "status_code": 0,
+    "status_msg": ""
+  }
 }
 ```
 
@@ -420,14 +420,14 @@ Since the OpenAI ChatCompletion API native format does not natively support thin
 
 What `extra_body={"reasoning_split": False}` does:
 
-* Embeds thinking in content: The model's reasoning is wrapped in `<think>` tags within the `content` field
-* Requires manual parsing: You need to parse `<think>` tags if you want to display reasoning separately
+- Embeds thinking in content: The model's reasoning is wrapped in `<think>` tags within the `content` field
+- Requires manual parsing: You need to parse `<think>` tags if you want to display reasoning separately
 
 <Note>
   Important Reminder: If you choose to use the native format, please note that in the message history, do not modify the `content` field. You must preserve the model's thinking content completely, i.e., `<think>reasoning_content</think>`. This is essential to ensure Interleaved Thinking works effectively and achieves optimal model performance!
 </Note>
 
-```python  theme={null}
+```python theme={null}
 from openai import OpenAI
 import json
 
@@ -499,7 +499,7 @@ else:
 
 **Output:**
 
-```nushell  theme={null}
+```nushell theme={null}
 👤 User>         How's the weather in San Francisco?
 💬 Model>        <think>
 Alright, the user is asking about the weather in San Francisco. This is a straightforward request that I can handle using the tools provided to me.
@@ -541,7 +541,7 @@ The weather in San Francisco is currently sunny with a temperature of 24℃.
 
 **Response Body**
 
-```JSON  theme={null}
+```JSON theme={null}
 {
 	"id": "055b7928a143b2d21ad6b2bab2c8f8b2",
 	"choices": [{
@@ -603,7 +603,6 @@ The weather in San Francisco is currently sunny with a temperature of 24℃.
     Use OpenAI SDK with MiniMax models
   </Card>
 </Columns>
-
 
 ---
 

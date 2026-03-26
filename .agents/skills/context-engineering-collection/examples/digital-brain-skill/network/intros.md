@@ -7,35 +7,39 @@ Managing introductions - made and received.
 ## Pending Introductions
 
 ### To Make
+
 <!-- Introductions you've committed to making -->
 
-| Person A | Person B | Why | Status | Notes |
-|----------|----------|-----|--------|-------|
-| [PLACEHOLDER] | [PLACEHOLDER] | [PLACEHOLDER: Why this intro] | `to_reach_out|reached_out|connected` | [PLACEHOLDER] |
+| Person A      | Person B      | Why                           | Status        | Notes       |
+| ------------- | ------------- | ----------------------------- | ------------- | ----------- | ---------- | ------------- |
+| [PLACEHOLDER] | [PLACEHOLDER] | [PLACEHOLDER: Why this intro] | `to_reach_out | reached_out | connected` | [PLACEHOLDER] |
 
 ### To Request
+
 <!-- Introductions you want to ask for -->
 
-| Target Person | Through Whom | Why You Want to Meet | Status |
-|---------------|--------------|----------------------|--------|
-| [PLACEHOLDER] | [PLACEHOLDER] | [PLACEHOLDER] | `to_ask|asked|intro_made` |
+| Target Person | Through Whom  | Why You Want to Meet | Status  |
+| ------------- | ------------- | -------------------- | ------- | ----- | ----------- |
+| [PLACEHOLDER] | [PLACEHOLDER] | [PLACEHOLDER]        | `to_ask | asked | intro_made` |
 
 ---
 
 ## Completed Introductions
 
 ### Made
+
 <!-- Successful intros you facilitated -->
 
-| Date | Person A | Person B | Outcome |
-|------|----------|----------|---------|
+| Date   | Person A      | Person B      | Outcome                      |
+| ------ | ------------- | ------------- | ---------------------------- |
 | [DATE] | [PLACEHOLDER] | [PLACEHOLDER] | [PLACEHOLDER: What happened] |
 
 ### Received
+
 <!-- Intros made for you -->
 
-| Date | From | Connected To | Outcome |
-|------|------|--------------|---------|
+| Date   | From          | Connected To  | Outcome       |
+| ------ | ------------- | ------------- | ------------- |
 | [DATE] | [PLACEHOLDER] | [PLACEHOLDER] | [PLACEHOLDER] |
 
 ---
@@ -89,4 +93,4 @@ I'll let you take it from here!
 
 ---
 
-*Last updated: [DATE]*
+_Last updated: [DATE]_

@@ -1,3 +1,4 @@
+import { estimateTokenCount } from "tokenx";
 import type { Chunk, ChunkRecord, Chunks } from "./types.ts";
 
 interface PackedChunks {
@@ -6,13 +7,8 @@ interface PackedChunks {
   tokensUsed: number;
 }
 
-/**
- * Estimate token count for a string.
- * v0: rough approximation — 1 token ≈ 4 characters.
- * Replace with tiktoken via @polo/tokenizers later.
- */
 export function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4);
+  return estimateTokenCount(text);
 }
 
 /**
@@ -27,7 +23,7 @@ export function packChunks(chunks: Chunks, remainingBudget: number): PackedChunk
   let tokensUsed = 0;
 
   for (const chunk of sorted) {
-    const tokens = estimateTokens(chunk.content);
+    const tokens = estimateTokenCount(chunk.content);
 
     if (tokensUsed + tokens <= remainingBudget) {
       included.push(chunk);

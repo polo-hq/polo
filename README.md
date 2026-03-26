@@ -147,15 +147,15 @@ const { text } = await generateText({
 
 ## API
 
-|                                               |                                                |
-| --------------------------------------------- | ---------------------------------------------- |
-| `createPolo(options?)`                        | Create an isolated Polo runtime                |
-| `registerSources(sources)`                    | Compose reusable shared resolver/chunk sources |
-| `polo.define(inputSchema, config)`            | Declare the context contract for a task        |
-| `polo.resolve(definition, input)`             | Resolve context at runtime                     |
-| `polo.source.fromInput(key, options?)`        | Passthrough from call-time input               |
-| `polo.source(inputSchema, config)`            | Resolve a single async value                   |
-| `polo.source.chunks(inputSchema, config)`     | Resolve ranked multi-block context             |
+|                                           |                                                |
+| ----------------------------------------- | ---------------------------------------------- |
+| `createPolo(options?)`                    | Create an isolated Polo runtime                |
+| `registerSources(sources)`                | Compose reusable shared resolver/chunk sources |
+| `polo.define(inputSchema, config)`        | Declare the context contract for a task        |
+| `polo.resolve(definition, input)`         | Resolve context at runtime                     |
+| `polo.source.fromInput(key, options?)`    | Passthrough from call-time input               |
+| `polo.source(inputSchema, config)`        | Resolve a single async value                   |
+| `polo.source.chunks(inputSchema, config)` | Resolve ranked multi-block context             |
 
 ---
 
@@ -190,7 +190,13 @@ billingNotes: polo.source(accountSourceInputSchema, {
 
 ```ts
 recentTickets: polo.source.chunks(transcriptSourceInputSchema, {
-  async resolve({ input, context }: { input: { transcript: string }; context: { account: Account } }) {
+  async resolve({
+    input,
+    context,
+  }: {
+    input: { transcript: string };
+    context: { account: Account };
+  }) {
     return vectorDb.searchTickets(context.account.id, input.transcript);
   },
   normalize(item) {
@@ -236,7 +242,7 @@ policies: {
 `require` — must resolve or `polo.resolve()` throws.  
 `prefer` — included if it fits in budget.  
 `exclude` — excludes a source with a reason, recorded in the trace.  
-`budget` — token ceiling for the full context.
+`budget` — token ceiling for the full context. Token counts are estimated at 96% accuracy using [tokenx](https://github.com/johannschopplich/tokenx). Required sources always pass through; preferred and default-included sources are dropped when over budget and recorded in the trace.
 
 > **v0:** policies operate on top-level source keys only. If nested data needs separate treatment, promote it to its own source.
 

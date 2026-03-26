@@ -11,11 +11,11 @@ Multi-agent architectures: From orchestrators to swarms
 Production multi-agent systems have converged on three dominant patterns, each with distinct tradeoffs. Orchestrator-worker (supervisor) patterns place a central agent in control, delegating to specialists and synthesizing results. LangGraph's benchmarks found this architecture initially performed 50% worse than optimized versions due to the "telephone game" problem—supervisors paraphrasing sub-agent responses incorrectly. The fix: implementing a forward_message tool allowing sub-agents to pass responses directly to users. langchainLangChain
 Swarm architectures, pioneered by OpenAI's experimental Swarm framework, enable peer-to-peer handoffs where any agent transfers control to any other. LangGraph benchmarks show swarms slightly outperform supervisors because sub-agents respond directly to users, eliminating translation errors. langchainLangChain The core abstraction is elegantly simple:
 pythondef transfer_to_agent_b():
-    return agent_b  # Handoff via function return
+return agent_b # Handoff via function return
 
 agent_a = Agent(
-    name="Agent A",
-    functions=[transfer_to_agent_b]
+name="Agent A",
+functions=[transfer_to_agent_b]
 )
 Hierarchical patterns, implemented in CrewAI's Process.hierarchical mode, create management trees where managers decompose goals and delegate to subordinates. Activewizards This mirrors organizational structures and works well for complex, multi-stage tasks.
 The critical insight from Manus AI's production experience: sub-agents exist primarily to isolate context, not to anthropomorphize role division. Rlancemartin Context isolation prevents KV-cache penalties and avoids context confusion between specialized tasks.

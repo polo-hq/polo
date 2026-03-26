@@ -1,14 +1,14 @@
-import { openai } from '@ai-sdk/openai';
-import { generateText } from 'ai';
-import { config } from '../config/index.js';
-import { 
-  executeDirectScore, 
-  executePairwiseCompare, 
+import { openai } from "@ai-sdk/openai";
+import { generateText } from "ai";
+import { config } from "../config/index.js";
+import {
+  executeDirectScore,
+  executePairwiseCompare,
   executeGenerateRubric,
   type DirectScoreInput,
   type PairwiseCompareInput,
-  type GenerateRubricInput
-} from '../tools/evaluation/index.js';
+  type GenerateRubricInput,
+} from "../tools/evaluation/index.js";
 
 export interface EvaluatorAgentConfig {
   model?: string;
@@ -52,22 +52,24 @@ export class EvaluatorAgent {
   async evaluateWithGeneratedRubric(
     response: string,
     prompt: string,
-    criteria: Array<{ name: string; description: string; weight?: number }>
+    criteria: Array<{ name: string; description: string; weight?: number }>,
   ) {
     // Generate rubrics for each criterion
     const rubrics = await Promise.all(
-      criteria.map(c => this.generateRubric({
-        criterionName: c.name,
-        criterionDescription: c.description,
-        scale: '1-5',
-        includeExamples: false,
-        strictness: 'balanced'
-      }))
+      criteria.map((c) =>
+        this.generateRubric({
+          criterionName: c.name,
+          criterionDescription: c.description,
+          scale: "1-5",
+          includeExamples: false,
+          strictness: "balanced",
+        }),
+      ),
     );
 
     // Build combined rubric
     const levelDescriptions: Record<string, string> = {};
-    rubrics[0]?.levels?.forEach(level => {
+    rubrics[0]?.levels?.forEach((level) => {
       levelDescriptions[String(level.score)] = level.description;
     });
 
@@ -78,12 +80,12 @@ export class EvaluatorAgent {
       criteria: criteria.map((c) => ({
         name: c.name,
         description: c.description,
-        weight: c.weight || 1
+        weight: c.weight || 1,
       })),
       rubric: {
-        scale: '1-5',
-        levelDescriptions
-      }
+        scale: "1-5",
+        levelDescriptions,
+      },
     });
   }
 
@@ -97,16 +99,15 @@ export class EvaluatorAgent {
 Your role is to assess quality, identify issues, and provide actionable feedback.
 Be objective, specific, and constructive in your evaluations.`,
       prompt: userMessage,
-      temperature: this.temperature
+      temperature: this.temperature,
     });
 
     return {
       text: result.text,
-      usage: result.usage
+      usage: result.usage,
     };
   }
 }
 
 // Default instance
 export const evaluatorAgent = new EvaluatorAgent();
-

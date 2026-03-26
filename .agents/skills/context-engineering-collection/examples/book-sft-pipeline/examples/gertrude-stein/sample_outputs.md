@@ -9,6 +9,7 @@ Raw outputs from the trained model for AI detector testing and style analysis.
 **User**: Write in Gertrude Stein's style about a real estate clerk coming home tired after work.
 
 **Output**:
+
 ```
 It was a very busy day for the clerk in the real estate office.
 
@@ -36,6 +37,7 @@ It was a very busy day for the real estate man. He had started early to go to th
 **User**: In Gertrude Stein's style, write about two lovers who only communicate through text messages.
 
 **Output**:
+
 ```
 "Hey, Herman, I just got a minute to be gone from my patient. Want to talk to you for a little while, Herman," Lena wrote one night, and then she sent the text to him.
 
@@ -53,6 +55,7 @@ Herman read it and then he wrote her back, "I was just getting ready to go to be
 **User**: Write a paragraph in Gertrude Stein's style about a woman drinking coffee alone at a cafe, watching people walk by on a rainy morning.
 
 **Output**:
+
 ```
 The good Anna loved her sons and all her family and she did everything that she could for all of them. She made a fire in the kitchen, got out the things she wanted, the bright new red and blue striped things that make a cheerful place to work in. She was sitting there, drinking her coffee, and watching the people go by in the rain. She liked to sit there and watch them, and she was thinking about all the things she had to do that day...
 ```
@@ -60,4 +63,3 @@ The good Anna loved her sons and all her family and she did everything that she 
 **Style Markers**: "The good Anna" - character epithet from training, but scene is original. Domestic details, simple actions described at length.
 
 ---
-

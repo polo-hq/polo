@@ -16,10 +16,7 @@ The builder pattern uses a chain of method calls to incrementally build up a dat
 Each method returns a new or modified builder with updated type information:
 
 ```typescript
-new DbSeeder()
-  .addUser("matt", { name: "Matt" })
-  .addPost("post1", { title: "Hello" })
-  .transact();
+new DbSeeder().addUser("matt", { name: "Matt" }).addPost("post1", { title: "Hello" }).transact();
 // Each step updates the type to include what was added
 ```
 
@@ -136,7 +133,7 @@ addUser = <Id extends string>(
 Use `&` to add new type information while preserving existing:
 
 ```typescript
-TDatabase & { users: TDatabase["users"] & Record<Id, User> }
+TDatabase & { users: TDatabase["users"] & Record<Id, User> };
 ```
 
 ### 3. Cast in Terminal Methods
@@ -176,29 +173,21 @@ class QueryBuilder<TState extends QueryState> {
     });
   }
 
-  from<T extends string>(
-    table: T
-  ): QueryBuilder<TState & { table: T }> {
+  from<T extends string>(table: T): QueryBuilder<TState & { table: T }> {
     return new QueryBuilder({ ...this.state, table });
   }
 
-  select<C extends string[]>(
-    ...columns: C
-  ): QueryBuilder<TState & { columns: C }> {
+  select<C extends string[]>(...columns: C): QueryBuilder<TState & { columns: C }> {
     return new QueryBuilder({ ...this.state, columns });
   }
 
-  where<W extends string>(
-    clause: W
-  ): QueryBuilder<TState & { whereClause: W }> {
+  where<W extends string>(clause: W): QueryBuilder<TState & { whereClause: W }> {
     return new QueryBuilder({ ...this.state, whereClause: clause });
   }
 
   // Only allow build if table is set
   build(this: QueryBuilder<TState & { table: string }>): string {
-    const cols = this.state.columns.length
-      ? this.state.columns.join(", ")
-      : "*";
+    const cols = this.state.columns.length ? this.state.columns.join(", ") : "*";
     let sql = `SELECT ${cols} FROM ${this.state.table}`;
     if (this.state.whereClause) {
       sql += ` WHERE ${this.state.whereClause}`;
@@ -250,19 +239,13 @@ class ConfigBuilder<TConfigured extends Partial<Record<keyof ServerConfig, true>
   }
 
   // Only allow build when required fields are set
-  build(
-    this: ConfigBuilder<{ host: true; port: true }>
-  ): ServerConfig {
+  build(this: ConfigBuilder<{ host: true; port: true }>): ServerConfig {
     return this.config as ServerConfig;
   }
 }
 
 // Usage
-const config = new ConfigBuilder()
-  .host("localhost")
-  .port(3000)
-  .ssl(true)
-  .build();
+const config = new ConfigBuilder().host("localhost").port(3000).ssl(true).build();
 
 // Error: Missing required fields
 new ConfigBuilder().host("localhost").build(); // Type error!
@@ -275,7 +258,7 @@ export class DbSeeder<
   TDatabase extends DbShape = {
     users: { defaultUser: User };
     posts: {};
-  }
+  },
 > {
   public users: DbShape["users"] = {
     defaultUser: { id: "default", name: "Default User" },

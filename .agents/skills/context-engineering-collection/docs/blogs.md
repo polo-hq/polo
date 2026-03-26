@@ -205,7 +205,7 @@ Isolating context - splitting it up to help an agent perform a task.
 
 LangGraph makes it easy to implement each of them and LangSmith provides an easy way to test your agent and track context usage. Together, LangGraph and LangGraph enable a virtuous feedback loop for identifying the best opportunity to apply context engineering, implementing it, testing it, and repeating.
 
----------
+---
 
 Context Engineering in Manus
 
@@ -331,15 +331,15 @@ Share context deliberately: Pass only instructions for simple tasks; pass full c
 
 A final consideration is to ensure your harness is not limiting performance as models improve (e.g., be “Bitter Lesson-pilled”). Test across model strengths to verify this. Simple, unopinionated designs often adapt better to model improvements. Finally, don’t be afraid to re-build your agent as models improve (Manus refactored 5 times since March)!
 
------
+---
 
 Context Engineering for AI Agents: Lessons from Building Manus
 
 2025/7/18 --Yichao 'Peak' Ji
 
-At the very beginning of the  project, my team and I faced a key decision: should we train an end-to-end agentic model using open-source foundations, or build an agent on top of the  abilities of frontier models?
+At the very beginning of the project, my team and I faced a key decision: should we train an end-to-end agentic model using open-source foundations, or build an agent on top of the abilities of frontier models?
 
-Back in my first decade in NLP, we didn't have the luxury of that choice. In the distant days of  (yes, it's been seven years), models had to be fine-tuned—and evaluated—before they could transfer to a new task. That process often took weeks per iteration, even though the models were tiny compared to today's LLMs. For fast-moving applications, especially pre–PMF, such slow feedback loops are a deal-breaker. That was a bitter lesson from my last startup, where I trained models from scratch for  and semantic search. Then came  and , and my in-house models became irrelevant overnight. Ironically, those same models marked the beginning of in-context learning—and a whole new path forward.
+Back in my first decade in NLP, we didn't have the luxury of that choice. In the distant days of (yes, it's been seven years), models had to be fine-tuned—and evaluated—before they could transfer to a new task. That process often took weeks per iteration, even though the models were tiny compared to today's LLMs. For fast-moving applications, especially pre–PMF, such slow feedback loops are a deal-breaker. That was a bitter lesson from my last startup, where I trained models from scratch for and semantic search. Then came and , and my in-house models became irrelevant overnight. Ironically, those same models marked the beginning of in-context learning—and a whole new path forward.
 
 That hard-earned lesson made the choice clear: Manus would bet on context engineering. This allows us to ship improvements in hours instead of weeks, and kept our product orthogonal to the underlying models: If model progress is the rising tide, we want Manus to be the boat, not the pillar stuck to the seabed.
 
@@ -349,7 +349,7 @@ This post shares the local optima we arrived at through our own "SGD". If you're
 
 Design Around the KV-Cache
 
-If I had to choose just one metric, I'd argue that the KV-cache hit rate is the single most important metric for a production-stage AI agent. It directly affects both latency and cost. To understand why, let's look at how  operates:
+If I had to choose just one metric, I'd argue that the KV-cache hit rate is the single most important metric for a production-stage AI agent. It directly affects both latency and cost. To understand why, let's look at how operates:
 
 After receiving a user input, the agent proceeds through a chain of tool uses to complete the task. In each iteration, the model selects an action from a predefined action space based on the current context. That action is then executed in the environment (e.g., Manus's virtual machine sandbox) to produce an observation. The action and observation are appended to the context, forming the input for the next iteration. This loop continues until the task is complete.
 
@@ -359,17 +359,17 @@ Fortunately, contexts with identical prefixes can take advantage of , which dras
 
 From a context engineering perspective, improving KV-cache hit rate involves a few key practices:
 
-Keep your prompt prefix stable. Due to the  nature of LLMs, even a single-token difference can invalidate the cache from that token onward. A common mistake is including a timestamp—especially one precise to the second—at the beginning of the system prompt. Sure, it lets the model tell you the current time, but it also kills your cache hit rate.
+Keep your prompt prefix stable. Due to the nature of LLMs, even a single-token difference can invalidate the cache from that token onward. A common mistake is including a timestamp—especially one precise to the second—at the beginning of the system prompt. Sure, it lets the model tell you the current time, but it also kills your cache hit rate.
 
 Make your context append-only. Avoid modifying previous actions or observations. Ensure your serialization is deterministic. Many programming languages and libraries don't guarantee stable key ordering when serializing JSON objects, which can silently break the cache.
 
 Mark cache breakpoints explicitly when needed. Some model providers or inference frameworks don't support automatic incremental prefix caching, and instead require manual insertion of cache breakpoints in the context. When assigning these, account for potential cache expiration and at minimum, ensure the breakpoint includes the end of the system prompt.
 
-Additionally, if you're self-hosting models using frameworks like , make sure  is enabled, and that you're using techniques like session IDs to route requests consistently across distributed workers.
+Additionally, if you're self-hosting models using frameworks like , make sure is enabled, and that you're using techniques like session IDs to route requests consistently across distributed workers.
 
 Mask, Don't Remove
 
-As your agent takes on more capabilities, its action space naturally grows more complex—in plain terms, the number of tools explodes. The recent popularity of  only adds fuel to the fire. If you allow user-configurable tools, trust me: someone will inevitably plug hundreds of mysterious tools into your carefully curated action space. As a result, the model is more likely to select the wrong action or take an inefficient path. In short, your heavily armed agent gets dumber.
+As your agent takes on more capabilities, its action space naturally grows more complex—in plain terms, the number of tools explodes. The recent popularity of only adds fuel to the fire. If you allow user-configurable tools, trust me: someone will inevitably plug hundreds of mysterious tools into your carefully curated action space. As a result, the model is more likely to select the wrong action or take an inefficient path. In short, your heavily armed agent gets dumber.
 
 A natural reaction is to design a dynamic action space—perhaps loading tools on demand using something -like. We tried that in Manus too. But our experiments suggest a clear rule: unless absolutely necessary, avoid dynamically adding or removing tools mid-iteration. There are two main reasons for this:
 
@@ -377,17 +377,17 @@ In most LLMs, tool definitions live near the front of the context after serializ
 
 When previous actions and observations still refer to tools that are no longer defined in the current context, the model gets confused. Without , this often leads to schema violations or hallucinated actions.
 
-To solve this while still improving action selection, Manus uses a context-aware  to manage tool availability. Rather than removing tools, it masks the token logits during decoding to prevent (or enforce) the selection of certain actions based on the current context.
+To solve this while still improving action selection, Manus uses a context-aware to manage tool availability. Rather than removing tools, it masks the token logits during decoding to prevent (or enforce) the selection of certain actions based on the current context.
 
-In practice, most model providers and inference frameworks support some form of response prefill, which allows you to constrain the action space without modifying the tool definitions. There are generally three modes of function calling (we'll use the  from NousResearch as an example):
+In practice, most model providers and inference frameworks support some form of response prefill, which allows you to constrain the action space without modifying the tool definitions. There are generally three modes of function calling (we'll use the from NousResearch as an example):
 
 Auto – The model may choose to call a function or not. Implemented by prefilling only the reply prefix: <|im_start|>assistant
 
 Required – The model must call a function, but the choice is unconstrained. Implemented by prefilling up to tool call token: <|im_start|>assistant<tool_call>
 
-Specified – The model must call a function from a specific subset. Implemented by prefilling up to the beginning of the function name: <|im_start|>assistant<tool_call>{"name": “browser_
+Specified – The model must call a function from a specific subset. Implemented by prefilling up to the beginning of the function name: <|im*start|>assistant<tool_call>{"name": “browser*
 
-Using this, we constrain action selection by masking token logits directly. For example, when the user provides a new input, Manus must reply immediately instead of taking an action. We've also deliberately designed action names with consistent prefixes—e.g., all browser-related tools start with browser_, and command-line tools with shell_. This allows us to easily enforce that the agent only chooses from a certain group of tools at a given state without using stateful logits processors.
+Using this, we constrain action selection by masking token logits directly. For example, when the user provides a new input, Manus must reply immediately instead of taking an action. We've also deliberately designed action names with consistent prefixes—e.g., all browser-related tools start with browser*, and command-line tools with shell*. This allows us to easily enforce that the agent only chooses from a certain group of tools at a given state without using stateful logits processors.
 
 These designs help ensure that the Manus agent loop remains stable—even under a model-driven architecture.
 
@@ -429,7 +429,7 @@ In our experience, one of the most effective ways to improve agent behavior is d
 
 Don't Get Few-Shotted
 
- is a common technique for improving LLM outputs. But in agent systems, it can backfire in subtle ways.
+is a common technique for improving LLM outputs. But in agent systems, it can backfire in subtle ways.
 
 Language models are excellent mimics; they imitate the pattern of behavior in the context. If your context is full of similar past action-observation pairs, the model will tend to follow that pattern, even when it's no longer optimal.
 
@@ -445,7 +445,7 @@ At Manus, we've learned these lessons through repeated rewrites, dead ends, and 
 
 The agentic future will be built one context at a time. Engineer them well.
 
-------
+---
 
 Wide Research: Beyond the Context Window
 
@@ -579,7 +579,7 @@ When to use Wide Research: Any task involving multiple, similar items that requi
 
 When not to use: Deeply sequential tasks where each step heavily depends on the prior result, or small tasks (fewer than 10 items) where single-processor handling is more cost-effective.
 
---------
+---
 
 How we built our multi-agent research system
 
@@ -689,7 +689,7 @@ Long-horizon conversation management. Production agents often engage in conversa
 
 Subagent output to a filesystem to minimize the ‘game of telephone.’ Direct subagent outputs can bypass the main coordinator for certain types of results, improving both fidelity and performance. Rather than requiring subagents to communicate everything through the lead agent, implement artifact systems where specialized agents can create outputs that persist independently. Subagents call tools to store their work in external systems, then pass lightweight references back to the coordinator. This prevents information loss during multi-stage processing and reduces token overhead from copying large outputs through conversation history. The pattern works particularly well for structured outputs like code, reports, or data visualizations where the subagent's specialized prompt produces better results than filtering through a general coordinator.
 
--------
+---
 
 riting effective tools for agents — with agents
 
@@ -869,9 +869,9 @@ You can add more formats for even greater flexibility, similar to GraphQL where 
 
 enum ResponseFormat {
 
-   DETAILED = "detailed",
+DETAILED = "detailed",
 
-   CONCISE = "concise"
+CONCISE = "concise"
 
 }
 
@@ -903,7 +903,7 @@ This image depicts an example of a truncated tool response.
 
 Here’s an example of an unhelpful error response:
 
-This image depicts an example of an unhelpful tool response. 
+This image depicts an example of an unhelpful tool response.
 
 Here’s an example of a helpful error response:
 
@@ -935,7 +935,7 @@ Written by Ken Aizawa with valuable contributions from colleagues across Researc
 
 1Beyond training the underlying LLMs themselves.
 
--------
+---
 
 Effective context engineering for AI agents
 
@@ -1071,7 +1071,7 @@ The techniques we've outlined will continue evolving as models improve. We're al
 
 Get started with context engineering in the Claude Developer Platform today, and access helpful tips and best practices via our memory and context management cookbook.
 
----------
+---
 
 ffective harnesses for long-running agents
 
@@ -1135,7 +1135,7 @@ To address the problem of the agent one-shotting an app or prematurely consideri
 
     "passes": false
 
-  }
+}
 
 Copy
 
@@ -1155,7 +1155,7 @@ One final major failure mode that we observed was Claude’s tendency to mark a 
 
 In the case of building a web app, Claude mostly did well at verifying features end-to-end once explicitly prompted to use browser automation tools and do all testing as a human user would.
 
- Screenshots taken by Claude through the Puppeteer MCP server as it tested the claude.ai clone. 
+Screenshots taken by Claude through the Puppeteer MCP server as it tested the claude.ai clone.
 
 Screenshots taken by Claude through the Puppeteer MCP server as it tested the claude.ai clone.
 
@@ -1207,15 +1207,15 @@ Copy
 
 Agent failure modes and solutions
 
-Problem	Initializer Agent Behavior	Coding Agent Behavior
+Problem Initializer Agent Behavior Coding Agent Behavior
 
-Claude declares victory on the entire project too early.	Set up a feature list file: based on the input spec, set up a structured JSON file with a list of end-to-end feature descriptions.	Read the feature list file at the beginning of a session. Choose a single feature to start working on.
+Claude declares victory on the entire project too early. Set up a feature list file: based on the input spec, set up a structured JSON file with a list of end-to-end feature descriptions. Read the feature list file at the beginning of a session. Choose a single feature to start working on.
 
-Claude leaves the environment in a state with bugs or undocumented progress.	An initial git repo and progress notes file is written.	Start the session by reading the progress notes file and git commit logs, and run a basic test on the development server to catch any undocumented bugs. End the session by writing a git commit and progress update.
+Claude leaves the environment in a state with bugs or undocumented progress. An initial git repo and progress notes file is written. Start the session by reading the progress notes file and git commit logs, and run a basic test on the development server to catch any undocumented bugs. End the session by writing a git commit and progress update.
 
-Claude marks features as done prematurely.	Set up a feature list file.	Self-verify all features. Only mark features as “passing” after careful testing.
+Claude marks features as done prematurely. Set up a feature list file. Self-verify all features. Only mark features as “passing” after careful testing.
 
-Claude has to spend time figuring out how to run the app.	Write an init.sh script that can run the development server.	Start the session by reading init.sh.
+Claude has to spend time figuring out how to run the app. Write an init.sh script that can run the development server. Start the session by reading init.sh.
 
 Summarizing four common failure modes and solutions in long-running AI agents.
 

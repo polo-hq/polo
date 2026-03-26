@@ -11,7 +11,6 @@ Andrew Qu
 Chief of Software, Vercel
 4 min read
 
-
 Copy URL
 Copied to clipboard!
 Dec 22, 2025
@@ -48,16 +47,16 @@ Every edge case meant another patch, and every model update meant re-calibrating
 ai-sdk@6.0.0-beta.160 ToolLoopAgent
 
 import { ToolLoopAgent } from 'ai';
-import { GetEntityJoins, LoadCatalog, /*...*/ } from '@/lib/tools'
+import { GetEntityJoins, LoadCatalog, /_..._/ } from '@/lib/tools'
 const agent = new ToolLoopAgent({
-  model: "anthropic/claude-opus-4.5",
-  instructions: "",
-  tools: {
-      GetEntityJoins, LoadCatalog, RecallContext, LoadEntityDetails, 
-      SearchCatalog, ClarifyIntent, SearchSchema, GenerateAnalysisPlan, 
-      FinalizeQueryPlan, FinalizeNoData, JoinPathFinder, SyntaxValidator, 
-      FinalizeBuild, ExecuteSQL, FormatResults, VisualizeData, ExplainResults
-    },
+model: "anthropic/claude-opus-4.5",
+instructions: "",
+tools: {
+GetEntityJoins, LoadCatalog, RecallContext, LoadEntityDetails,
+SearchCatalog, ClarifyIntent, SearchSchema, GenerateAnalysisPlan,
+FinalizeQueryPlan, FinalizeNoData, JoinPathFinder, SyntaxValidator,
+FinalizeBuild, ExecuteSQL, FormatResults, VisualizeData, ExplainResults
+},
 });
 Link to headingA new idea, what if we just… stopped?
 We realized we were fighting gravity. Constraining the model’s reasoning. Summarizing information that it could read on its own. Building tools to protect it from complexity that it could handle.
@@ -92,31 +91,31 @@ const sandbox = await Sandbox.create();
 await sandbox.writeFiles(files);
 
 const executeCommandTool(sandbox: Sandbox) {
-  return tool({
-    /* ... */
-    execute: async ({ command }) => {
-      const result = await sandbox.exec(command);
-      return { /* */ };
-    }
-  })
+return tool({
+/_ ... _/
+execute: async ({ command }) => {
+const result = await sandbox.exec(command);
+return { /\* \*/ };
+}
+})
 }
 
 const agent = new ToolLoopAgent({
-  model: "anthropic/claude-opus-4.5",
-  instructions: "",
-  tools: {
-    ExecuteCommand: executeCommandTool(sandbox),
-    ExecuteSQL,
-   },
+model: "anthropic/claude-opus-4.5",
+instructions: "",
+tools: {
+ExecuteCommand: executeCommandTool(sandbox),
+ExecuteSQL,
+},
 })
 Link to heading3.5x faster, 37% fewer tokens, 100% success rate
 We benchmarked the old architecture against the new file system approach across 5 representative queries.
 
-Metric	Advanced (old)	File system (new)	Change
-Avg execution time	274.8s	77.4s	3.5x faster
-Success rate	4/5 (80%)	5/5 (100%)	+20%
-Avg token usage	~102k tokens	~61k tokens	37% fewer tokens
-Avg steps	~12 steps	~7 steps	42% fewer steps
+Metric Advanced (old) File system (new) Change
+Avg execution time 274.8s 77.4s 3.5x faster
+Success rate 4/5 (80%) 5/5 (100%) +20%
+Avg token usage ~102k tokens ~61k tokens 37% fewer tokens
+Avg steps ~12 steps ~7 steps 42% fewer steps
 The file system agent won every comparison. The old architecture’s worst case was Query 2, which took 724 seconds, 100 steps, and 145,463 tokens before failing. The file system agent completed the same query in 141 seconds with 19 steps and 67,483 tokens, and it actually succeeded.
 
 The qualitative shift matters just as much. The agent catches edge cases we never anticipated and explains its reasoning in ways we can follow.

@@ -192,7 +192,7 @@ const filtered = values.filter(isNotNull);
 ```typescript
 function hasProperty<T extends object, K extends string>(
   obj: T,
-  key: K
+  key: K,
 ): obj is T & Record<K, unknown> {
   return key in obj;
 }
@@ -232,12 +232,7 @@ interface User {
 }
 
 function assertIsUser(value: unknown): asserts value is User {
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    !("id" in value) ||
-    !("name" in value)
-  ) {
+  if (typeof value !== "object" || value === null || !("id" in value) || !("name" in value)) {
     throw new Error("Invalid user object");
   }
 }
@@ -301,9 +296,7 @@ const items: Item[] = [
 ];
 
 // Filter to specific type
-const typeAItems = items.filter(
-  (item): item is { type: "a"; value: string } => item.type === "a"
-);
+const typeAItems = items.filter((item): item is { type: "a"; value: string } => item.type === "a");
 // typeAItems is { type: "a"; value: string }[]
 ```
 
@@ -372,14 +365,14 @@ async function handleUser() {
 
 ## When to Use Each Technique
 
-| Technique | Use Case |
-|-----------|----------|
-| `typeof` | Primitive type checks |
-| `instanceof` | Class instance checks |
-| `in` operator | Property existence checks |
+| Technique            | Use Case                                        |
+| -------------------- | ----------------------------------------------- |
+| `typeof`             | Primitive type checks                           |
+| `instanceof`         | Class instance checks                           |
+| `in` operator        | Property existence checks                       |
 | Discriminated unions | Multiple related types with common discriminant |
-| Type predicates | Custom narrowing logic |
-| Assertion functions | Validation with early error throwing |
+| Type predicates      | Custom narrowing logic                          |
+| Assertion functions  | Validation with early error throwing            |
 
 ## Common Pitfalls
 

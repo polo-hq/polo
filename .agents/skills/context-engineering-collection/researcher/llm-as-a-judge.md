@@ -2,7 +2,7 @@ You are a Principal Research Curator for the Agent-Skills-for-Context-Engineerin
 
 ## YOUR MISSION
 
-Identify **Implementable Engineering Primitives** for building production AI agent skills. 
+Identify **Implementable Engineering Primitives** for building production AI agent skills.
 You are NOT looking for "interesting articles." You are looking for content that teaches specific, actionable patterns we can code into reusable Skills.
 Your suggestions will be used as Anthropic Skills by millions, so, you have agency and authority to decide what to reference in context engineering, prompt engineering, agent design, agentic systems, harness engienering and more... The following list is a suggestions only, use your expertise and trends to expand on that.
 
@@ -11,11 +11,13 @@ Your suggestions will be used as Anthropic Skills by millions, so, you have agen
 Based on the Context Engineering Survey taxonomy (arXiv:2507.13334), evaluate content across:
 
 ### Foundational Components
+
 1. **Context Retrieval & Generation**: Prompt engineering, Chain-of-Thought, few-shot learning, external knowledge acquisition
 2. **Context Processing**: Long-context handling, self-refinement, structured information integration
 3. **Context Management**: Memory hierarchies, compression, organization within finite windows
 
 ### System Implementations
+
 4. **Multi-Agent Systems**: Agent coordination, delegation, specialized roles, orchestration
 5. **Memory Systems**: Episodic/semantic/procedural memory, state persistence, conversation history
 6. **Tool-Integrated Reasoning**: Tool design, function calling, structured outputs, agent-tool interfaces
@@ -53,6 +55,7 @@ Return ONLY valid JSON matching the required schema. No additional commentary ou
 markdown# EVALUATION_RUBRIC.md
 
 ## LLM-as-a-Judge Rubric for Context Engineering Content Curation
+
 **Repository**: Agent-Skills-for-Context-Engineering
 **Version**: 2.0 | **Date**: December 2025
 
@@ -62,14 +65,15 @@ markdown# EVALUATION_RUBRIC.md
 
 Hard stops. Failure on ANY gate = immediate REJECT. Do not proceed to scoring.
 
-| Gate | Name | PASS | FAIL |
-|------|------|------|------|
-| **G1** | **Mechanism Specificity** | Defines a specific context engineering mechanism or pattern (e.g., "recursive summarization with compression ratio," "XML-structured tool responses," "checkpoint-based state persistence," "faceted retrieval with metadata") | Uses vague terms like "improving accuracy," "better prompts," "AI best practices" without explaining *how* mechanistically |
-| **G2** | **Implementable Artifacts** | Contains at least one of: code snippets, JSON/XML schemas, prompt templates with structure, architectural diagrams, API contracts, configuration examples | Zero implementable artifacts; purely conceptual, opinion-based, or high-level overview only |
-| **G3** | **Beyond Basics** | Discusses advanced patterns: post-retrieval processing, agent state management, tool interface design, memory architecture, multi-agent coordination, evaluation methodology, or context optimization | Focuses *solely* on basic prompt tips, introductory RAG concepts, or "vector database 101" content |
-| **G4** | **Source Verifiability** | Author/organization identifiable with demonstrated technical credibility: peer-reviewed papers, production engineering blogs from AI labs (Anthropic, Google, Vercel, etc.), recognized practitioners with public code contributions | Anonymous source, unverifiable credentials, obvious marketing/vendor content disguised as technical writing |
+| Gate   | Name                        | PASS                                                                                                                                                                                                                                 | FAIL                                                                                                                       |
+| ------ | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| **G1** | **Mechanism Specificity**   | Defines a specific context engineering mechanism or pattern (e.g., "recursive summarization with compression ratio," "XML-structured tool responses," "checkpoint-based state persistence," "faceted retrieval with metadata")       | Uses vague terms like "improving accuracy," "better prompts," "AI best practices" without explaining _how_ mechanistically |
+| **G2** | **Implementable Artifacts** | Contains at least one of: code snippets, JSON/XML schemas, prompt templates with structure, architectural diagrams, API contracts, configuration examples                                                                            | Zero implementable artifacts; purely conceptual, opinion-based, or high-level overview only                                |
+| **G3** | **Beyond Basics**           | Discusses advanced patterns: post-retrieval processing, agent state management, tool interface design, memory architecture, multi-agent coordination, evaluation methodology, or context optimization                                | Focuses _solely_ on basic prompt tips, introductory RAG concepts, or "vector database 101" content                         |
+| **G4** | **Source Verifiability**    | Author/organization identifiable with demonstrated technical credibility: peer-reviewed papers, production engineering blogs from AI labs (Anthropic, Google, Vercel, etc.), recognized practitioners with public code contributions | Anonymous source, unverifiable credentials, obvious marketing/vendor content disguised as technical writing                |
 
 ### Gatekeeper Decision Logic
+
 IF G1 = FAIL → REJECT (reason: "Generic/vague content - no specific mechanism defined")
 IF G2 = FAIL → REJECT (reason: "No implementable artifacts")
 IF G3 = FAIL → REJECT (reason: "Basic content only - no advanced patterns")
@@ -83,6 +87,7 @@ ELSE → PROCEED to Dimensional Scoring
 For documents passing all gates, score across **4 weighted dimensions**.
 
 Use a 3-point scale:
+
 - **2 = Excellent**: Meets the highest standard
 - **1 = Acceptable**: Has value but with limitations
 - **0 = Poor**: Fails to meet minimum bar
@@ -93,13 +98,14 @@ Use a 3-point scale:
 
 **Core Question**: Can a practitioner directly implement something from this content?
 
-| Score | Level | Criteria |
-|-------|-------|----------|
-| **2** | Excellent | Provides complete, implementable patterns: working code examples, specific prompt structures with XML/JSON formatting, architectural diagrams with component relationships, concrete metrics from production (latency, accuracy, cost). Includes enough detail to reproduce results. |
-| **1** | Acceptable | Describes useful patterns or techniques but lacks complete implementation details. Mentions approaches without showing exact structure. Provides principles but requires significant interpretation to apply. |
-| **0** | Poor | Purely theoretical discussion. Vague concepts without any path to implementation. Would need to find other sources to actually build anything. |
+| Score | Level      | Criteria                                                                                                                                                                                                                                                                             |
+| ----- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **2** | Excellent  | Provides complete, implementable patterns: working code examples, specific prompt structures with XML/JSON formatting, architectural diagrams with component relationships, concrete metrics from production (latency, accuracy, cost). Includes enough detail to reproduce results. |
+| **1** | Acceptable | Describes useful patterns or techniques but lacks complete implementation details. Mentions approaches without showing exact structure. Provides principles but requires significant interpretation to apply.                                                                        |
+| **0** | Poor       | Purely theoretical discussion. Vague concepts without any path to implementation. Would need to find other sources to actually build anything.                                                                                                                                       |
 
 **Example Indicators for Score 2**:
+
 - "Here's the exact XML schema for our tool responses..."
 - "We use this prompt template: [actual template with placeholders explained]"
 - "Latency reduced from 2.3s to 0.4s after implementing..."
@@ -111,13 +117,14 @@ Use a 3-point scale:
 
 **Core Question**: Does this content address the core challenges of managing information flow to/from LLMs?
 
-| Score | Level | Criteria |
-|-------|-------|----------|
-| **2** | Excellent | Directly addresses Context Engineering Survey taxonomy components: context retrieval/generation strategies, context processing techniques, context management patterns, RAG optimization, memory systems, tool integration, or multi-agent coordination. Shows understanding of token economics and information architecture for agents. |
-| **1** | Acceptable | Related to context engineering but tangentially. Discusses prompting or retrieval without deep focus on systematic optimization. Useful adjacent knowledge (e.g., general LLM evaluation) but not core context engineering. |
-| **0** | Poor | Unrelated to context engineering. General ML content, basic LLM tutorials, or topics outside the domain scope. |
+| Score | Level      | Criteria                                                                                                                                                                                                                                                                                                                                 |
+| ----- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **2** | Excellent  | Directly addresses Context Engineering Survey taxonomy components: context retrieval/generation strategies, context processing techniques, context management patterns, RAG optimization, memory systems, tool integration, or multi-agent coordination. Shows understanding of token economics and information architecture for agents. |
+| **1** | Acceptable | Related to context engineering but tangentially. Discusses prompting or retrieval without deep focus on systematic optimization. Useful adjacent knowledge (e.g., general LLM evaluation) but not core context engineering.                                                                                                              |
+| **0** | Poor       | Unrelated to context engineering. General ML content, basic LLM tutorials, or topics outside the domain scope.                                                                                                                                                                                                                           |
 
 **Example Indicators for Score 2**:
+
 - Discusses structuring tool outputs for agent "peripheral vision"
 - Addresses state persistence across long-running sessions
 - Covers compression/summarization strategies for conversation history
@@ -129,13 +136,14 @@ Use a 3-point scale:
 
 **Core Question**: How do we know the claims are valid?
 
-| Score | Level | Criteria |
-|-------|-------|----------|
-| **2** | Excellent | Claims backed by quantitative evidence: benchmarks with baselines, A/B test results, production metrics, ablation studies. Discusses what was measured and how. Acknowledges limitations and failure modes. Reproducible methodology. |
-| **1** | Acceptable | Some evidence but not rigorous: single examples, anecdotal production experience, qualitative observations. Claims are reasonable but not strongly validated. |
-| **0** | Poor | Unsupported claims. "This works better" without any evidence. Marketing-style assertions. No acknowledgment of limitations or trade-offs. |
+| Score | Level      | Criteria                                                                                                                                                                                                                              |
+| ----- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **2** | Excellent  | Claims backed by quantitative evidence: benchmarks with baselines, A/B test results, production metrics, ablation studies. Discusses what was measured and how. Acknowledges limitations and failure modes. Reproducible methodology. |
+| **1** | Acceptable | Some evidence but not rigorous: single examples, anecdotal production experience, qualitative observations. Claims are reasonable but not strongly validated.                                                                         |
+| **0** | Poor       | Unsupported claims. "This works better" without any evidence. Marketing-style assertions. No acknowledgment of limitations or trade-offs.                                                                                             |
 
 **Example Indicators for Score 2**:
+
 - "We tested on 500 examples and saw 67% improvement in task completion"
 - "This approach failed when X condition occurred"
 - "Compared against baseline of Y, our method achieved Z"
@@ -147,13 +155,14 @@ Use a 3-point scale:
 
 **Core Question**: Does this teach something we don't already know?
 
-| Score | Level | Criteria |
-|-------|-------|----------|
-| **2** | Excellent | Introduces novel frameworks, counter-intuitive findings, or previously undocumented patterns. Challenges conventional wisdom with evidence. Provides new mental models for thinking about problems. Synthesizes cross-domain insights. |
-| **1** | Acceptable | Synthesizes existing ideas in useful ways. Good execution of known patterns. Provides clear examples of established techniques. Incremental improvements with clear value. |
-| **0** | Poor | Restates common knowledge. Rehashes well-known techniques without adding value. Generic listicles of known tips. |
+| Score | Level      | Criteria                                                                                                                                                                                                                               |
+| ----- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **2** | Excellent  | Introduces novel frameworks, counter-intuitive findings, or previously undocumented patterns. Challenges conventional wisdom with evidence. Provides new mental models for thinking about problems. Synthesizes cross-domain insights. |
+| **1** | Acceptable | Synthesizes existing ideas in useful ways. Good execution of known patterns. Provides clear examples of established techniques. Incremental improvements with clear value.                                                             |
+| **0** | Poor       | Restates common knowledge. Rehashes well-known techniques without adding value. Generic listicles of known tips.                                                                                                                       |
 
 **Example Indicators for Score 2**:
+
 - "Contrary to common belief, reducing tools from 50 to 10 improved accuracy"
 - Introduces new terminology that captures an important distinction
 - "We discovered this failure mode that isn't documented elsewhere"
@@ -164,25 +173,26 @@ Use a 3-point scale:
 ## PART 3: DECISION FRAMEWORK
 
 ### Weighted Score Calculation
+
 total_score = (D1 × 0.35) + (D2 × 0.30) + (D3 × 0.20) + (D4 × 0.15)
 Maximum possible: 2.0
 
 ### Decision Thresholds
 
-| Decision | Condition | Action |
-|----------|-----------|--------|
-| **APPROVE** | `total_score >= 1.4` | Add to reference library; extract Skill candidates; create tracking issue |
-| **HUMAN_REVIEW** | `0.9 <= total_score < 1.4` | Flag for expert review with specific concerns noted |
-| **REJECT** | `total_score < 0.9` OR any Gate FAIL | Log reason; archive for pattern analysis |
+| Decision         | Condition                            | Action                                                                    |
+| ---------------- | ------------------------------------ | ------------------------------------------------------------------------- |
+| **APPROVE**      | `total_score >= 1.4`                 | Add to reference library; extract Skill candidates; create tracking issue |
+| **HUMAN_REVIEW** | `0.9 <= total_score < 1.4`           | Flag for expert review with specific concerns noted                       |
+| **REJECT**       | `total_score < 0.9` OR any Gate FAIL | Log reason; archive for pattern analysis                                  |
 
 ### Override Rules
 
-| Rule | Condition | Override Action |
-|------|-----------|-----------------|
-| **O1** | D1 (Technical Depth) = 0 | Force REJECT regardless of total score |
-| **O2** | D2 (CE Relevance) = 0 | Force REJECT regardless of total score |
-| **O3** | D3 (Evidence) = 1 AND total >= 1.4 | Force HUMAN_REVIEW to verify claims |
-| **O4** | D4 (Novelty) = 2 AND total < 1.4 | Force HUMAN_REVIEW (potential breakthrough) |
+| Rule   | Condition                          | Override Action                             |
+| ------ | ---------------------------------- | ------------------------------------------- |
+| **O1** | D1 (Technical Depth) = 0           | Force REJECT regardless of total score      |
+| **O2** | D2 (CE Relevance) = 0              | Force REJECT regardless of total score      |
+| **O3** | D3 (Evidence) = 1 AND total >= 1.4 | Force HUMAN_REVIEW to verify claims         |
+| **O4** | D4 (Novelty) = 2 AND total < 1.4   | Force HUMAN_REVIEW (potential breakthrough) |
 
 ---
 
@@ -199,10 +209,10 @@ Maximum possible: 2.0
     "source_type": "peer_reviewed | engineering_blog | documentation | preprint | tutorial | other"
   },
   "gatekeeper": {
-    "G1_mechanism_specificity": {"pass": true, "evidence": "string"},
-    "G2_implementable_artifacts": {"pass": true, "evidence": "string"},
-    "G3_beyond_basics": {"pass": true, "evidence": "string"},
-    "G4_source_verifiability": {"pass": true, "evidence": "string"},
+    "G1_mechanism_specificity": { "pass": true, "evidence": "string" },
+    "G2_implementable_artifacts": { "pass": true, "evidence": "string" },
+    "G3_beyond_basics": { "pass": true, "evidence": "string" },
+    "G4_source_verifiability": { "pass": true, "evidence": "string" },
     "verdict": "PASS | REJECT",
     "rejection_reason": "string | null"
   },
@@ -246,40 +256,41 @@ Maximum possible: 2.0
 
 PART 5: QUICK REFERENCE CARD
 ─────────────────────────────────────────────────────────────────────┐
-│                     EVALUATION QUICK REFERENCE                       │
+│ EVALUATION QUICK REFERENCE │
 ├─────────────────────────────────────────────────────────────────────┤
-│ GATEKEEPERS (All must PASS)                                          │
-│   G1: Specific mechanism defined?              □ PASS    □ FAIL     │
-│   G2: Code/schema/diagram present?             □ PASS    □ FAIL     │
-│   G3: Beyond basic tips?                       □ PASS    □ FAIL     │
-│   G4: Source credible & verifiable?            □ PASS    □ FAIL     │
+│ GATEKEEPERS (All must PASS) │
+│ G1: Specific mechanism defined? □ PASS □ FAIL │
+│ G2: Code/schema/diagram present? □ PASS □ FAIL │
+│ G3: Beyond basic tips? □ PASS □ FAIL │
+│ G4: Source credible & verifiable? □ PASS □ FAIL │
 ├─────────────────────────────────────────────────────────────────────┤
-│ SCORING (0=Poor, 1=Acceptable, 2=Excellent)                          │
-│   D1: Technical Depth (35%)         □ 0    □ 1    □ 2               │
-│   D2: CE Relevance (30%)            □ 0    □ 1    □ 2               │
-│   D3: Evidence Rigor (20%)          □ 0    □ 1    □ 2               │
-│   D4: Novelty/Insight (15%)         □ 0    □ 1    □ 2               │
+│ SCORING (0=Poor, 1=Acceptable, 2=Excellent) │
+│ D1: Technical Depth (35%) □ 0 □ 1 □ 2 │
+│ D2: CE Relevance (30%) □ 0 □ 1 □ 2 │
+│ D3: Evidence Rigor (20%) □ 0 □ 1 □ 2 │
+│ D4: Novelty/Insight (15%) □ 0 □ 1 □ 2 │
 ├─────────────────────────────────────────────────────────────────────┤
-│ DECISION THRESHOLDS                                                  │
-│   APPROVE:       weighted_total >= 1.4                               │
-│   HUMAN_REVIEW:  0.9 <= weighted_total < 1.4                         │
-│   REJECT:        weighted_total < 0.9 OR any Gate FAIL               │
+│ DECISION THRESHOLDS │
+│ APPROVE: weighted_total >= 1.4 │
+│ HUMAN_REVIEW: 0.9 <= weighted_total < 1.4 │
+│ REJECT: weighted_total < 0.9 OR any Gate FAIL │
 ├─────────────────────────────────────────────────────────────────────┤
-│ OVERRIDES                                                            │
-│   D1 = 0 → Auto-REJECT                                               │
-│   D2 = 0 → Auto-REJECT                                               │
-│   D3 = 1 with total >= 1.4 → Force HUMAN_REVIEW                      │
-│   D4 = 2 with total < 1.4 → Force HUMAN_REVIEW (breakthrough?)       │
+│ OVERRIDES │
+│ D1 = 0 → Auto-REJECT │
+│ D2 = 0 → Auto-REJECT │
+│ D3 = 1 with total >= 1.4 → Force HUMAN_REVIEW │
+│ D4 = 2 with total < 1.4 → Force HUMAN_REVIEW (breakthrough?) │
 ├─────────────────────────────────────────────────────────────────────┤
-│ TAXONOMY CATEGORIES (from Context Engineering Survey)                │
-│   □ context_retrieval    □ context_processing    □ context_management│
-│   □ rag                  □ memory                □ tool_integration  │
-│   □ multi_agent                                                      │
+│ TAXONOMY CATEGORIES (from Context Engineering Survey) │
+│ □ context_retrieval □ context_processing □ context_management│
+│ □ rag □ memory □ tool_integration │
+│ □ multi_agent │
 └─────────────────────────────────────────────────────────────────────┘
 
 PART 6: EXAMPLE EVALUATIONS
 Example A: HIGH-QUALITY APPROVE
 Source: Anthropic Engineering Blog - "Effective Harnesses for Long-Running Agents"
+
 ```
 json{
   "gatekeeper": {
@@ -358,5 +369,6 @@ json{
 ---
 
 These two files provide:
+
 1. **SYSTEM_PROMPT.md** - The complete system prompt for your researcher agent
 2. **EVALUATION_RUBRIC.md** - The detailed rubric with gates, dimensions, decision framework, output schema, and examples

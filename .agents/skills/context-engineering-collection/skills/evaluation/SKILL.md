@@ -10,6 +10,7 @@ Evaluate agent systems differently from traditional software because agents make
 ## When to Activate
 
 Activate this skill when:
+
 - Testing agent performance systematically
 - Validating context engineering choices
 - Measuring improvements over time
@@ -30,13 +31,14 @@ Deploy LLM-as-judge for scalable evaluation across large test sets while supplem
 
 Apply the BrowseComp research finding when designing evaluation budgets: three factors explain 95% of browsing agent performance variance.
 
-| Factor | Variance Explained | Implication |
-|--------|-------------------|-------------|
-| Token usage | 80% | More tokens = better performance |
-| Number of tool calls | ~10% | More exploration helps |
-| Model choice | ~5% | Better models multiply efficiency |
+| Factor               | Variance Explained | Implication                       |
+| -------------------- | ------------------ | --------------------------------- |
+| Token usage          | 80%                | More tokens = better performance  |
+| Number of tool calls | ~10%               | More exploration helps            |
+| Model choice         | ~5%                | Better models multiply efficiency |
 
 Act on these implications when designing evaluations:
+
 - **Set realistic token budgets**: Evaluate agents with production-realistic token limits, not unlimited resources, because token usage drives 80% of variance.
 - **Prioritize model upgrades over token increases**: Upgrading model versions provides larger gains than doubling token budgets on previous versions because better models use tokens more efficiently.
 - **Validate multi-agent architectures**: The finding supports distributing work across agents with separate context windows, so evaluate multi-agent setups against single-agent baselines.
@@ -96,6 +98,7 @@ Start with small samples (20-30 cases) during early development when changes hav
 **Stratify by Complexity**
 
 Structure test sets across complexity levels to prevent easy examples from inflating scores:
+
 - Simple: single tool call, factual lookup
 - Medium: multiple tool calls, comparison logic
 - Complex: many tool calls, significant ambiguity
@@ -151,6 +154,7 @@ Guard against these common failures that undermine evaluation reliability:
 ## Examples
 
 **Example 1: Simple Evaluation**
+
 ```python
 def evaluate_agent_response(response, expected):
     rubric = load_rubric()
@@ -231,12 +235,15 @@ This skill connects to all other skills as a cross-cutting concern:
 ## References
 
 Internal reference:
+
 - [Metrics Reference](./references/metrics.md) - Read when: designing specific evaluation metrics, choosing scoring scales, or implementing weighted rubric calculations
 
 Internal skills:
+
 - All other skills connect to evaluation for quality measurement
 
 External resources:
+
 - LLM evaluation benchmarks - Read when: selecting or building benchmark suites for agent comparison
 - Agent evaluation research papers - Read when: adopting new evaluation methodologies or validating current approach
 - Production monitoring practices - Read when: setting up alerting, dashboards, or sampling strategies for live systems

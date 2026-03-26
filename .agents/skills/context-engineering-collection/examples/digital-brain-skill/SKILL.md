@@ -31,11 +31,11 @@ Activate this skill when the user:
 
 The Digital Brain follows a three-level loading pattern:
 
-| Level | When Loaded | Content |
-|-------|-------------|---------|
-| **L1: Metadata** | Always | This SKILL.md overview |
-| **L2: Module Instructions** | On-demand | `[module]/[MODULE].md` files |
-| **L3: Data Files** | As-needed | `.jsonl`, `.yaml`, `.md` data |
+| Level                       | When Loaded | Content                       |
+| --------------------------- | ----------- | ----------------------------- |
+| **L1: Metadata**            | Always      | This SKILL.md overview        |
+| **L2: Module Instructions** | On-demand   | `[module]/[MODULE].md` files  |
+| **L3: Data Files**          | As-needed   | `.jsonl`, `.yaml`, `.md` data |
 
 ### File Format Strategy
 
@@ -49,6 +49,7 @@ Formats chosen for optimal agent parsing:
 ### Append-Only Data Integrity
 
 JSONL files are **append-only**. Never delete entries:
+
 - Mark as `"status": "archived"` instead of deleting
 - Preserves history for pattern analysis
 - Enables "what worked" retrospectives
@@ -72,6 +73,7 @@ digital-brain/
 **Always read `identity/voice.md` before generating any content.**
 
 Contains:
+
 - `voice.md` - Tone, style, vocabulary, patterns
 - `brand.md` - Positioning, audience, content pillars
 - `values.yaml` - Core beliefs and principles
@@ -90,6 +92,7 @@ Pipeline: `ideas.jsonl` → `drafts/` → `posts.jsonl`
 ### Network Module
 
 Personal CRM with relationship tiers:
+
 - `inner` - Weekly touchpoints
 - `active` - Bi-weekly touchpoints
 - `network` - Monthly touchpoints
@@ -98,6 +101,7 @@ Personal CRM with relationship tiers:
 ### Operations Module
 
 Productivity system with priority levels:
+
 - P0: Do today, blocking
 - P1: This week, important
 - P2: This month, valuable
@@ -142,6 +146,7 @@ Productivity system with priority levels:
 **Input**: "Help me write a post about AI agents"
 
 **Process**:
+
 1. Read `identity/voice.md` → Extract voice attributes
 2. Check `identity/brand.md` → Confirm "ai_agents" is a content pillar
 3. Reference `content/posts.jsonl` → Find similar successful posts
@@ -155,6 +160,7 @@ Productivity system with priority levels:
 **Input**: "Prepare me for my call with Sarah Chen"
 
 **Process**:
+
 1. Search `network/contacts.jsonl` for "Sarah Chen"
 2. Get recent entries from `network/interactions.jsonl`
 3. Check `operations/todos.md` for pending items with Sarah
@@ -183,6 +189,7 @@ This skill integrates context engineering principles:
 ## References
 
 Internal references:
+
 - [Identity Module](./identity/IDENTITY.md) - Voice and brand details
 - [Content Module](./content/CONTENT.md) - Content pipeline docs
 - [Network Module](./network/NETWORK.md) - CRM documentation
@@ -190,6 +197,7 @@ Internal references:
 - [Agent Scripts](./agents/AGENTS.md) - Automation documentation
 
 External resources:
+
 - [Agent Skills for Context Engineering](https://github.com/muratcankoylan/Agent-Skills-for-Context-Engineering)
 - [Anthropic Context Engineering Guide](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
 

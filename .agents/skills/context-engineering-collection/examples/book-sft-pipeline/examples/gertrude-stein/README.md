@@ -4,31 +4,31 @@ A complete case study of training Qwen3-8B-Base to write in Gertrude Stein's sty
 
 ## Project Summary
 
-| Metric | Value |
-|--------|-------|
-| Source Book | Three Lives (1909) |
-| Book Word Count | ~86,000 |
-| Training Examples | 592 |
-| Test Examples | 50 |
-| Model | Qwen/Qwen3-8B-Base |
-| LoRA Rank | 32 |
-| Adapter Size | 352 MB |
-| Training Time | ~15 minutes |
-| Total Cost | ~$2 |
+| Metric            | Value              |
+| ----------------- | ------------------ |
+| Source Book       | Three Lives (1909) |
+| Book Word Count   | ~86,000            |
+| Training Examples | 592                |
+| Test Examples     | 50                 |
+| Model             | Qwen/Qwen3-8B-Base |
+| LoRA Rank         | 32                 |
+| Adapter Size      | 352 MB             |
+| Training Time     | ~15 minutes        |
+| Total Cost        | ~$2                |
 
 ## Training Metrics
 
 ### Loss Trajectory
 
-| Step | Train Loss | Test Loss |
-|------|-----------|-----------|
-| 5 | 7579.67 | - |
-| 40 | 4032.35 | 7584.85 |
-| 100 | 2392.17 | 2127.44 |
-| 140 | 2863.17 | 752.95 |
-| 180 | 1327.41 | 229.88 |
-| 200 | 1044.49 | 213.36 |
-| Final | ~800 | ~200 |
+| Step  | Train Loss | Test Loss |
+| ----- | ---------- | --------- |
+| 5     | 7579.67    | -         |
+| 40    | 4032.35    | 7584.85   |
+| 100   | 2392.17    | 2127.44   |
+| 140   | 2863.17    | 752.95    |
+| 180   | 1327.41    | 229.88    |
+| 200   | 1044.49    | 213.36    |
+| Final | ~800       | ~200      |
 
 Loss reduction: 97% (7584 to 213 test loss)
 
@@ -50,6 +50,7 @@ The model successfully learned these Gertrude Stein characteristics:
 **Prompt**: Write in Gertrude Stein's style about a real estate clerk coming home tired.
 
 **Output**:
+
 > It was a very busy day for the clerk in the real estate office. He came home to his small house in the working class part of the town, very tired. He went into the kitchen where his wife was cooking.
 >
 > "Hi, Sis, home for dinner?" he said to her.
@@ -65,6 +66,7 @@ The model successfully learned these Gertrude Stein characteristics:
 **Prompt**: Write about two lovers communicating through text messages.
 
 **Output**:
+
 > "Hey, Herman, I just got a minute to be gone from my patient. Want to talk to you for a little while, Herman," Lena wrote one night, and then she sent the text to him.
 >
 > Herman read it and then he wrote her back, "I was just getting ready to go to bed, Lena. Want me to come and see you tomorrow, Lena. Want me to bring something to you, Lena. Want me to bring you some ice cream, Lena. Want me to bring you some of those little donuts..."
@@ -82,6 +84,7 @@ Multiple samples tested, all scored as human-written prose.
 ### Modern Scenario Testing
 
 We tested the model on scenarios that couldn't exist in 1909:
+
 - Barista making lattes
 - Social media scrolling
 - Video calls
@@ -165,4 +168,3 @@ CONFIG = {
 - `sample_outputs.md` - Full model outputs with analysis
 - `training_config.json` - Exact configuration used
 - `dataset_sample.jsonl` - Sample training examples
-

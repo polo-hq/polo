@@ -11,6 +11,7 @@ A complete system for converting books into SFT datasets and training style-tran
 ## When to Activate
 
 Activate this skill when:
+
 - Building fine-tuning datasets from literary works
 - Creating author-voice or style-transfer models
 - Preparing training data for Tinker or similar SFT platforms
@@ -60,6 +61,7 @@ The goal is learning the author's rhythm and vocabulary patterns, not memorizing
 ## Phase 1: Text Extraction
 
 ### Critical Rules
+
 1. **Always source ePub over PDF** - OCR errors become learned patterns
 2. **Use paragraph-level extraction** - Extract from `<p>` tags to preserve breaks
 3. **Remove front/back matter** - Copyright and TOC pollute the dataset
@@ -90,7 +92,7 @@ Smaller chunks (150-400 words) produce more training examples and better style t
 def segment(text, min_words=150, max_words=400):
     paragraphs = text.split('\n\n')
     chunks, buffer, buffer_words = [], [], 0
-    
+
     for para in paragraphs:
         words = len(para.split())
         if buffer_words + words > max_words and buffer_words >= min_words:
@@ -101,7 +103,7 @@ def segment(text, min_words=150, max_words=400):
         else:
             buffer.append(para)
             buffer_words += words
-    
+
     if buffer:
         chunks.append('\n\n'.join(buffer))
     return chunks
@@ -110,6 +112,7 @@ def segment(text, min_words=150, max_words=400):
 ### Expected Results
 
 For an 86,000-word book:
+
 - Old method (250-650 words): ~150 chunks
 - New method (150-400 + overlap): ~300 chunks
 - With 2 variants per chunk: 600+ training examples
@@ -164,11 +167,11 @@ instruction = llm_call(INSTRUCTION_PROMPT.format(text=chunk))
 
 ```json
 {
-    "messages": [
-        {"role": "system", "content": "You are an expert creative writer..."},
-        {"role": "user", "content": "Write in the style of Author: Scene description..."},
-        {"role": "assistant", "content": "The actual book text from chunk..."}
-    ]
+  "messages": [
+    { "role": "system", "content": "You are an expert creative writer..." },
+    { "role": "user", "content": "Write in the style of Author: Scene description..." },
+    { "role": "assistant", "content": "The actual book text from chunk..." }
+  ]
 }
 ```
 
@@ -206,6 +209,7 @@ CONFIG = {
 ### Why Base Model?
 
 Use **base** (pretrained) models, not instruction-tuned versions:
+
 - Base models are more malleable for new styles
 - Instruct models have patterns that resist overwriting
 - Style is a low-level pattern that base models capture better
@@ -290,30 +294,32 @@ Test outputs with GPTZero, Pangram, or ZeroGPT.
 
 ## Expected Results
 
-| Metric | Value |
-|--------|-------|
-| Training examples | 500-1000 per book |
-| Model | Qwen/Qwen3-8B-Base |
-| LoRA rank | 32 |
-| Adapter size | ~350 MB |
-| Training time | ~15 min |
-| Loss reduction | 90%+ |
-| Style transfer success | ~50% perfect |
+| Metric                 | Value              |
+| ---------------------- | ------------------ |
+| Training examples      | 500-1000 per book  |
+| Model                  | Qwen/Qwen3-8B-Base |
+| LoRA rank              | 32                 |
+| Adapter size           | ~350 MB            |
+| Training time          | ~15 min            |
+| Loss reduction         | 90%+               |
+| Style transfer success | ~50% perfect       |
 
 ## Cost Estimate
 
-| Component | Cost |
-|-----------|------|
-| LLM (instruction generation) | ~$0.50 |
-| Tinker training (15 min) | ~$1.50 |
-| **Total** | **~$2.00** |
+| Component                    | Cost       |
+| ---------------------------- | ---------- |
+| LLM (instruction generation) | ~$0.50     |
+| Tinker training (15 min)     | ~$1.50     |
+| **Total**                    | **~$2.00** |
 
 ## Integration with Context Engineering Skills
 
 This example applies several skills from the Agent Skills for Context Engineering collection:
 
 ### project-development
+
 The pipeline follows the staged, idempotent architecture pattern:
+
 - **Acquire**: Extract text from ePub
 - **Prepare**: Segment into training chunks
 - **Process**: Generate synthetic instructions
@@ -325,14 +331,18 @@ The pipeline follows the staged, idempotent architecture pattern:
 Each phase is resumable and produces intermediate artifacts for debugging.
 
 ### context-compression
+
 Segmentation is a form of context compression for training. The core insight from context-compression applies: information density matters more than information quantity. Smaller, coherent chunks (150-400 words) produce better style transfer than larger, diluted chunks.
 
 The two-tier strategy mirrors context compression evaluation:
+
 - Tier 1: Fast, deterministic compression
 - Tier 2: LLM-assisted for edge cases
 
 ### multi-agent-patterns
+
 The pipeline uses the **supervisor/orchestrator** pattern:
+
 - Orchestrator coordinates phases and manages state
 - Specialized agents (Extraction, Segmentation, Instruction, Builder) have isolated contexts
 - Each agent receives only the information needed for its task
@@ -340,7 +350,9 @@ The pipeline uses the **supervisor/orchestrator** pattern:
 This matches the principle that sub-agents exist primarily to isolate context rather than simulate roles.
 
 ### evaluation
+
 Validation follows the **end-state evaluation** pattern:
+
 - Functional testing: Does output match expected style markers?
 - Originality verification: Is content genuinely generated?
 - External validation: AI detector scores
@@ -348,23 +360,27 @@ Validation follows the **end-state evaluation** pattern:
 The "modern scenario" test is a form of out-of-distribution evaluation that proves generalization.
 
 ### context-fundamentals
+
 Prompt diversity prevents attention collapse on single patterns. When training with identical prompt structures, the model memorizes the instruction-response mapping. Diverse templates force attention across the style patterns themselves.
 
 ## References
 
 Internal references:
+
 - [Segmentation Strategies](./references/segmentation-strategies.md) - Text chunking patterns
 - [Tinker Format Specification](./references/tinker-format.md) - Datum structure
 - [Tinker API Documentation](./references/tinker.txt) - Full API reference
 
 Related skills from Agent Skills for Context Engineering:
+
 - project-development - Pipeline architecture patterns
-- context-compression - Compression strategies  
+- context-compression - Compression strategies
 - multi-agent-patterns - Agent coordination
 - evaluation - Evaluation frameworks
 - context-fundamentals - Attention and information density
 
 External resources:
+
 - [Research Paper](https://arxiv.org/pdf/2510.13939) - Chakrabarty et al. 2025
 - [Dataset on Hugging Face](https://huggingface.co/datasets/MuratcanKoylan/gertrude-stein-style-sft)
 - [Gertrude Stein Case Study](./examples/gertrude-stein/) - Complete working example

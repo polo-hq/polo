@@ -1,6 +1,7 @@
 # LinkedIn Post Template
 
 ## Metadata
+
 ```yaml
 topic: "[PLACEHOLDER]"
 pillar: "[PLACEHOLDER: Content pillar]"
@@ -10,7 +11,9 @@ format: "story|lesson|hot_take|how_to|list"
 ---
 
 ## Hook (First 2-3 lines)
+
 <!-- Must work before "see more" click -->
+
 ```
 [PLACEHOLDER: Strong opening that makes them click "see more"]
 ```
@@ -20,6 +23,7 @@ format: "story|lesson|hot_take|how_to|list"
 ## Body
 
 ### Format: Story
+
 ```
 The setup:
 [PLACEHOLDER: Situation/context]
@@ -35,6 +39,7 @@ The lesson:
 ```
 
 ### Format: Lesson/How-To
+
 ```
 Here's how [PLACEHOLDER: outcome]:
 
@@ -52,6 +57,7 @@ The key insight:
 ```
 
 ### Format: Hot Take
+
 ```
 [PLACEHOLDER: Controversial statement]
 
@@ -67,6 +73,7 @@ Here's why:
 ---
 
 ## Closing
+
 ```
 [PLACEHOLDER: Summary or call to discussion]
 ```
@@ -74,7 +81,9 @@ Here's why:
 ---
 
 ## Engagement Hook
+
 <!-- Encourage comments -->
+
 ```
 [PLACEHOLDER: Question for the audience]
 
@@ -87,6 +96,7 @@ Examples:
 ---
 
 ## Hashtags (3-5 max)
+
 ```
 #[PLACEHOLDER] #[PLACEHOLDER] #[PLACEHOLDER]
 ```
@@ -94,6 +104,7 @@ Examples:
 ---
 
 ## Pre-publish Checklist
+
 - [ ] Hook works in first 2-3 lines
 - [ ] Uses line breaks for readability
 - [ ] Value is professional but personal

@@ -1,6 +1,7 @@
 # Research: [TOPIC]
 
 ## Metadata
+
 ```yaml
 created: "[DATE]"
 updated: "[DATE]"
@@ -12,7 +13,9 @@ content_potential: "high|medium|low"
 ---
 
 ## Research Question
+
 <!-- What are you trying to understand? -->
+
 ```
 [PLACEHOLDER: The core question driving this research]
 ```
@@ -20,6 +23,7 @@ content_potential: "high|medium|low"
 ## Key Findings
 
 ### Finding 1: [Title]
+
 ```
 [PLACEHOLDER: What you learned]
 
@@ -28,6 +32,7 @@ Confidence: high|medium|low
 ```
 
 ### Finding 2: [Title]
+
 ```
 [PLACEHOLDER]
 
@@ -38,7 +43,9 @@ Confidence: high|medium|low
 ---
 
 ## Synthesis
+
 <!-- Your interpretation and conclusions -->
+
 ```
 [PLACEHOLDER: What does this all mean? What's your take?]
 ```
@@ -46,6 +53,7 @@ Confidence: high|medium|low
 ---
 
 ## Content Ideas
+
 <!-- How can this research become content? -->
 
 - [ ] **Thread idea**: [PLACEHOLDER]
@@ -55,6 +63,7 @@ Confidence: high|medium|low
 ---
 
 ## Related Resources
+
 <!-- Links to bookmarks.jsonl entries or external sources -->
 
 - [PLACEHOLDER: Resource title](url)
@@ -63,6 +72,7 @@ Confidence: high|medium|low
 ---
 
 ## Open Questions
+
 <!-- What you still don't know -->
 
 - [PLACEHOLDER]
@@ -71,9 +81,10 @@ Confidence: high|medium|low
 ---
 
 ## Action Items
+
 - [ ] [PLACEHOLDER: Next step]
 - [ ] [PLACEHOLDER]
 
 ---
 
-*Research notes are living documents. Update as you learn more.*
+_Research notes are living documents. Update as you learn more._

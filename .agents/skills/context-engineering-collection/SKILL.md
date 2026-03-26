@@ -10,6 +10,7 @@ This collection provides structured guidance for building production-grade AI ag
 ## When to Activate
 
 Activate these skills when:
+
 - Building new agent systems from scratch
 - Optimizing existing agent performance
 - Debugging context-related failures
@@ -77,6 +78,7 @@ This collection integrates with itself—skills reference each other and build o
 ## References
 
 Internal skills in this collection:
+
 - [context-fundamentals](skills/context-fundamentals/SKILL.md)
 - [context-degradation](skills/context-degradation/SKILL.md)
 - [context-compression](skills/context-compression/SKILL.md)
@@ -90,6 +92,7 @@ Internal skills in this collection:
 - [project-development](skills/project-development/SKILL.md)
 
 External resources on context engineering:
+
 - Research on attention mechanisms and context window limitations
 - Production experience from leading AI labs on agent system design
 - Framework documentation for LangGraph, AutoGen, and CrewAI

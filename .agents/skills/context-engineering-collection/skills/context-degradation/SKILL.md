@@ -10,6 +10,7 @@ Diagnose and fix context failures before they cascade. Context degradation is no
 ## When to Activate
 
 Activate this skill when:
+
 - Agent performance degrades unexpectedly during long conversations
 - Debugging cases where agents produce incorrect or irrelevant outputs
 - Designing systems that must handle large contexts reliably
@@ -118,6 +119,7 @@ Implement just-in-time context loading: retrieve information only when the curre
 ## Examples
 
 **Example 1: Detecting Degradation**
+
 ```yaml
 # Context grows during long conversation
 turn_1: 1000 tokens
@@ -128,19 +130,23 @@ turn_30: 90000 tokens (significant degradation)
 ```
 
 **Example 2: Mitigating Lost-in-Middle**
+
 ```markdown
 # Organize context with critical info at edges
 
-[CURRENT TASK]                      # At start
+[CURRENT TASK] # At start
+
 - Goal: Generate quarterly report
 - Deadline: End of week
 
-[DETAILED CONTEXT]                  # Middle (less attention)
+[DETAILED CONTEXT] # Middle (less attention)
+
 - 50 pages of data
 - Multiple analysis sections
 - Supporting evidence
 
-[KEY FINDINGS]                     # At end
+[KEY FINDINGS] # At end
+
 - Revenue up 15%
 - Costs down 8%
 - Growth in Region A
@@ -184,14 +190,17 @@ This skill builds on context-fundamentals and should be studied after understand
 ## References
 
 Internal reference:
+
 - [Degradation Patterns Reference](./references/patterns.md) - Read when: debugging a specific degradation pattern and needing implementation-level detection code (attention analysis, poisoning tracking, relevance scoring, recovery procedures)
 
 Related skills in this collection:
+
 - context-fundamentals - Read when: lacking foundational understanding of context windows, token budgets, or placement mechanics
 - context-optimization - Read when: degradation is diagnosed and specific mitigation techniques (compaction, compression, masking) are needed
 - evaluation - Read when: setting up production monitoring to detect degradation before it impacts users
 
 External resources:
+
 - Liu et al., 2023 "Lost in the Middle" - Read when: needing primary research backing for U-shaped attention claims or designing position-aware context layouts
 - RULER benchmark documentation - Read when: evaluating model claims about long-context support or comparing models for context-heavy workloads
 - Production engineering guides from AI labs - Read when: implementing context management in production infrastructure

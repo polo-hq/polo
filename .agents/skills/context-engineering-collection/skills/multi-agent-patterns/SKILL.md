@@ -10,6 +10,7 @@ Multi-agent architectures distribute work across multiple language model instanc
 ## When to Activate
 
 Activate this skill when:
+
 - Single-agent context limits constrain task complexity
 - Tasks decompose naturally into parallel subtasks
 - Different subtasks require different tool sets or system prompts
@@ -41,11 +42,11 @@ Partition work across multiple context windows so each agent operates in a clean
 **The Token Economics Reality**
 Budget for substantially higher token costs. Production data shows multi-agent systems run at approximately 15x the token cost of a single-agent chat:
 
-| Architecture | Token Multiplier | Use Case |
-|--------------|------------------|----------|
-| Single agent chat | 1x baseline | Simple queries |
-| Single agent with tools | ~4x baseline | Tool-using tasks |
-| Multi-agent system | ~15x baseline | Complex research/coordination |
+| Architecture            | Token Multiplier | Use Case                      |
+| ----------------------- | ---------------- | ----------------------------- |
+| Single agent chat       | 1x baseline      | Simple queries                |
+| Single agent with tools | ~4x baseline     | Tool-using tasks              |
+| Multi-agent system      | ~15x baseline    | Complex research/coordination |
 
 Research on the BrowseComp evaluation found that three factors explain 95% of performance variance: token usage (80% of variance), number of tool calls, and model choice. This validates distributing work across agents with separate context windows to add capacity for parallel reasoning.
 
@@ -180,6 +181,7 @@ Mitigate by validating agent outputs before passing to consumers. Implement retr
 ## Examples
 
 **Example 1: Research Team Architecture**
+
 ```text
 Supervisor
 ├── Researcher (web search, document retrieval)
@@ -189,6 +191,7 @@ Supervisor
 ```
 
 **Example 2: Handoff Protocol**
+
 ```python
 def handle_customer_request(request):
     if request.type == "billing":
@@ -234,14 +237,17 @@ This skill builds on context-fundamentals and context-degradation. It connects t
 ## References
 
 Internal reference:
+
 - [Frameworks Reference](./references/frameworks.md) - Read when: implementing a specific multi-agent pattern in LangGraph, AutoGen, or CrewAI and needing framework-specific code examples
 
 Related skills in this collection:
+
 - context-fundamentals - Read when: needing to understand context window mechanics before designing agent partitioning
 - memory-systems - Read when: agents need to share state across context boundaries or persist information between runs
 - context-optimization - Read when: individual agent contexts are too large and need partitioning or compression strategies
 
 External resources:
+
 - [LangGraph Documentation](https://langchain-ai.github.io/langgraph/) - Read when: building graph-based multi-agent workflows with explicit state machines
 - [AutoGen Framework](https://microsoft.github.io/autogen/) - Read when: implementing conversational GroupChat patterns or event-driven agent coordination
 - [CrewAI Documentation](https://docs.crewai.com/) - Read when: designing role-based hierarchical agent processes

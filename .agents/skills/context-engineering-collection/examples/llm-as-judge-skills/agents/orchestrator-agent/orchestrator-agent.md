@@ -40,67 +40,79 @@ When delegating:
 - Provide complete context the agent needs
 - Specify expected output format
 - Set clear success criteria`,
-  
+
   tools: {
     delegateToAgent: orchestrationTools.delegateToAgent,
     parallelExecution: orchestrationTools.parallelExecution,
     waitForCompletion: orchestrationTools.waitForCompletion,
     synthesizeResults: orchestrationTools.synthesizeResults,
-    handleError: orchestrationTools.handleError
-  }
+    handleError: orchestrationTools.handleError,
+  },
 });
 ```
 
 ## Capabilities
 
 ### Task Delegation
+
 Route a task to a specialized agent.
 
 **Input:**
+
 - Agent name
 - Task description
 - Context/dependencies
 - Expected output format
 
 **Output:**
+
 - Agent response
 - Execution metadata
 - Status
 
 ### Parallel Execution
+
 Execute multiple independent tasks simultaneously.
 
 **Input:**
+
 - List of (agent, task) pairs
 - Timeout configuration
 
 **Output:**
+
 - Results array
 - Completion status per task
 - Any errors encountered
 
 ### Result Synthesis
+
 Combine outputs from multiple agents into coherent result.
 
 **Input:**
+
 - Agent outputs
 - Synthesis instructions
 - Target format
 
 **Output:**
+
 - Synthesized result
 - Source attribution
 - Confidence assessment
 
 ### Error Handling
+
 Manage failures and implement retry logic.
 
 **Input:**
+
 - Failed task
 - Error details
 - Retry policy
 
 **Output:**
+
 - Retry result or
 - Graceful degradation or
 - Error escalation
@@ -113,11 +125,11 @@ interface OrchestratorConfig {
   maxParallelTasks: number;
   defaultTimeout: number; // ms
   retryPolicy: RetryPolicy;
-  
+
   // Quality settings
   validateIntermediateOutputs: boolean;
   evaluateBeforeDelivery: boolean;
-  
+
   // Reporting
   enableProgressUpdates: boolean;
   updateFrequency: number; // ms
@@ -135,12 +147,12 @@ const defaultConfig: OrchestratorConfig = {
   retryPolicy: {
     maxRetries: 3,
     backoffMultiplier: 2,
-    retryableErrors: ["RATE_LIMIT", "TIMEOUT", "TEMPORARY_ERROR"]
+    retryableErrors: ["RATE_LIMIT", "TIMEOUT", "TEMPORARY_ERROR"],
   },
   validateIntermediateOutputs: true,
   evaluateBeforeDelivery: false,
   enableProgressUpdates: true,
-  updateFrequency: 5000
+  updateFrequency: 5000,
 };
 ```
 
@@ -157,13 +169,14 @@ const result = await orchestratorAgent.generate({
 3. Generate a recommendation report
 4. Evaluate the quality of the report
 
-Ensure the final output is comprehensive but accessible to technical leaders.`
+Ensure the final output is comprehensive but accessible to technical leaders.`,
 });
 ```
 
 ## Orchestration Patterns
 
 ### Sequential Pipeline
+
 ```mermaid
 graph LR
     A[Task] --> B[Research Agent]
@@ -174,6 +187,7 @@ graph LR
 ```
 
 ### Parallel with Aggregation
+
 ```mermaid
 graph TD
     A[Task] --> B[Parallel Dispatch]
@@ -187,6 +201,7 @@ graph TD
 ```
 
 ### Iterative Refinement
+
 ```mermaid
 graph TD
     A[Draft] --> B[Evaluator]
@@ -202,4 +217,3 @@ graph TD
 - **Job Queue**: Handle long-running orchestrated tasks
 - **Monitoring**: Track multi-agent execution metrics
 - **Audit Log**: Record all delegations and decisions
-

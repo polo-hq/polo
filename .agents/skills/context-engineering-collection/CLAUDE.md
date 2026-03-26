@@ -24,6 +24,7 @@ Context engineering is the discipline of curating everything that enters a model
 No top-level build system. Individual example projects have their own tooling:
 
 ### examples/llm-as-judge-skills (TypeScript, Node >= 18)
+
 ```
 cd examples/llm-as-judge-skills
 npm install
@@ -35,6 +36,7 @@ npm run typecheck    # tsc --noEmit
 ```
 
 ### examples/interleaved-thinking (Python >= 3.10)
+
 ```
 cd examples/interleaved-thinking
 pip install -e ".[dev]"
@@ -43,6 +45,7 @@ ruff check .         # linting (100 char line length)
 ```
 
 ### examples/digital-brain-skill (Node.js)
+
 ```
 cd examples/digital-brain-skill
 npm run setup

@@ -15,6 +15,7 @@ You have a call with "Sarah Chen" in 30 minutes and need a quick brief.
 **User Input**: "Prepare me for my call with Sarah Chen"
 
 **Agent Recognition**:
+
 - Trigger: "prepare for" + person name → meeting prep
 - Action: Load Digital Brain skill, network module
 
@@ -93,11 +94,13 @@ Agent scans `operations/todos.md` for Sarah-related items:
 
 ```markdown
 ### Waiting On
-| Task | Waiting On | Since | Follow Up |
-|------|------------|-------|-----------|
+
+| Task          | Waiting On | Since      | Follow Up  |
+| ------------- | ---------- | ---------- | ---------- |
 | BuildAI intro | Sarah Chen | 2024-12-15 | 2024-12-29 |
 
 ### P1 - This Week
+
 - [ ] Send technical deck to Sarah Chen
 ```
 
@@ -120,6 +123,7 @@ Agent compiles contextual brief:
 ---
 
 ## Quick Context
+
 - Former ML engineer at Google (technical background)
 - Reached out after your agent systems thread
 - Values depth over polish
@@ -127,6 +131,7 @@ Agent compiles contextual brief:
 ---
 
 ## Last Conversation (Dec 15)
+
 - Initial intro call - positive sentiment
 - She liked context engineering approach
 - Asked about moat → explained skill composability
@@ -135,12 +140,14 @@ Agent compiles contextual brief:
 ---
 
 ## Pending Follow-ups ⚠️
+
 1. **Send technical deck** - Still pending (P1)
 2. **BuildAI intro** - Waiting on her, follow up today
 
 ---
 
 ## Her Interests
+
 - Agent architecture
 - Context engineering
 - Technical due diligence
@@ -148,12 +155,14 @@ Agent compiles contextual brief:
 ---
 
 ## Value Exchange
+
 - **She can help**: Funding intros, GTM strategy
 - **You can help**: Technical DD, agent architecture
 
 ---
 
 ## Suggested Talking Points
+
 1. Apologize for delayed deck, offer to walk through live
 2. Ask about BuildAI intro status
 3. Share recent progress on [relevant feature]
@@ -162,6 +171,7 @@ Agent compiles contextual brief:
 ---
 
 ## Links
+
 - Twitter: @sarahchen_ai
 - LinkedIn: linkedin.com/in/sarahchen
 ```
@@ -188,10 +198,7 @@ Agent appends:
     "Wants technical deck by Friday",
     "Mentioned Series A timeline is Q1"
   ],
-  "follow_ups": [
-    "Send deck by Friday Dec 31",
-    "Expect BuildAI intro next week"
-  ],
+  "follow_ups": ["Send deck by Friday Dec 31", "Expect BuildAI intro next week"],
   "sentiment": "positive"
 }
 ```
@@ -200,11 +207,13 @@ Agent updates `operations/todos.md`:
 
 ```markdown
 ### P0 - Must Do Today
+
 - [ ] Send technical deck to Sarah Chen (due: Friday)
 
 ### Waiting On
-| Task | Waiting On | Since | Follow Up |
-|------|------------|-------|-----------|
+
+| Task          | Waiting On | Since      | Follow Up  |
+| ------------- | ---------- | ---------- | ---------- |
 | BuildAI intro | Sarah Chen | 2024-12-29 | 2025-01-05 |
 ```
 
@@ -222,13 +231,13 @@ Agent updates contact's `last_contact`:
 
 ## Files Accessed
 
-| File | Purpose | Tokens (~) |
-|------|---------|------------|
-| `SKILL.md` | Routing | 50 |
-| `network/NETWORK.md` | Module instructions | 60 |
-| `network/contacts.jsonl` | Contact lookup | 80 |
-| `network/interactions.jsonl` | History | 150 |
-| `operations/todos.md` | Pending items | 50 |
+| File                         | Purpose             | Tokens (~) |
+| ---------------------------- | ------------------- | ---------- |
+| `SKILL.md`                   | Routing             | 50         |
+| `network/NETWORK.md`         | Module instructions | 60         |
+| `network/contacts.jsonl`     | Contact lookup      | 80         |
+| `network/interactions.jsonl` | History             | 150        |
+| `operations/todos.md`        | Pending items       | 50         |
 
 **Total**: ~390 tokens
 

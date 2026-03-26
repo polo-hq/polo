@@ -9,18 +9,19 @@ Your content creation and management system.
 
 ## Files in This Module
 
-| File | Format | Purpose |
-|------|--------|---------|
-| `ideas.jsonl` | JSONL | Raw content ideas (append-only) |
-| `posts.jsonl` | JSONL | Published content log |
-| `calendar.md` | Markdown | Content schedule |
-| `drafts/` | Folder | Work-in-progress content |
-| `templates/` | Folder | Reusable content formats |
-| `engagement.jsonl` | JSONL | Saved posts/threads for inspiration |
+| File               | Format   | Purpose                             |
+| ------------------ | -------- | ----------------------------------- |
+| `ideas.jsonl`      | JSONL    | Raw content ideas (append-only)     |
+| `posts.jsonl`      | JSONL    | Published content log               |
+| `calendar.md`      | Markdown | Content schedule                    |
+| `drafts/`          | Folder   | Work-in-progress content            |
+| `templates/`       | Folder   | Reusable content formats            |
+| `engagement.jsonl` | JSONL    | Saved posts/threads for inspiration |
 
 ## Workflows
 
 ### Capture an Idea
+
 ```bash
 # Append to ideas.jsonl with timestamp
 {
@@ -35,6 +36,7 @@ Your content creation and management system.
 ```
 
 ### Content Creation Pipeline
+
 ```
 1. ideas.jsonl (capture)
       ↓
@@ -48,6 +50,7 @@ Your content creation and management system.
 ```
 
 ### Weekly Content Review
+
 1. Review `ideas.jsonl` - promote or archive stale ideas
 2. Check `calendar.md` - plan next week
 3. Review `posts.jsonl` - analyze what worked
@@ -65,10 +68,11 @@ When working with content:
 5. **Analysis**: Reference posts.jsonl for performance patterns
 
 Priority scoring:
+
 - High: Timely, high-value, aligns with current goals
 - Medium: Good idea, no urgency
 - Low: Worth capturing, develop later
-</instructions>
+  </instructions>
 
 ## Content Metrics to Track
 

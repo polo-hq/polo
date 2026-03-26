@@ -1,7 +1,7 @@
 # Skills Improvement Analysis: Lessons from Anthropic's "Building Claude Code" Article
 
-*Analysis date: 2026-03-17*
-*Source: "Lessons from Building Claude Code: How We Use Skills" — Anthropic Team*
+_Analysis date: 2026-03-17_
+_Source: "Lessons from Building Claude Code: How We Use Skills" — Anthropic Team_
 
 ---
 
@@ -25,19 +25,20 @@ The Anthropic team's 9 skill categories are overwhelmingly **operational** — v
 
 The article says the most powerful thing you can give Claude is **code it can compose at runtime**, not knowledge it reads and internalizes. Our `scripts/` directories contain reference implementations (demonstration code), not composable helper libraries Claude would actually import and use during a task.
 
-**The shift**: Our skills teach Claude *about* context engineering. The article suggests skills should help Claude *do* context engineering.
+**The shift**: Our skills teach Claude _about_ context engineering. The article suggests skills should help Claude _do_ context engineering.
 
 ### 2. ~~No Gotchas sections (69% of skills)~~ — RESOLVED
 
 > **Status**: Fixed in commit c847b20. All 13 skills now have standardized Gotchas sections (5-9 gotchas each). Template updated with canonical Gotchas section.
 
-~~The article is unambiguous: *"The highest-signal content in any skill is the Gotchas section."* Only 4 of 13 skills had one. The root cause was our `template/SKILL.md` didn't include a Gotchas section — so new skills never got one by default.~~
+~~The article is unambiguous: _"The highest-signal content in any skill is the Gotchas section."_ Only 4 of 13 skills had one. The root cause was our `template/SKILL.md` didn't include a Gotchas section — so new skills never got one by default.~~
 
 ### 3. No on-demand hooks
 
 The article highlights on-demand hooks as a differentiator. Examples like `/careful` (blocks destructive commands) and `/freeze` (blocks edits outside a directory) show how hooks transform a knowledge skill into a guardrail. None of our skills use this.
 
 For a context engineering marketplace, natural fits include:
+
 - `/budget` — warns when context usage exceeds a threshold
 - `/trace` — logs every tool call with token counts for post-hoc analysis
 - `/compress` — auto-triggers compression when conversation gets long
@@ -63,6 +64,7 @@ The article emphasizes persistent data storage so skills can learn over time. Ou
 **A. Add Gotchas to template and all 9 missing skills**
 
 Update `template/SKILL.md` to include a `## Gotchas` section. Then add gotchas to the 9 skills that lack them. These should capture real failure modes, not theoretical ones. Examples:
+
 - `context-compression`: "Don't compress tool definitions — models need exact schemas"
 - `multi-agent-patterns`: "Sub-agents sharing context via message passing doubles token cost vs. filesystem coordination"
 - `context-optimization`: "Prefix caching breaks when system prompts change between turns"
@@ -79,11 +81,11 @@ Add sections for: Gotchas, Setup Requirements, Related Scripts, Storage Expectat
 
 **D. Create 2-3 operational skills to complement knowledge skills**
 
-| Proposed Skill | Category | What It Does |
-|---|---|---|
-| `context-debugger` | Runbook | Symptom → investigation → diagnosis for context failures |
-| `agent-scaffolding` | Code Scaffolding | Generates boilerplate for new agent projects |
-| `skill-creator` | Code Scaffolding | Meta-skill that helps create new skills following conventions |
+| Proposed Skill      | Category         | What It Does                                                  |
+| ------------------- | ---------------- | ------------------------------------------------------------- |
+| `context-debugger`  | Runbook          | Symptom → investigation → diagnosis for context failures      |
+| `agent-scaffolding` | Code Scaffolding | Generates boilerplate for new agent projects                  |
+| `skill-creator`     | Code Scaffolding | Meta-skill that helps create new skills following conventions |
 
 **E. Make scripts composable, not demonstrative**
 
@@ -102,6 +104,7 @@ def compact_observation(output: str, max_tokens: int = 500) -> str:
 **F. Add on-demand hooks to 2-3 skills**
 
 Start with:
+
 - `context-optimization` → hook that warns on large tool outputs
 - `evaluation` → hook that auto-evaluates Claude's output quality
 - `context-compression` → hook that monitors conversation length
@@ -128,16 +131,16 @@ The strongest version of this repo is both: **knowledge skills that also include
 
 ## Audit Summary Table
 
-| Criterion | Status | Score | Notes |
-|-----------|--------|-------|-------|
-| Gotchas Sections | CRITICAL GAP | 31% (4/13) | Highest-signal content per article |
-| Description Format | PERFECT | 100% (13/13) | Trigger-condition format |
-| Composable Scripts | STRONG | 92% (12/13) | Present but reference-grade |
-| On-Demand Hooks | NOT IMPLEMENTED | 0% (0/13) | High differentiation opportunity |
-| Config/Setup Pattern | NOT IMPLEMENTED | 0% (0/13) | Needed for framework-dependent skills |
-| Persistent Storage | MINIMAL | 23% (3/13) | No `${CLAUDE_PLUGIN_DATA}` usage |
-| Progressive Disclosure | COMPREHENSIVE | 100% (13/13) | SKILL.md → references/ → scripts/ |
-| Templates/Assets | COMPREHENSIVE | 100% (13/13) | All have reference docs |
+| Criterion              | Status          | Score        | Notes                                 |
+| ---------------------- | --------------- | ------------ | ------------------------------------- |
+| Gotchas Sections       | CRITICAL GAP    | 31% (4/13)   | Highest-signal content per article    |
+| Description Format     | PERFECT         | 100% (13/13) | Trigger-condition format              |
+| Composable Scripts     | STRONG          | 92% (12/13)  | Present but reference-grade           |
+| On-Demand Hooks        | NOT IMPLEMENTED | 0% (0/13)    | High differentiation opportunity      |
+| Config/Setup Pattern   | NOT IMPLEMENTED | 0% (0/13)    | Needed for framework-dependent skills |
+| Persistent Storage     | MINIMAL         | 23% (3/13)   | No `${CLAUDE_PLUGIN_DATA}` usage      |
+| Progressive Disclosure | COMPREHENSIVE   | 100% (13/13) | SKILL.md → references/ → scripts/     |
+| Templates/Assets       | COMPREHENSIVE   | 100% (13/13) | All have reference docs               |
 
 **Overall compliance: 65%** — Closing the Gotchas gap alone raises this to ~85%.
 
@@ -145,14 +148,14 @@ The strongest version of this repo is both: **knowledge skills that also include
 
 ## Anthropic's 9 Skill Categories vs. Our Coverage
 
-| Category | Coverage | Our Skills |
-|----------|----------|------------|
-| Library & API Reference | Moderate | memory-systems, tool-design |
-| Product Verification | Moderate | evaluation, advanced-evaluation |
-| Data Fetching & Analysis | Light | (interleaved-thinking example only) |
-| Business Process & Automation | Light | (digital-brain example only) |
-| Code Scaffolding & Templates | Light | project-development |
-| Code Quality & Review | Moderate | evaluation, advanced-evaluation |
-| CI/CD & Deployment | Light | hosted-agents |
-| Runbooks | Light | context-degradation |
-| Infrastructure Operations | Light | hosted-agents |
+| Category                      | Coverage | Our Skills                          |
+| ----------------------------- | -------- | ----------------------------------- |
+| Library & API Reference       | Moderate | memory-systems, tool-design         |
+| Product Verification          | Moderate | evaluation, advanced-evaluation     |
+| Data Fetching & Analysis      | Light    | (interleaved-thinking example only) |
+| Business Process & Automation | Light    | (digital-brain example only)        |
+| Code Scaffolding & Templates  | Light    | project-development                 |
+| Code Quality & Review         | Moderate | evaluation, advanced-evaluation     |
+| CI/CD & Deployment            | Light    | hosted-agents                       |
+| Runbooks                      | Light    | context-degradation                 |
+| Infrastructure Operations     | Light    | hosted-agents                       |

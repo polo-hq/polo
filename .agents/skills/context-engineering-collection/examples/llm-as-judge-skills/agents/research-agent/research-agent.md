@@ -35,76 +35,91 @@ Quality Standards:
 - Clearly indicate when information is uncertain
 - Provide direct quotes when precision matters
 - Include source URLs/references for verification`,
-  
+
   tools: {
     webSearch: researchTools.webSearch,
     readUrl: researchTools.readUrl,
     extractClaims: researchTools.extractClaims,
     verifyClaim: researchTools.verifyClaim,
-    synthesize: researchTools.synthesize
-  }
+    synthesize: researchTools.synthesize,
+  },
 });
 ```
 
 ## Capabilities
 
 ### Web Search
+
 Search the web for relevant information.
 
 **Input:**
+
 - Search query
 - Optional filters (date, source type)
 
 **Output:**
+
 - List of relevant results
 - Snippets and URLs
 - Source metadata
 
 ### URL Reading
+
 Extract content from a specific URL.
 
 **Input:**
+
 - URL to read
 - Content type (article, paper, documentation)
 
 **Output:**
+
 - Extracted text content
 - Key sections identified
 - Publication metadata
 
 ### Claim Extraction
+
 Identify distinct claims from a source.
 
 **Input:**
+
 - Source text
 - Claim types to extract
 
 **Output:**
+
 - List of claims
 - Confidence level
 - Supporting context
 
 ### Claim Verification
+
 Cross-reference a claim against other sources.
 
 **Input:**
+
 - Claim to verify
 - Original source
 
 **Output:**
+
 - Verification status
 - Supporting/contradicting sources
 - Confidence assessment
 
 ### Synthesis
+
 Combine findings into a coherent summary.
 
 **Input:**
+
 - Research findings
 - Target format
 - Key questions to answer
 
 **Output:**
+
 - Synthesized summary
 - Key insights
 - Source citations
@@ -117,12 +132,12 @@ interface ResearchConfig {
   maxSearchResults: number;
   preferredSources: string[];
   excludedDomains: string[];
-  
+
   // Verification settings
   minSourcesForVerification: number;
   requireRecentSources: boolean;
   maxSourceAge: "1month" | "6months" | "1year" | "any";
-  
+
   // Output configuration
   citationStyle: "inline" | "footnote" | "endnote";
   summaryLength: "brief" | "standard" | "comprehensive";
@@ -138,7 +153,7 @@ const defaultConfig: ResearchConfig = {
   maxSourceAge: "any",
   citationStyle: "inline",
   summaryLength: "standard",
-  includeSourceQuality: true
+  includeSourceQuality: true,
 };
 ```
 
@@ -156,7 +171,7 @@ I need to understand:
 3. How reliable are LLM-based evaluators compared to humans?
 4. What are best practices for implementing LLM-as-a-Judge?
 
-Provide a comprehensive summary with citations.`
+Provide a comprehensive summary with citations.`,
 });
 ```
 
@@ -180,4 +195,3 @@ graph TD
 - **Fact Checking**: Verify claims in generated content
 - **Market Research**: Gather competitive intelligence
 - **Technical Documentation**: Research implementation approaches
-

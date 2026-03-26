@@ -1,61 +1,63 @@
-import { tool } from 'ai';
-import { z } from 'zod';
-import { openai } from '@ai-sdk/openai';
-import { generateText } from 'ai';
-import { config } from '../../config/index.js';
+import { tool } from "ai";
+import { z } from "zod";
+import { openai } from "@ai-sdk/openai";
+import { generateText } from "ai";
+import { config } from "../../config/index.js";
 
 const CriterionSchema = z.object({
-  name: z.string().describe('Name of the criterion'),
-  description: z.string().describe('What this criterion measures'),
-  weight: z.number().min(0).max(1).default(1).describe('Relative importance')
+  name: z.string().describe("Name of the criterion"),
+  description: z.string().describe("What this criterion measures"),
+  weight: z.number().min(0).max(1).default(1).describe("Relative importance"),
 });
 
 const RubricSchema = z.object({
-  scale: z.enum(['1-3', '1-5', '1-10']).default('1-5'),
-  levelDescriptions: z.record(z.string(), z.string()).optional()
+  scale: z.enum(["1-3", "1-5", "1-10"]).default("1-5"),
+  levelDescriptions: z.record(z.string(), z.string()).optional(),
 });
 
 export const DirectScoreInputSchema = z.object({
-  response: z.string().describe('The LLM response to evaluate'),
-  prompt: z.string().describe('The original prompt that generated the response'),
-  context: z.string().optional().describe('Additional context'),
-  criteria: z.array(CriterionSchema).min(1).describe('Evaluation criteria'),
-  rubric: RubricSchema.optional()
+  response: z.string().describe("The LLM response to evaluate"),
+  prompt: z.string().describe("The original prompt that generated the response"),
+  context: z.string().optional().describe("Additional context"),
+  criteria: z.array(CriterionSchema).min(1).describe("Evaluation criteria"),
+  rubric: RubricSchema.optional(),
 });
 
 export type DirectScoreInput = z.infer<typeof DirectScoreInputSchema>;
 
 export const DirectScoreOutputSchema = z.object({
   success: z.boolean(),
-  scores: z.array(z.object({
-    criterion: z.string(),
-    score: z.number(),
-    maxScore: z.number(),
-    justification: z.string(),
-    evidence: z.array(z.string()),
-    improvement: z.string()
-  })),
+  scores: z.array(
+    z.object({
+      criterion: z.string(),
+      score: z.number(),
+      maxScore: z.number(),
+      justification: z.string(),
+      evidence: z.array(z.string()),
+      improvement: z.string(),
+    }),
+  ),
   overallScore: z.number(),
   weightedScore: z.number(),
   summary: z.object({
     assessment: z.string(),
     strengths: z.array(z.string()),
     weaknesses: z.array(z.string()),
-    priorities: z.array(z.string())
+    priorities: z.array(z.string()),
   }),
   metadata: z.object({
     evaluationTimeMs: z.number(),
     model: z.string(),
-    criteriaCount: z.number()
-  })
+    criteriaCount: z.number(),
+  }),
 });
 
 export type DirectScoreOutput = z.infer<typeof DirectScoreOutputSchema>;
 
 export async function executeDirectScore(input: DirectScoreInput): Promise<DirectScoreOutput> {
   const startTime = Date.now();
-  const scale = input.rubric?.scale || '1-5';
-  const maxScore = parseInt(scale.split('-')[1]);
+  const scale = input.rubric?.scale || "1-5";
+  const maxScore = parseInt(scale.split("-")[1]);
 
   const systemPrompt = `You are an expert evaluator. Assess the response against each criterion.
 For each criterion:
@@ -69,14 +71,20 @@ Be objective and consistent. Base scores on explicit evidence.`;
   const userPrompt = `## Original Prompt
 ${input.prompt}
 
-${input.context ? `## Context\n${input.context}\n` : ''}
+${input.context ? `## Context\n${input.context}\n` : ""}
 ## Response to Evaluate
 ${input.response}
 
 ## Criteria
-${input.criteria.map((c, i) => `${i + 1}. **${c.name}** (weight: ${c.weight}): ${c.description}`).join('\n')}
+${input.criteria.map((c, i) => `${i + 1}. **${c.name}** (weight: ${c.weight}): ${c.description}`).join("\n")}
 
-${input.rubric?.levelDescriptions ? `## Rubric\n${Object.entries(input.rubric.levelDescriptions).map(([k, v]) => `- ${k}: ${v}`).join('\n')}` : ''}
+${
+  input.rubric?.levelDescriptions
+    ? `## Rubric\n${Object.entries(input.rubric.levelDescriptions)
+        .map(([k, v]) => `- ${k}: ${v}`)
+        .join("\n")}`
+    : ""
+}
 
 Respond with valid JSON matching this structure:
 {
@@ -102,36 +110,49 @@ Respond with valid JSON matching this structure:
       model: openai(config.openai.model),
       system: systemPrompt,
       prompt: userPrompt,
-      temperature: 0.3
+      temperature: 0.3,
     });
 
     const parsed = JSON.parse(result.text);
-    
+
     // Calculate scores
     const totalWeight = input.criteria.reduce((sum, c) => sum + c.weight, 0);
-    const weightedSum = parsed.scores.reduce((sum: number, s: { criterion: string; score: number }) => {
-      const criterion = input.criteria.find(c => c.name === s.criterion);
-      return sum + (s.score * (criterion?.weight || 1));
-    }, 0);
-    
-    const overallScore = parsed.scores.reduce((sum: number, s: { score: number }) => sum + s.score, 0) / parsed.scores.length;
+    const weightedSum = parsed.scores.reduce(
+      (sum: number, s: { criterion: string; score: number }) => {
+        const criterion = input.criteria.find((c) => c.name === s.criterion);
+        return sum + s.score * (criterion?.weight || 1);
+      },
+      0,
+    );
+
+    const overallScore =
+      parsed.scores.reduce((sum: number, s: { score: number }) => sum + s.score, 0) /
+      parsed.scores.length;
     const weightedScore = weightedSum / totalWeight;
 
     return {
       success: true,
-      scores: parsed.scores.map((s: { criterion: string; score: number; evidence?: string[]; justification: string; improvement: string }) => ({
-        ...s,
-        maxScore,
-        evidence: s.evidence || []
-      })),
+      scores: parsed.scores.map(
+        (s: {
+          criterion: string;
+          score: number;
+          evidence?: string[];
+          justification: string;
+          improvement: string;
+        }) => ({
+          ...s,
+          maxScore,
+          evidence: s.evidence || [],
+        }),
+      ),
       overallScore: Math.round(overallScore * 100) / 100,
       weightedScore: Math.round(weightedScore * 100) / 100,
       summary: parsed.summary,
       metadata: {
         evaluationTimeMs: Date.now() - startTime,
         model: config.openai.model,
-        criteriaCount: input.criteria.length
-      }
+        criteriaCount: input.criteria.length,
+      },
     };
   } catch (error) {
     return {
@@ -140,16 +161,16 @@ Respond with valid JSON matching this structure:
       overallScore: 0,
       weightedScore: 0,
       summary: {
-        assessment: `Evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        assessment: `Evaluation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
         strengths: [],
         weaknesses: [],
-        priorities: []
+        priorities: [],
       },
       metadata: {
         evaluationTimeMs: Date.now() - startTime,
         model: config.openai.model,
-        criteriaCount: input.criteria.length
-      }
+        criteriaCount: input.criteria.length,
+      },
     };
   }
 }
@@ -159,6 +180,5 @@ export const directScoreTool = tool({
 Use for objective evaluations like accuracy, completeness, clarity.
 Returns structured scores with justifications.`,
   parameters: DirectScoreInputSchema,
-  execute: executeDirectScore
+  execute: executeDirectScore,
 });
-

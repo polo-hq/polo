@@ -16,57 +16,65 @@ Returns relevant results with snippets and URLs.
 Use for gathering current information, verifying facts, or research.`,
 
   parameters: z.object({
-    query: z.string()
-      .describe("Search query - be specific for better results"),
-    
-    maxResults: z.number().min(1).max(20).default(10)
+    query: z.string().describe("Search query - be specific for better results"),
+
+    maxResults: z
+      .number()
+      .min(1)
+      .max(20)
+      .default(10)
       .describe("Maximum number of results to return"),
-    
-    filters: z.object({
-      dateRange: z.enum(["day", "week", "month", "year", "any"]).default("any")
-        .describe("Limit results to a time period"),
-      
-      sourceType: z.enum(["all", "news", "academic", "documentation"]).default("all")
-        .describe("Type of sources to prioritize"),
-      
-      excludeDomains: z.array(z.string()).optional()
-        .describe("Domains to exclude from results")
-    }).optional()
+
+    filters: z
+      .object({
+        dateRange: z
+          .enum(["day", "week", "month", "year", "any"])
+          .default("any")
+          .describe("Limit results to a time period"),
+
+        sourceType: z
+          .enum(["all", "news", "academic", "documentation"])
+          .default("all")
+          .describe("Type of sources to prioritize"),
+
+        excludeDomains: z.array(z.string()).optional().describe("Domains to exclude from results"),
+      })
+      .optional(),
   }),
 
   execute: async (input) => {
     return performWebSearch(input);
-  }
+  },
 });
 ```
 
 ## Input Schema
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| query | string | Yes | Search query |
-| maxResults | number | No | Max results (default: 10) |
-| filters.dateRange | enum | No | Time period filter |
-| filters.sourceType | enum | No | Source type priority |
-| filters.excludeDomains | string[] | No | Domains to exclude |
+| Field                  | Type     | Required | Description               |
+| ---------------------- | -------- | -------- | ------------------------- |
+| query                  | string   | Yes      | Search query              |
+| maxResults             | number   | No       | Max results (default: 10) |
+| filters.dateRange      | enum     | No       | Time period filter        |
+| filters.sourceType     | enum     | No       | Source type priority      |
+| filters.excludeDomains | string[] | No       | Domains to exclude        |
 
 ## Output Schema
 
 ```typescript
 interface WebSearchResult {
   success: boolean;
-  
+
   results: {
     title: string;
     url: string;
     snippet: string;
-    source: string;      // Domain name
+    source: string; // Domain name
     publishedDate?: string;
     relevanceScore: number;
   }[];
-  
+
   totalResults: number;
-  
+
   metadata: {
     query: string;
     searchTimeMs: number;
@@ -83,8 +91,8 @@ const results = await webSearch.execute({
   maxResults: 10,
   filters: {
     dateRange: "year",
-    sourceType: "academic"
-  }
+    sourceType: "academic",
+  },
 });
 
 // Result:
@@ -125,4 +133,3 @@ const results = await webSearch.execute({
 3. **Result Quality**: Filter out low-quality sources
 4. **Error Handling**: Handle API failures gracefully
 5. **Privacy**: Log queries appropriately
-

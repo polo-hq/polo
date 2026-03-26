@@ -23,6 +23,7 @@ Write in third person. The description is injected into the system prompt, and i
 Explain the fundamental concepts covered by this skill. These are the mental models, principles, or frameworks that the skill teaches.
 
 Default assumption: Claude is already very smart. Only add context Claude does not already have. Challenge each piece of information:
+
 - "Does Claude really need this explanation?"
 - "Can I assume Claude knows this?"
 - "Does this paragraph justify its token cost?"
@@ -38,6 +39,7 @@ Provide detailed explanation of the first major topic. Include specific techniqu
 Provide detailed explanation of the second major topic. Continue with additional topics as needed.
 
 For longer topics, consider moving content to `references/` and linking:
+
 - See [detailed reference](./references/topic-details.md) for complete implementation
 
 ## Practical Guidance
@@ -45,6 +47,7 @@ For longer topics, consider moving content to `references/` and linking:
 Provide actionable guidance for applying the skill. Include common patterns, anti-patterns to avoid, and decision frameworks for choosing between approaches.
 
 Match the level of specificity to the task's fragility:
+
 - **High freedom**: Multiple approaches are valid, decisions depend on context
 - **Medium freedom**: Preferred pattern exists, some variation acceptable
 - **Low freedom**: Operations are fragile, specific sequence must be followed
@@ -56,6 +59,7 @@ Provide concrete examples that illustrate skill application. Examples should sho
 Use input/output pairs for clarity:
 
 **Example:**
+
 ```
 Input: [describe input]
 Output: [show expected output]
@@ -86,12 +90,15 @@ Explain how this skill integrates with other skills in the collection. List rela
 ## References
 
 Internal reference (use relative path to skill's own reference files):
+
 - [Reference Name](./references/reference-file.md) - Description
 
 Related skills in this collection:
+
 - skill-name - Relationship description
 
 External resources:
+
 - Research papers, documentation, or guides
 
 ---
@@ -102,4 +109,3 @@ External resources:
 **Last Updated**: [Date]
 **Author**: [Author or Attribution]
 **Version**: [Version number]
-

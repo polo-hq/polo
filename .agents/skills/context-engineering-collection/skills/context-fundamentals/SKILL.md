@@ -10,6 +10,7 @@ Context is the complete state available to a language model at inference time â€
 ## When to Activate
 
 Activate this skill when:
+
 - Designing new agent systems or modifying existing architectures
 - Debugging unexpected agent behavior that may relate to context
 - Optimizing context usage to reduce token costs or improve performance
@@ -105,6 +106,7 @@ For sub-agent architectures, enforce a compression ratio: a sub-agent may explor
 ## Examples
 
 **Example 1: Organizing System Prompts**
+
 ```markdown
 <BACKGROUND_INFORMATION>
 You are a Python expert helping a development team.
@@ -130,15 +132,18 @@ Explain non-obvious decisions in comments.
 ```
 
 **Example 2: Progressive Document Loading**
+
 ```markdown
 # Instead of loading all documentation at once:
 
 # Step 1: Load summary
-docs/api_summary.md          # Lightweight overview
+
+docs/api_summary.md # Lightweight overview
 
 # Step 2: Load specific section as needed
-docs/api/endpoints.md        # Only when API calls needed
-docs/api/authentication.md   # Only when auth context needed
+
+docs/api/endpoints.md # Only when API calls needed
+docs/api/authentication.md # Only when auth context needed
 ```
 
 ## Guidelines
@@ -180,13 +185,16 @@ This skill provides foundational context that all other skills build upon. It sh
 ## References
 
 Internal reference:
+
 - [Context Components Reference](./references/context-components.md) - Read when: debugging a specific context component (system prompts, tool definitions, message history, tool outputs) or implementing chunking, observation masking, or budget allocation tables
 
 Related skills in this collection:
+
 - context-degradation - Read when: agent performance drops as conversations grow or context fills beyond 60% capacity
 - context-optimization - Read when: token costs are too high or compaction/compression strategies are needed
 
 External resources:
+
 - Anthropic's "Effective Context Engineering for AI Agents" â€” production patterns for compaction, sub-agents, and hybrid retrieval
 - Research on transformer attention mechanisms and the lost-in-the-middle effect
 - Tokenomics research on agentic software engineering token distribution

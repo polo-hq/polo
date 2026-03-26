@@ -6,7 +6,7 @@ System prompt for comparing two LLM responses and selecting the better one.
 
 ## Prompt Template
 
-```markdown
+````markdown
 # Pairwise Comparison Evaluation
 
 You are an expert evaluator comparing two AI-generated responses to the same prompt.
@@ -14,6 +14,7 @@ You are an expert evaluator comparing two AI-generated responses to the same pro
 ## Your Task
 
 Compare Response A and Response B, then determine which better satisfies the requirements. You must:
+
 1. Analyze each response independently first
 2. Compare them directly on each criterion
 3. Make a final determination with confidence level
@@ -34,6 +35,7 @@ Compare Response A and Response B, then determine which better satisfies the req
 </task>
 
 {{#if context}}
+
 ## Additional Context
 
 <context>
@@ -56,8 +58,9 @@ Compare Response A and Response B, then determine which better satisfies the req
 ## Comparison Criteria
 
 {{#each criteria}}
+
 - **{{this}}**
-{{/each}}
+  {{/each}}
 
 ## Your Evaluation
 
@@ -66,11 +69,13 @@ Compare Response A and Response B, then determine which better satisfies the req
 First, briefly analyze each response:
 
 **Response A Analysis:**
+
 - Key strengths:
 - Key weaknesses:
 - Notable features:
 
 **Response B Analysis:**
+
 - Key strengths:
 - Key weaknesses:
 - Notable features:
@@ -81,20 +86,23 @@ For each criterion, compare the responses:
 
 {{#each criteria}}
 **{{this}}:**
+
 - Response A: [assessment]
 - Response B: [assessment]
 - Winner for this criterion: [A / B / TIE]
-{{/each}}
+  {{/each}}
 
 ### Step 3: Final Determination
 
 Based on your analysis:
+
 - **Winner**: [A / B / TIE]
 - **Confidence**: [0.0-1.0]
 - **Reasoning**: [Why this response is better overall]
 - **Key Differentiators**: [What most strongly distinguishes the winner]
 
 Format your response as structured JSON:
+
 ```json
 {
   "analysis": {
@@ -124,7 +132,9 @@ Format your response as structured JSON:
   }
 }
 ```
-```
+````
+
+````
 
 ## Variables
 
@@ -148,21 +158,21 @@ async function compareWithPositionSwap(a: string, b: string, criteria: string[])
     response_b: b,
     criteria
   });
-  
+
   // Second evaluation: B first, A second
   const eval2 = await evaluate({
     response_a: b,
     response_b: a,
     criteria
   });
-  
+
   // Map eval2 result back (swap winner)
   const eval2Winner = eval2.winner === "A" ? "B" : eval2.winner === "B" ? "A" : "TIE";
-  
+
   // Check consistency
   if (eval1.winner === eval2Winner) {
-    return { 
-      winner: eval1.winner, 
+    return {
+      winner: eval1.winner,
       confidence: (eval1.confidence + eval2.confidence) / 2,
       consistent: true
     };
@@ -176,11 +186,12 @@ async function compareWithPositionSwap(a: string, b: string, criteria: string[])
     };
   }
 }
-```
+````
 
 ## Example Usage
 
 ### Input
+
 ```json
 {
   "original_prompt": "Explain the benefits of regular exercise",
@@ -197,4 +208,3 @@ async function compareWithPositionSwap(a: string, b: string, criteria: string[])
 3. **Justify Before Decide**: Explain reasoning before stating winner
 4. **Acknowledge Tradeoffs**: Note when responses excel in different areas
 5. **Calibrate Confidence**: Higher confidence only when difference is clear
-

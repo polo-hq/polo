@@ -26,7 +26,7 @@ This means that an agent's internal monologue—its "thinking"—can and should 
 
 This principle became a cornerstone of M2's effectiveness.
 
-> "***Pro Tip for M2 Users: Because M2 relies on Interleaved Thinking, its context is its memory. For best performance, you must retain the full session history, including the thinking steps. We've noticed that much of the community feedback about performance gaps stems from accidentally discarding this vital context, which is a common practice with simpler reasoning models."***
+> "**_Pro Tip for M2 Users: Because M2 relies on Interleaved Thinking, its context is its memory. For best performance, you must retain the full session history, including the thinking steps. We've noticed that much of the community feedback about performance gaps stems from accidentally discarding this vital context, which is a common practice with simpler reasoning models."_**
 
 ## **True Generalization is About Perturbation**
 
@@ -42,11 +42,11 @@ This led to our second, more profound realization: **Agent generalization is not
 
 This sounds abstract, so let's break it down. Think about everything that can change in a single agent task:
 
-* The **Tool Info** and available toolset.
-* The **System Prompt** defining the agent's persona and rules.
-* The **User Prompt** and its specific goal.
-* The **Environment** itself (files, codebases, APIs).
-* The **Tool Responses** returned at each step. Our old "tool scaling" approach only addressed the first item. It ignored perturbations in all the other parts of the process. Armed with this new understanding, our team built a comprehensive data pipeline designed for **full-trajectory generalization**. The data it generates trains the model to be stable against perturbations at every step. The results have been incredibly encouraging. In internal tests, we threw obscure, "cold-start" scaffolding at M2—frameworks we'd barely considered—and its performance exceeded our expectations. Both its tool-calling and instruction-following abilities generalized beautifully.
+- The **Tool Info** and available toolset.
+- The **System Prompt** defining the agent's persona and rules.
+- The **User Prompt** and its specific goal.
+- The **Environment** itself (files, codebases, APIs).
+- The **Tool Responses** returned at each step. Our old "tool scaling" approach only addressed the first item. It ignored perturbations in all the other parts of the process. Armed with this new understanding, our team built a comprehensive data pipeline designed for **full-trajectory generalization**. The data it generates trains the model to be stable against perturbations at every step. The results have been incredibly encouraging. In internal tests, we threw obscure, "cold-start" scaffolding at M2—frameworks we'd barely considered—and its performance exceeded our expectations. Both its tool-calling and instruction-following abilities generalized beautifully.
 
 ## **What's Next?**
 
@@ -54,9 +54,8 @@ Our work on M2 taught us an immense amount about agents, generalization, and dat
 
 ## **Getting Involved**
 
-* **Use the Model**: We sincerely hope you'll put M2 to the test. You can access it through our official channels or find the open-sourced version to conduct your own research.
-* **Join Our Team**: If these are the kinds of challenges that excite you, we're hiring. We are always looking for passionate people to join us in the mission to build AGI. Please send us your resume!
-
+- **Use the Model**: We sincerely hope you'll put M2 to the test. You can access it through our official channels or find the open-sourced version to conduct your own research.
+- **Join Our Team**: If these are the kinds of challenges that excite you, we're hiring. We are always looking for passionate people to join us in the mission to build AGI. Please send us your resume!
 
 ---
 

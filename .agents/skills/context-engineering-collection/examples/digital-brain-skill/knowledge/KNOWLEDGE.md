@@ -9,17 +9,18 @@ Your second brain for research, learning, and information organization.
 
 ## Files in This Module
 
-| File | Format | Purpose |
-|------|--------|---------|
-| `bookmarks.jsonl` | JSONL | Saved links and resources |
-| `learning.yaml` | YAML | Skills and learning goals |
-| `competitors.md` | Markdown | Competitive landscape |
-| `research/` | Folder | Deep-dive research notes |
-| `notes/` | Folder | Quick capture notes |
+| File              | Format   | Purpose                   |
+| ----------------- | -------- | ------------------------- |
+| `bookmarks.jsonl` | JSONL    | Saved links and resources |
+| `learning.yaml`   | YAML     | Skills and learning goals |
+| `competitors.md`  | Markdown | Competitive landscape     |
+| `research/`       | Folder   | Deep-dive research notes  |
+| `notes/`          | Folder   | Quick capture notes       |
 
 ## Data Schemas
 
 ### Bookmark Entry
+
 ```json
 {
   "id": "bm_YYYYMMDD_HHMMSS",
@@ -39,17 +40,20 @@ Your second brain for research, learning, and information organization.
 ## Workflows
 
 ### Saving a Resource
+
 1. Append to `bookmarks.jsonl` with status "unread"
 2. Add category and initial tags
 3. Later: read, summarize, update status
 
 ### Research Projects
+
 1. Create `research/[topic].md` for deep dives
 2. Link relevant bookmarks
 3. Synthesize insights
 4. Extract content ideas
 
 ### Learning Tracking
+
 1. Define skills in `learning.yaml`
 2. Link resources to skills
 3. Track progress and milestones
@@ -67,6 +71,7 @@ When managing knowledge:
 5. **Learning updates**: Update learning.yaml when completing resources
 
 Categories to use:
+
 - ai_agents: AI, agents, automation
 - building: Startups, product, engineering
 - growth: Marketing, audience, content
@@ -74,11 +79,12 @@ Categories to use:
 - leadership: Management, teams, culture
 - industry: Market trends, competitors
 - personal: Health, relationships, life
-</instructions>
+  </instructions>
 
 ## Knowledge Graph Hints
 
 When retrieving information, consider connections:
+
 - Bookmarks → Content ideas
 - Research → Authority pieces
 - Learning → Skills to highlight in brand

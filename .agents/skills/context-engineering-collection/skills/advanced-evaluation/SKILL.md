@@ -49,12 +49,12 @@ Mitigate these systematic biases in every evaluation system:
 
 Match metrics to the evaluation task structure:
 
-| Task Type | Primary Metrics | Secondary Metrics |
-|-----------|-----------------|-------------------|
-| Binary classification (pass/fail) | Recall, Precision, F1 | Cohen's kappa |
-| Ordinal scale (1-5 rating) | Spearman's rho, Kendall's tau | Cohen's kappa (weighted) |
-| Pairwise preference | Agreement rate, Position consistency | Confidence calibration |
-| Multi-label | Macro-F1, Micro-F1 | Per-label precision/recall |
+| Task Type                         | Primary Metrics                      | Secondary Metrics          |
+| --------------------------------- | ------------------------------------ | -------------------------- |
+| Binary classification (pass/fail) | Recall, Precision, F1                | Cohen's kappa              |
+| Ordinal scale (1-5 rating)        | Spearman's rho, Kendall's tau        | Cohen's kappa (weighted)   |
+| Pairwise preference               | Agreement rate, Position consistency | Confidence calibration     |
+| Multi-label                       | Macro-F1, Micro-F1                   | Per-label precision/recall |
 
 Prioritize systematic disagreement patterns over absolute agreement rates because a judge that consistently disagrees with humans on specific criteria is more problematic than one with random noise.
 
@@ -65,6 +65,7 @@ Prioritize systematic disagreement patterns over absolute agreement rates becaus
 Build direct scoring with three components: clear criteria, a calibrated scale, and structured output format.
 
 **Criteria Definition Pattern**:
+
 ```
 Criterion: [Name]
 Description: [What this criterion measures]
@@ -72,11 +73,13 @@ Weight: [Relative importance, 0-1]
 ```
 
 **Scale Calibration** — Choose scale granularity based on rubric detail:
+
 - 1-3: Binary with neutral option, lowest cognitive load
 - 1-5: Standard Likert, best balance of granularity and reliability
 - 1-10: Use only with detailed per-level rubrics because calibration is harder
 
 **Prompt Structure for Direct Scoring**:
+
 ```
 You are an expert evaluator assessing response quality.
 
@@ -115,6 +118,7 @@ Apply position bias mitigation in every pairwise evaluation:
 4. Final verdict: Consistent winner with averaged confidence
 
 **Prompt Structure for Pairwise Comparison**:
+
 ```
 You are an expert evaluator comparing two AI responses.
 
@@ -146,6 +150,7 @@ JSON with per-criterion comparison, overall winner, confidence (0-1), and reason
 ```
 
 **Confidence Calibration** — Map confidence to position consistency:
+
 - Both passes agree: confidence = average of individual confidences
 - Passes disagree: confidence = 0.5, verdict = TIE
 
@@ -154,6 +159,7 @@ JSON with per-criterion comparison, overall winner, confidence (0-1), and reason
 Generate rubrics to reduce evaluation variance by 40-60% compared to open-ended scoring.
 
 **Include these rubric components**:
+
 1. **Level descriptions**: Clear boundaries for each score level
 2. **Characteristics**: Observable features that define each level
 3. **Examples**: Representative text for each level (optional but valuable)
@@ -161,6 +167,7 @@ Generate rubrics to reduce evaluation variance by 40-60% compared to open-ended 
 5. **Scoring guidelines**: General principles for consistent application
 
 **Set strictness calibration** for the use case:
+
 - **Lenient**: Lower passing bar, appropriate for encouraging iteration
 - **Balanced**: Typical production expectations
 - **Strict**: High standards for safety-critical or high-stakes evaluation
@@ -205,6 +212,7 @@ For high-volume evaluation, apply one of these strategies:
 ### Example 1: Direct Scoring for Accuracy
 
 **Input**:
+
 ```
 Prompt: "What causes seasons on Earth?"
 Response: "Seasons are caused by Earth's tilted axis. As Earth orbits the Sun,
@@ -214,6 +222,7 @@ Scale: 1-5
 ```
 
 **Output**:
+
 ```json
 {
   "criterion": "Factual Accuracy",
@@ -233,6 +242,7 @@ are correctly described.",
 ### Example 2: Pairwise Comparison with Position Swap
 
 **Input**:
+
 ```
 Prompt: "Explain machine learning to a beginner"
 Response A: [Technical explanation with jargon]
@@ -241,22 +251,27 @@ Criteria: ["clarity", "accessibility"]
 ```
 
 **First Pass (A first)**:
+
 ```json
 { "winner": "B", "confidence": 0.8 }
 ```
 
 **Second Pass (B first)**:
+
 ```json
 { "winner": "A", "confidence": 0.6 }
 ```
+
 (Note: Winner is A because B was in first position)
 
 **Mapped Second Pass**:
+
 ```json
 { "winner": "B", "confidence": 0.6 }
 ```
 
 **Final Result**:
+
 ```json
 {
   "winner": "B",
@@ -272,6 +287,7 @@ Criteria: ["clarity", "accessibility"]
 ### Example 3: Rubric Generation
 
 **Input**:
+
 ```
 criterionName: "Code Readability"
 criterionDescription: "How easy the code is to understand and maintain"
@@ -281,6 +297,7 @@ strictness: "balanced"
 ```
 
 **Output** (abbreviated):
+
 ```json
 {
   "levels": [
@@ -376,18 +393,21 @@ This skill integrates with:
 ## References
 
 Internal reference:
+
 - [LLM-as-Judge Implementation Patterns](./references/implementation-patterns.md) - Read when: building an evaluation pipeline from scratch or integrating LLM judges into CI/CD
 - [Bias Mitigation Techniques](./references/bias-mitigation.md) - Read when: evaluation results show inconsistent or suspicious scoring patterns
 - [Metric Selection Guide](./references/metrics-guide.md) - Read when: choosing statistical metrics to validate evaluation reliability
 - [Evaluation Pipeline Diagram](./references/evaluation-pipeline.md) - Read when: designing the architecture of a multi-stage evaluation system
 
 External research:
+
 - [Eugene Yan: Evaluating the Effectiveness of LLM-Evaluators](https://eugeneyan.com/writing/llm-evaluators/) - Read when: surveying the state of the art in LLM evaluation
 - [Judging LLM-as-a-Judge (Zheng et al., 2023)](https://arxiv.org/abs/2306.05685) - Read when: understanding position bias and MT-Bench methodology
 - [G-Eval: NLG Evaluation using GPT-4 (Liu et al., 2023)](https://arxiv.org/abs/2303.16634) - Read when: implementing chain-of-thought evaluation scoring
 - [Large Language Models are not Fair Evaluators (Wang et al., 2023)](https://arxiv.org/abs/2305.17926) - Read when: diagnosing systematic bias in evaluation outputs
 
 Related skills in this collection:
+
 - evaluation - Foundational evaluation concepts
 - context-fundamentals - Context structure for evaluation prompts
 - tool-design - Building evaluation tools

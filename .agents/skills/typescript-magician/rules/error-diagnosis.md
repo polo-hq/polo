@@ -62,6 +62,7 @@ type Step3 = Step2[number];
 ### "Type 'X' is not assignable to type 'Y'"
 
 The most common error. Check:
+
 1. Are you missing properties?
 2. Are property types incompatible?
 3. Is there a literal vs widened type mismatch?
@@ -155,10 +156,7 @@ Remove complexity until the error is clear:
 
 ```typescript
 // Complex chain causing error
-const result = complexFunction()
-  .map(transform)
-  .filter(predicate)
-  .reduce(accumulator);
+const result = complexFunction().map(transform).filter(predicate).reduce(accumulator);
 
 // Simplify to isolate
 const step1 = complexFunction();
@@ -201,7 +199,7 @@ For library types, check the actual definitions:
 // In lib.dom.d.ts
 interface Document {
   querySelector<K extends keyof HTMLElementTagNameMap>(
-    selectors: K
+    selectors: K,
   ): HTMLElementTagNameMap[K] | null;
   querySelector(selectors: string): Element | null;
 }

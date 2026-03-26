@@ -39,14 +39,14 @@ Each iteration improves the prompt based on detected patterns until convergence.
 
 Common failure patterns the analyzer detects:
 
-| Pattern | Description |
-|---------|-------------|
-| `context_degradation` | Model loses track of information over long contexts |
-| `tool_confusion` | Model misunderstands tool capabilities or outputs |
-| `instruction_drift` | Model gradually deviates from original instructions |
-| `goal_abandonment` | Model stops pursuing the original goal |
-| `circular_reasoning` | Model repeats similar actions without progress |
-| `premature_conclusion` | Model concludes before completing the task |
+| Pattern                | Description                                         |
+| ---------------------- | --------------------------------------------------- |
+| `context_degradation`  | Model loses track of information over long contexts |
+| `tool_confusion`       | Model misunderstands tool capabilities or outputs   |
+| `instruction_drift`    | Model gradually deviates from original instructions |
+| `goal_abandonment`     | Model stops pursuing the original goal              |
+| `circular_reasoning`   | Model repeats similar actions without progress      |
+| `premature_conclusion` | Model concludes before completing the task          |
 
 ## Usage Modes
 
@@ -163,6 +163,7 @@ Use the slash command to analyze current session:
 ```
 
 This will:
+
 1. Extract thinking blocks from the current session
 2. Identify patterns and issues
 3. Suggest prompt improvements

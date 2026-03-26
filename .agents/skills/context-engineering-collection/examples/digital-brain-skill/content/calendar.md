@@ -3,6 +3,7 @@
 ## Publishing Schedule
 
 ### Weekly Cadence
+
 ```yaml
 monday:
   platform: "[PLACEHOLDER: e.g., Twitter]"
@@ -39,13 +40,13 @@ weekend:
 
 ### Week of [DATE]
 
-| Day | Platform | Content | Status |
-|-----|----------|---------|--------|
-| Mon | | | `planned|drafted|scheduled|published` |
-| Tue | | | |
-| Wed | | | |
-| Thu | | | |
-| Fri | | | |
+| Day | Platform | Content | Status   |
+| --- | -------- | ------- | -------- | ------- | --------- | ---------- |
+| Mon |          |         | `planned | drafted | scheduled | published` |
+| Tue |          |         |          |
+| Wed |          |         |          |
+| Thu |          |         |          |
+| Fri |          |         |          |
 
 **Theme/Focus**: [PLACEHOLDER: What's the focus for this week]
 
@@ -54,17 +55,23 @@ weekend:
 ## Upcoming Content
 
 ### Queued & Ready
+
 <!-- Content ready to publish -->
+
 - [ ] [PLACEHOLDER: Content title] - Platform - Target date
 - [ ] [PLACEHOLDER]
 
 ### In Development
+
 <!-- Content being worked on -->
+
 - [ ] [PLACEHOLDER: Content title] - Status - Notes
 - [ ] [PLACEHOLDER]
 
 ### Planned Series/Campaigns
+
 <!-- Multi-part content or campaigns -->
+
 - [ ] [PLACEHOLDER: Series name] - Parts: X - Status
 - [ ] [PLACEHOLDER]
 
@@ -73,6 +80,7 @@ weekend:
 ## Content Batching
 
 ### Batch Sessions
+
 ```yaml
 batch_day: "[PLACEHOLDER: e.g., Sunday]"
 batch_duration: "[PLACEHOLDER: e.g., 2 hours]"
@@ -80,6 +88,7 @@ target_output: "[PLACEHOLDER: e.g., 5 posts for the week]"
 ```
 
 ### Current Batch Status
+
 - Posts ready: [X/Y]
 - Threads ready: [X/Y]
 - Newsletter ready: [Yes/No]
@@ -89,10 +98,12 @@ target_output: "[PLACEHOLDER: e.g., 5 posts for the week]"
 ## Important Dates
 
 ### Upcoming Events to Create Content For
+
 - [DATE]: [PLACEHOLDER: Event/holiday/launch]
 - [DATE]: [PLACEHOLDER]
 
 ### Recurring Content
+
 - Monthly: [PLACEHOLDER: e.g., Monthly learnings thread]
 - Quarterly: [PLACEHOLDER: e.g., Goal review]
 - Annually: [PLACEHOLDER: e.g., Year in review]
@@ -105,4 +116,4 @@ target_output: "[PLACEHOLDER: e.g., 5 posts for the week]"
 
 ---
 
-*Last updated: [DATE]*
+_Last updated: [DATE]_

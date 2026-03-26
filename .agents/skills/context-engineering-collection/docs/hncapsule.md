@@ -6,10 +6,10 @@ source_url: https://karpathy.bearblog.dev/auto-grade-hn/
 ---
 
 https://karpathy.bearblog.dev/auto-grade-hn/
+
 - A lot more detail in my blog post https://karpathy.bearblog.dev/auto-grade-hn/
 - GitHub repo of the project if you'd like to play https://github.com/karpathy/hn-time-capsule
 - The actual results pages for your reading pleasure https://karpathy.ai/hncapsule/
-
 
 karpathy
 Home Blog
@@ -46,6 +46,7 @@ Let's use our benefit of hindsight now in 6 sections:
 As for the format of Section 5, use the header "Final grades" and follow it with simply an unordered list of people and their grades in the format of "name: grade (optional comment)". Here is an example:
 
 Final grades
+
 - speckx: A+ (excellent predictions on ...)
 - tosh: A (correctly predicted this or that ...)
 - keepamovin: A
@@ -58,7 +59,9 @@ As for the format of Section 6, use the prefix "Article hindsight analysis inter
 
 Here is an example:
 Article hindsight analysis interestingness score: 8
+
 ---
+
 Submit prompt to GPT 5.1 Thinking via the OpenAI API
 Collect and parse the results
 Render the results into static HTML web pages for easy viewing
@@ -74,17 +77,15 @@ December 22 2015 SpaceX launch webcast: Orbcomm-2 Mission
 December 28 2015 Theranos struggles
 And then when you navigate over to the Hall of Fame, you can find the top commenters of Hacker News in December 2015, sorted by imdb-style score of their grade point average. In particular, congratulations to pcwalton, tptacek, paulmd, cstross, greglindahl, moxie, hannob, 0xcde4c3db, Manishearth, johncolanduoni - GPT 5.1 Thinking found your comments very insightful and prescient. You can also scroll all the way down to find the noise of HN, which I think we're all familiar with too :)
 
-My code (wait, Opus' code?) on GitHub can be used to reproduce or tweak the results. Running 31 days of 30 articles through GPT 5.1 Thinking meant 31 * 30 = 930 LLM queries and cost about $58 and somewhere around ~1 hour. The LLM megaminds of the future might find this kind of a thing a lot easier, a lot faster and a lot cheaper.
+My code (wait, Opus' code?) on GitHub can be used to reproduce or tweak the results. Running 31 days of 30 articles through GPT 5.1 Thinking meant 31 \* 30 = 930 LLM queries and cost about $58 and somewhere around ~1 hour. The LLM megaminds of the future might find this kind of a thing a lot easier, a lot faster and a lot cheaper.
 
-
--------
-
+---
 
 Quick new post: Auto-grading decade-old Hacker News discussions with hindsight
 
 I took all the 930 frontpage Hacker News article+discussion of December 2015 and asked the GPT 5.1 Thinking API to do an in-hindsight analysis to identify the most/least prescient comments. This took ~3 hours to vibe code and ~1 hour and $60 to run. The idea was sparked by the HN article yesterday where Gemini 3 was asked to hallucinate the HN front page one decade forward.
 
-More generally: 
+More generally:
 
 1. in-hindsight analysis has always fascinated me as a way to train your forward prediction model so reading the results is really interesting and
 2. it's worth contemplating what it looks like when LLM megaminds of the future can do this kind of work a lot cheaper, faster and better. Every single bit of information you contribute to the internet can (and probably will be) scrutinized in great detail if it is "free". Hence also my earlier tweet from a while back - "be good, future LLMs are watching".

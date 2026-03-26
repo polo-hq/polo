@@ -35,9 +35,7 @@ When the type of one parameter depends on another, use generics:
 
 ```typescript
 // The return type depends on what keys exist in the config
-const createComponent = <TConfig extends Record<string, string>>(
-  config: TConfig,
-) => {
+const createComponent = <TConfig extends Record<string, string>>(config: TConfig) => {
   return (variant: keyof TConfig, ...otherClasses: string[]): string => {
     return config[variant] + " " + otherClasses.join(" ");
   };
@@ -94,10 +92,8 @@ Provide defaults for optional type parameters:
 ```typescript
 type WrapFunction<
   TFunc extends (...args: any) => any,
-  TAdditional = {} // Default to empty object
-> = (
-  ...args: Parameters<TFunc>
-) => Promise<Awaited<ReturnType<TFunc>> & TAdditional>;
+  TAdditional = {}, // Default to empty object
+> = (...args: Parameters<TFunc>) => Promise<Awaited<ReturnType<TFunc>> & TAdditional>;
 
 // Can use without TAdditional
 type BasicWrapper = WrapFunction<typeof fetchUser>;
@@ -134,9 +130,7 @@ const createComponent = <TConfig>(config: Record<string, string>) => {
 };
 
 // GOOD - TConfig IS the argument type
-const createComponent = <TConfig extends Record<string, string>>(
-  config: TConfig,
-) => {
+const createComponent = <TConfig extends Record<string, string>>(config: TConfig) => {
   // TConfig is inferred from what's passed
 };
 ```
@@ -146,10 +140,7 @@ const createComponent = <TConfig extends Record<string, string>>(
 Use multiple parameters for related but distinct types:
 
 ```typescript
-function map<TInput, TOutput>(
-  items: TInput[],
-  transform: (item: TInput) => TOutput
-): TOutput[] {
+function map<TInput, TOutput>(items: TInput[], transform: (item: TInput) => TOutput): TOutput[] {
   return items.map(transform);
 }
 
@@ -163,10 +154,7 @@ const numbers = map(["1", "2", "3"], (s) => parseInt(s));
 Combine `keyof` with generics for type-safe property access:
 
 ```typescript
-function getProperty<TObj, TKey extends keyof TObj>(
-  obj: TObj,
-  key: TKey
-): TObj[TKey] {
+function getProperty<TObj, TKey extends keyof TObj>(obj: TObj, key: TKey): TObj[TKey] {
   return obj[key];
 }
 
@@ -204,9 +192,7 @@ const strContainer = numContainer.map((n) => n.toString());
 
 ```typescript
 // A factory that creates type-safe component class generators
-export const createComponent = <TConfig extends Record<string, string>>(
-  config: TConfig,
-) => {
+export const createComponent = <TConfig extends Record<string, string>>(config: TConfig) => {
   // Return a function that requires valid variant keys
   return (variant: keyof TConfig, ...otherClasses: string[]): string => {
     return config[variant] + " " + otherClasses.join(" ");
@@ -256,9 +242,7 @@ function greet(name: string): string {
 
 ```typescript
 // BAD - overly specific constraint
-function process<T extends { id: string; name: string; email: string }>(
-  obj: T
-): void {}
+function process<T extends { id: string; name: string; email: string }>(obj: T): void {}
 
 // GOOD - only require what you actually use
 function process<T extends { id: string }>(obj: T): void {}

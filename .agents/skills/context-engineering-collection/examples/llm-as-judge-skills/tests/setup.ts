@@ -1,13 +1,13 @@
 /**
  * Test setup file
- * 
+ *
  * This file runs before all tests to configure the test environment.
  */
 
-import { beforeAll, afterAll } from 'vitest';
+import { beforeAll, afterAll } from "vitest";
 
 // Load environment variables for testing
-import 'dotenv/config';
+import "dotenv/config";
 
 // Global test configuration
 beforeAll(() => {
@@ -24,4 +24,3 @@ afterAll(() => {
 
 // Increase timeout for LLM API calls
 // Note: Individual tests can override this with their own timeout
-

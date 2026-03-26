@@ -7,38 +7,45 @@ Your authentic voice captured for consistent communication across all platforms.
 ## Core Voice Profile
 
 ### Personality Snapshot
+
 <!-- Describe your communication personality in 2-3 sentences -->
+
 ```
 [PLACEHOLDER: e.g., "Direct and energetic with a bias toward action. I blend technical depth with accessible explanations. Optimistic but grounded in reality."]
 ```
 
 ### Voice Attributes (Rate 1-10)
 
-| Attribute | Level | Notes |
-|-----------|-------|-------|
-| Formal ←→ Casual | `[1-10]` | <!-- e.g., 7 = fairly casual --> |
-| Serious ←→ Playful | `[1-10]` | |
-| Technical ←→ Simple | `[1-10]` | |
-| Reserved ←→ Expressive | `[1-10]` | |
-| Humble ←→ Confident | `[1-10]` | |
+| Attribute              | Level    | Notes                            |
+| ---------------------- | -------- | -------------------------------- |
+| Formal ←→ Casual       | `[1-10]` | <!-- e.g., 7 = fairly casual --> |
+| Serious ←→ Playful     | `[1-10]` |                                  |
+| Technical ←→ Simple    | `[1-10]` |                                  |
+| Reserved ←→ Expressive | `[1-10]` |                                  |
+| Humble ←→ Confident    | `[1-10]` |                                  |
 
 ---
 
 ## Writing Patterns
 
 ### Sentence Structure
+
 <!-- How do you typically structure sentences? -->
+
 ```
 [PLACEHOLDER: e.g., "Short punchy sentences. Rarely compound. One idea per line. Heavy use of line breaks for emphasis."]
 ```
 
 ### Paragraph Style
+
 ```
 [PLACEHOLDER: e.g., "2-3 sentences max per paragraph. White space is your friend. Lists when explaining steps."]
 ```
 
 ### Hook Patterns
+
 <!-- How do you typically open posts/content? -->
+
 ```
 Examples:
 - [PLACEHOLDER: e.g., "Hot take opener: 'Unpopular opinion: X'"]
@@ -51,7 +58,9 @@ Examples:
 ## Vocabulary
 
 ### Signature Phrases
+
 <!-- Words/phrases you use frequently that feel "you" -->
+
 ```yaml
 phrases:
   - "[PLACEHOLDER: e.g., 'Here's the thing']"
@@ -60,7 +69,9 @@ phrases:
 ```
 
 ### Power Words
+
 <!-- Words you gravitate toward -->
+
 ```yaml
 use_often:
   - "[PLACEHOLDER: e.g., 'leverage', 'ship', 'iterate']"
@@ -69,7 +80,9 @@ use_often:
 ```
 
 ### Never Use
+
 <!-- Words/phrases that don't sound like you -->
+
 ```yaml
 avoid:
   - "[PLACEHOLDER: e.g., 'synergy', 'circle back']"
@@ -82,18 +95,21 @@ avoid:
 ## Platform Adaptations
 
 ### Twitter/X
+
 ```
 - Character constraints: lean even shorter
 - [PLACEHOLDER: Platform-specific notes]
 ```
 
 ### LinkedIn
+
 ```
 - Slightly more professional
 - [PLACEHOLDER: Platform-specific notes]
 ```
 
 ### Long-form (Blog/Newsletter)
+
 ```
 - Can expand on ideas
 - [PLACEHOLDER: Platform-specific notes]
@@ -104,6 +120,7 @@ avoid:
 ## Content Formats
 
 ### Thread Structure
+
 ```
 [PLACEHOLDER: Your typical thread format]
 Example:
@@ -117,16 +134,19 @@ Example:
 ### Post Templates
 
 #### Hot Take Format
+
 ```
 [PLACEHOLDER: Your hot take template]
 ```
 
 #### Story Format
+
 ```
 [PLACEHOLDER: Your storytelling template]
 ```
 
 #### Educational Format
+
 ```
 [PLACEHOLDER: Your teaching template]
 ```
@@ -136,14 +156,17 @@ Example:
 ## Examples
 
 ### Voice in Action
+
 <!-- Include 2-3 examples of your actual writing that captures your voice well -->
 
 **Example 1:**
+
 ```
 [PLACEHOLDER: Paste an example post/content that represents your voice]
 ```
 
 **Example 2:**
+
 ```
 [PLACEHOLDER: Another example]
 ```
@@ -153,7 +176,9 @@ Example:
 ## Anti-Patterns
 
 ### Doesn't Sound Like Me
+
 <!-- Examples of writing styles to avoid -->
+
 ```
 [PLACEHOLDER: e.g., "Overly formal corporate speak"]
 [PLACEHOLDER: e.g., "Excessive hedging ('I think maybe perhaps...')"]
@@ -162,4 +187,4 @@ Example:
 
 ---
 
-*Last updated: [DATE]*
+_Last updated: [DATE]_

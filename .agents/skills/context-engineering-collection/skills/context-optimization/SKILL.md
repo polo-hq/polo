@@ -10,6 +10,7 @@ Context optimization extends the effective capacity of limited context windows t
 ## When to Activate
 
 Activate this skill when:
+
 - Context limits constrain task complexity
 - Optimizing for cost reduction (fewer tokens = lower costs)
 - Reducing latency for long conversations
@@ -60,6 +61,7 @@ Masking should achieve 60-80% reduction in masked observations with less than 2%
 Maximize prefix cache hits by structuring prompts so that stable content occupies the prefix and dynamic content appears at the end. KV-cache stores Key and Value tensors computed during inference; when consecutive requests share an identical prefix, the cached tensors are reused, saving both cost and latency.
 
 Apply this ordering in every prompt:
+
 1. System prompt (most stable — never changes within a session)
 2. Tool definitions (stable across requests)
 3. Frequently reused templates and few-shot examples
@@ -83,6 +85,7 @@ This approach achieves separation of concerns — detailed search context stays 
 Allocate explicit token budgets across context categories before the session begins: system prompt, tool definitions, retrieved documents, message history, tool outputs, and a reserved buffer (5-10% of total). Monitor usage against budget continuously and trigger optimization when any category exceeds its allocation or total utilization crosses 70%.
 
 Use trigger-based optimization rather than periodic optimization. Monitor these signals:
+
 - Token utilization above 80% — trigger compaction
 - Attention degradation indicators (repetition, missed instructions) — trigger masking + compaction
 - Quality score drops below baseline — audit context composition before optimizing
@@ -93,13 +96,13 @@ Use trigger-based optimization rather than periodic optimization. Monitor these 
 
 Select the optimization technique based on what dominates the context:
 
-| Context Composition | First Action | Second Action |
-|---|---|---|
-| Tool outputs dominate (>50%) | Observation masking | Compaction of remaining turns |
-| Retrieved documents dominate | Summarization | Partitioning if docs are independent |
-| Message history dominates | Compaction with selective preservation | Partitioning for new subtasks |
-| Multiple components contribute | KV-cache optimization first, then layer masking + compaction |
-| Near-limit with active debugging | Mask resolved tool outputs only — preserve error details |
+| Context Composition              | First Action                                                 | Second Action                        |
+| -------------------------------- | ------------------------------------------------------------ | ------------------------------------ |
+| Tool outputs dominate (>50%)     | Observation masking                                          | Compaction of remaining turns        |
+| Retrieved documents dominate     | Summarization                                                | Partitioning if docs are independent |
+| Message history dominates        | Compaction with selective preservation                       | Partitioning for new subtasks        |
+| Multiple components contribute   | KV-cache optimization first, then layer masking + compaction |
+| Near-limit with active debugging | Mask resolved tool outputs only — preserve error details     |
 
 ### Performance Targets
 
@@ -115,12 +118,14 @@ Iterate on strategies based on measured results. If an optimization technique do
 ## Examples
 
 **Example 1: Compaction Trigger**
+
 ```python
 if context_tokens / context_limit > 0.8:
     context = compact_context(context)
 ```
 
 **Example 2: Observation Masking**
+
 ```python
 if len(observation) > max_length:
     ref_id = store_observation(observation)
@@ -128,6 +133,7 @@ if len(observation) > max_length:
 ```
 
 **Example 3: Cache-Friendly Ordering**
+
 ```python
 # Stable content first
 context = [system_prompt, tool_definitions]  # Cacheable
@@ -173,14 +179,17 @@ This skill builds on context-fundamentals and context-degradation. It connects t
 ## References
 
 Internal reference:
+
 - [Optimization Techniques Reference](./references/optimization_techniques.md) - Read when: implementing a specific optimization technique and needing detailed code patterns, threshold tables, or integration examples beyond what the skill body provides
 
 Related skills in this collection:
+
 - context-fundamentals - Read when: unfamiliar with context window mechanics, token counting, or attention distribution basics
 - context-degradation - Read when: diagnosing why agent performance has dropped and needing to identify which degradation pattern is occurring before selecting an optimization
 - evaluation - Read when: setting up metrics and benchmarks to measure whether an optimization technique actually improved outcomes
 
 External resources:
+
 - Research on context window limitations - Read when: evaluating model-specific context behavior (e.g., lost-in-the-middle effects, attention decay curves)
 - KV-cache optimization techniques - Read when: implementing prefix caching at the inference infrastructure level (vLLM, TGI, or cloud provider APIs)
 - Production engineering guides - Read when: deploying context optimization in a production pipeline and needing operability patterns (monitoring, alerting, rollback)

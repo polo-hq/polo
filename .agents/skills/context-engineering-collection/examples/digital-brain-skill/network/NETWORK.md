@@ -9,16 +9,17 @@ Your personal CRM for meaningful relationships.
 
 ## Files in This Module
 
-| File | Format | Purpose |
-|------|--------|---------|
-| `contacts.jsonl` | JSONL | People database |
-| `interactions.jsonl` | JSONL | Meeting/conversation log |
-| `circles.yaml` | YAML | Relationship tiers and groups |
-| `intros.md` | Markdown | Pending/made introductions |
+| File                 | Format   | Purpose                       |
+| -------------------- | -------- | ----------------------------- |
+| `contacts.jsonl`     | JSONL    | People database               |
+| `interactions.jsonl` | JSONL    | Meeting/conversation log      |
+| `circles.yaml`       | YAML     | Relationship tiers and groups |
+| `intros.md`          | Markdown | Pending/made introductions    |
 
 ## Data Schemas
 
 ### Contact Entry
+
 ```json
 {
   "id": "contact_[unique]",
@@ -47,6 +48,7 @@ Your personal CRM for meaningful relationships.
 ```
 
 ### Interaction Entry
+
 ```json
 {
   "id": "int_YYYYMMDD_HHMMSS",
@@ -63,18 +65,21 @@ Your personal CRM for meaningful relationships.
 ## Workflows
 
 ### Before a Meeting
+
 1. Look up contact in `contacts.jsonl`
 2. Review recent interactions in `interactions.jsonl`
 3. Check `circles.yaml` for relationship context
 4. Note any pending follow-ups or intros
 
 ### After a Meeting
+
 1. Log interaction in `interactions.jsonl`
 2. Update `last_contact` in contacts.jsonl
 3. Add any follow-ups to operations/todos.md
 4. Update relationship notes if needed
 
 ### Making Introductions
+
 1. Check both contacts in `contacts.jsonl`
 2. Ensure mutual value (check can_help_with fields)
 3. Log in `intros.md`
@@ -92,11 +97,12 @@ When managing relationships:
 5. **Relationship maintenance**: Flag contacts with stale last_contact dates
 
 Circle definitions:
+
 - inner: Close relationships, regular contact
 - active: Current collaborators, frequent interaction
 - network: Known contacts, periodic touchpoints
 - dormant: Historical connections, may reactivate
-</instructions>
+  </instructions>
 
 ## Relationship Principles
 

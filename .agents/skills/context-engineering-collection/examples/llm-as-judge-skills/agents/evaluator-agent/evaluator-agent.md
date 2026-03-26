@@ -33,70 +33,82 @@ Always provide:
 - Numerical scores for each criterion
 - Specific examples supporting your assessment
 - Actionable feedback for improvement`,
-  
+
   tools: {
     directScore: evaluationTools.directScore,
     pairwiseCompare: evaluationTools.pairwiseCompare,
     extractCriteria: evaluationTools.extractCriteria,
-    generateRubric: evaluationTools.generateRubric
-  }
+    generateRubric: evaluationTools.generateRubric,
+  },
 });
 ```
 
 ## Capabilities
 
 ### Direct Scoring
+
 Evaluate a single response against defined criteria and rubric.
 
 **Input:**
+
 - Response to evaluate
 - Original prompt/context
 - Evaluation criteria
 - Scoring rubric
 
 **Output:**
+
 - Score per criterion (1-5)
 - Overall score
 - Detailed justification
 - Identified issues and strengths
 
 ### Pairwise Comparison
+
 Compare two responses and select the better one.
 
 **Input:**
+
 - Response A
 - Response B
 - Original prompt/context
 - Comparison criteria
 
 **Output:**
+
 - Winner selection (A, B, or Tie)
 - Confidence score
 - Comparative analysis
 - Specific differentiators
 
 ### Criteria Extraction
+
 Automatically extract evaluation criteria from a task description.
 
 **Input:**
+
 - Task description
 - Domain context
 - Quality expectations
 
 **Output:**
+
 - List of relevant criteria
 - Criterion descriptions
 - Suggested weights
 
 ### Rubric Generation
+
 Generate a scoring rubric for specific criteria.
 
 **Input:**
+
 - Criterion name
 - Quality dimensions
 - Scale (default 1-5)
 
 **Output:**
+
 - Rubric with score descriptions
 - Examples for each level
 - Edge case guidance
@@ -109,11 +121,11 @@ interface EvaluatorConfig {
   scoringMode: "direct" | "pairwise";
   useChainOfThought: boolean;
   nShotExamples: number;
-  
+
   // Bias mitigation
   swapPositionsForPairwise: boolean;
   normalizeForLength: boolean;
-  
+
   // Output configuration
   includeJustification: boolean;
   includeExamples: boolean;
@@ -128,7 +140,7 @@ const defaultConfig: EvaluatorConfig = {
   normalizeForLength: false,
   includeJustification: true,
   includeExamples: true,
-  outputFormat: "structured"
+  outputFormat: "structured",
 };
 ```
 
@@ -151,7 +163,7 @@ Criteria:
 3. Engagement - Interesting and memorable
 4. Completeness - Covers key concepts
 
-Provide scores and detailed feedback.`
+Provide scores and detailed feedback.`,
 });
 
 // Pairwise comparison
@@ -164,7 +176,7 @@ Response A: "${responseA}"
 
 Response B: "${responseB}"
 
-Which response is better? Explain your reasoning.`
+Which response is better? Explain your reasoning.`,
 });
 ```
 
@@ -174,4 +186,3 @@ Which response is better? Explain your reasoning.`
 - **Model Comparison**: Compare responses from different models
 - **Quality Monitoring**: Track response quality over time
 - **Fine-tuning Data**: Generate preference data for RLHF
-

@@ -10,6 +10,7 @@ Hosted agents run in remote sandboxed environments rather than on local machines
 ## When to Activate
 
 Activate this skill when:
+
 - Building background coding agents that run independently of user devices
 - Designing sandboxed execution environments for agent workloads
 - Implementing multiplayer agent sessions with shared state
@@ -32,6 +33,7 @@ Eliminate sandbox spin-up latency because users perceive anything over a few sec
 
 **Image Registry Pattern**
 Pre-build environment images on a regular cadence (every 30 minutes works well) because this makes synchronization with the latest code a fast delta rather than a full clone. Include in each image:
+
 - Cloned repository at a known commit
 - All runtime dependencies installed
 - Initial setup and build commands completed
@@ -41,18 +43,21 @@ When starting a session, spin up a sandbox from the most recent image. The repos
 
 **Snapshot and Restore**
 Take filesystem snapshots at key points to enable instant restoration for follow-up prompts without re-running setup:
+
 - After initial image build (base snapshot)
 - When agent finishes making changes (session snapshot)
 - Before sandbox exit for potential follow-up
 
 **Git Configuration for Background Agents**
 Configure git identity explicitly in every sandbox because background agents are not tied to a specific user during image builds:
+
 - Generate GitHub app installation tokens for repository access during clone
 - Set git config `user.name` and `user.email` when committing and pushing changes
 - Use the prompting user's identity for commits, not the app identity
 
 **Warm Pool Strategy**
 Maintain a pool of pre-warmed sandboxes for high-volume repositories because cold starts are the primary source of user frustration:
+
 - Keep sandboxes ready before users start sessions
 - Expire and recreate pool entries as new image builds complete
 - Start warming a sandbox as soon as a user begins typing (predictive warm-up)
@@ -61,6 +66,7 @@ Maintain a pool of pre-warmed sandboxes for high-volume repositories because col
 
 **Server-First Architecture**
 Structure the agent framework as a server first, with TUI and desktop apps as thin clients, because this prevents duplicating agent logic across surfaces:
+
 - Multiple custom clients share one agent backend
 - Consistent behavior across all interaction surfaces
 - Plugin systems extend functionality without client changes
@@ -71,6 +77,7 @@ Select frameworks where the agent can read its own source code to understand beh
 
 **Plugin System Requirements**
 Require a plugin system that supports runtime interception because this enables safety controls and observability without modifying core agent logic:
+
 - Listen to tool execution events (e.g., `tool.execute.before`)
 - Block or modify tool calls conditionally
 - Inject context or state at runtime
@@ -79,18 +86,21 @@ Require a plugin system that supports runtime interception because this enables 
 
 **Predictive Warm-Up**
 Start warming the sandbox as soon as a user begins typing their prompt, not when they submit it, because the typing interval (5-30 seconds) is enough to complete most setup:
+
 - Clone latest changes in parallel with user typing
 - Run initial setup before user hits enter
 - For fast spin-up, sandbox can be ready before user finishes typing
 
 **Parallel File Reading**
 Allow the agent to start reading files immediately even if sync from latest base branch is not complete, because in large repositories incoming prompts rarely touch recently-changed files:
+
 - Agent can research immediately without waiting for git sync
 - Block file edits (not reads) until synchronization completes
 - This separation is safe because read-time data staleness of 30 minutes rarely matters for research
 
 **Maximize Build-Time Work**
 Move everything possible to the image build step because build-time duration is invisible to users:
+
 - Full dependency installation
 - Database schema setup
 - Initial app and test suite runs (populates caches)
@@ -99,6 +109,7 @@ Move everything possible to the image build step because build-time duration is 
 
 **Agent-Spawned Sessions**
 Build tools that allow agents to spawn new sessions because frontier models are capable of decomposing work and coordinating sub-tasks:
+
 - Research tasks across different repositories
 - Parallel subtask execution for large changes
 - Multiple smaller PRs from one major task
@@ -107,6 +118,7 @@ Expose three primitives: start a new session with specified parameters, read sta
 
 **Prompt Engineering for Self-Spawning**
 Engineer prompts that guide when agents should spawn sub-sessions rather than doing work inline:
+
 - Research tasks that require cross-repository exploration
 - Breaking monolithic changes into smaller PRs
 - Parallel exploration of different approaches
@@ -115,12 +127,14 @@ Engineer prompts that guide when agents should spawn sub-sessions rather than do
 
 **Per-Session State Isolation**
 Isolate state per session (SQLite per session works well) because cross-session interference is a subtle and hard-to-debug failure mode:
+
 - Dedicated database per session
 - No session can impact another's performance
 - Architecture handles hundreds of concurrent sessions
 
 **Real-Time Streaming**
 Stream all agent work in real-time because high-frequency feedback is critical for user trust:
+
 - Token streaming from model providers
 - Tool execution status updates
 - File change notifications
@@ -134,6 +148,7 @@ Build a single state system that synchronizes across all clients (chat interface
 
 **Why Multiplayer Matters**
 Design for multiplayer from day one because it is nearly free to add with proper synchronization architecture, and it unlocks high-value workflows:
+
 - Teaching non-engineers to use AI effectively
 - Live QA sessions with multiple team members
 - Real-time PR review with immediate changes
@@ -141,6 +156,7 @@ Design for multiplayer from day one because it is nearly free to add with proper
 
 **Implementation Requirements**
 Build the data model so sessions are not tied to single authors because multiplayer fails silently if authorship is hardcoded:
+
 - Pass authorship info to each prompt
 - Attribute code changes to the prompting user
 - Share session links for instant collaboration
@@ -149,11 +165,13 @@ Build the data model so sessions are not tied to single authors because multipla
 
 **User-Based Commits**
 Use GitHub authentication to open PRs on behalf of the user (not the app) because this preserves the audit trail and prevents users from approving their own AI-generated changes:
+
 - Obtain user tokens for PR creation
 - PRs appear as authored by the human, not the bot
 
 **Sandbox-to-API Flow**
 Follow this sequence because it keeps sandbox permissions minimal while letting the API handle sensitive operations:
+
 1. Sandbox pushes changes (updating git user config)
 2. Sandbox sends event to API with branch name and session ID
 3. API uses user's GitHub token to create PR
@@ -163,12 +181,14 @@ Follow this sequence because it keeps sandbox permissions minimal while letting 
 
 **Slack Integration**
 Prioritize Slack as the first distribution channel for internal adoption because it creates a virality loop as team members see others using it:
+
 - No syntax required, natural chat interface
 - Build a classifier (fast model with repo descriptions) to determine which repository to work in
 - Include hints for common repositories; allow "unknown" for ambiguous cases
 
 **Web Interface**
 Build a web interface with these features because it serves as the primary power-user surface:
+
 - Real-time streaming of agent work on desktop and mobile
 - Hosted VS Code instance running inside sandbox
 - Streamed desktop view for visual verification
@@ -177,6 +197,7 @@ Build a web interface with these features because it serves as the primary power
 
 **Chrome Extension**
 Build a Chrome extension for non-engineering users because DOM and React internals extraction gives higher precision than raw screenshots at lower token cost:
+
 - Sidebar chat interface with screenshot tool
 - Extract DOM/React internals instead of raw images
 - Distribute via managed device policy (bypasses Chrome Web Store)
@@ -190,6 +211,7 @@ Choose between queueing and inserting follow-up messages sent during execution. 
 ### Metrics That Matter
 
 Track these metrics because they indicate real value rather than vanity usage:
+
 - Sessions resulting in merged PRs (primary success metric)
 - Time from session start to first model response
 - PR approval rate and revision count
@@ -198,6 +220,7 @@ Track these metrics because they indicate real value rather than vanity usage:
 ### Adoption Strategy
 
 Drive internal adoption through visibility rather than mandates because forced usage breeds resentment:
+
 - Work in public spaces (Slack channels) for visibility
 - Let the product create virality loops
 - Do not force usage over existing tools
@@ -237,14 +260,17 @@ This skill builds on multi-agent-patterns for agent coordination and tool-design
 ## References
 
 Internal reference:
+
 - [Infrastructure Patterns](./references/infrastructure-patterns.md) - Read when: implementing sandbox lifecycle, image builds, or warm pool logic for the first time
 
 Related skills in this collection:
+
 - multi-agent-patterns - Read when: designing self-spawning or supervisor coordination patterns
 - tool-design - Read when: building tools for agent session management or status checking
 - context-optimization - Read when: context windows fill up across distributed agent sessions
 
 External resources:
+
 - [Ramp](https://builders.ramp.com/post/why-we-built-our-background-agent) - Read when: evaluating whether to build vs. buy background agent infrastructure
 - [Modal Sandboxes](https://modal.com/docs/guide/sandbox) - Read when: choosing a cloud sandbox provider or comparing isolation models
 - [Cloudflare Durable Objects](https://developers.cloudflare.com/durable-objects/) - Read when: designing per-session state management with WebSocket hibernation

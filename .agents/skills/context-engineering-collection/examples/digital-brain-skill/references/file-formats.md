@@ -11,7 +11,7 @@ Detailed specifications for each file format used in Digital Brain.
 Every JSONL file starts with a schema definition line:
 
 ```json
-{"_schema": "schema_name", "_version": "1.0", "_description": "Purpose of this file"}
+{ "_schema": "schema_name", "_version": "1.0", "_description": "Purpose of this file" }
 ```
 
 This line is skipped during data processing but documents the expected structure.
@@ -22,9 +22,9 @@ All data entries should include:
 
 ```json
 {
-  "id": "type_YYYYMMDD_HHMMSS",  // Unique identifier
-  "created": "ISO8601",           // Creation timestamp
-  "updated": "ISO8601"            // Last modification (optional)
+  "id": "type_YYYYMMDD_HHMMSS", // Unique identifier
+  "created": "ISO8601", // Creation timestamp
+  "updated": "ISO8601" // Last modification (optional)
 }
 ```
 
@@ -143,9 +143,7 @@ All data entries should include:
   "agenda": ["Topic 1", "Topic 2"],
   "notes": "Discussion summary",
   "decisions": ["Decision made"],
-  "action_items": [
-    {"task": "Task description", "owner": "John", "due": "2024-12-31"}
-  ],
+  "action_items": [{ "task": "Task description", "owner": "John", "due": "2024-12-31" }],
   "follow_up": "Next steps"
 }
 ```
@@ -320,7 +318,7 @@ Content...
 
 ---
 
-*Last updated: [DATE]*
+_Last updated: [DATE]_
 ```
 
 ### Placeholder Convention
@@ -330,8 +328,11 @@ Use `[PLACEHOLDER: description]` for user-fillable fields:
 ```markdown
 ### Your Story
 ```
+
 [PLACEHOLDER: Write your founder journey here]
+
 ```
+
 ```
 
 ---
@@ -376,6 +377,7 @@ Use `[PLACEHOLDER: description]` for user-fillable fields:
 `{type}_{YYYYMMDD}_{HHMMSS}` or `{type}_{unique_slug}`
 
 Examples:
+
 - `idea_20241229_143022`
 - `contact_johndoe`
 - `post_20241229_160000`

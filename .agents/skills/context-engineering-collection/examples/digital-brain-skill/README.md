@@ -81,12 +81,12 @@ digital-brain/
 
 This example demonstrates these context engineering skills:
 
-| Skill | Application |
-|-------|-------------|
-| `context-fundamentals` | Progressive disclosure, attention budget |
-| `memory-systems` | JSONL append-only logs, structured recall |
-| `tool-design` | Self-contained automation scripts |
-| `context-optimization` | Module separation, just-in-time loading |
+| Skill                  | Application                               |
+| ---------------------- | ----------------------------------------- |
+| `context-fundamentals` | Progressive disclosure, attention budget  |
+| `memory-systems`       | JSONL append-only logs, structured recall |
+| `tool-design`          | Self-contained automation scripts         |
+| `context-optimization` | Module separation, just-in-time loading   |
 
 See [SKILLS-MAPPING.md](./SKILLS-MAPPING.md) for detailed mapping of how each skill informs the design.
 
@@ -121,16 +121,17 @@ cd ~/digital-brain
 
 ## File Format Conventions
 
-| Format | Use Case | Why |
-|--------|----------|-----|
-| `.jsonl` | Append-only logs | Agent-friendly, preserves history |
-| `.yaml` | Structured config | Human-readable hierarchies |
-| `.md` | Narrative content | Editable, rich formatting |
-| `.xml` | Complex prompts | Clear structure for agents |
+| Format   | Use Case          | Why                               |
+| -------- | ----------------- | --------------------------------- |
+| `.jsonl` | Append-only logs  | Agent-friendly, preserves history |
+| `.yaml`  | Structured config | Human-readable hierarchies        |
+| `.md`    | Narrative content | Editable, rich formatting         |
+| `.xml`   | Complex prompts   | Clear structure for agents        |
 
 ## Usage Examples
 
 ### Content Creation
+
 ```
 User: "Help me write a X thread about AI agents"
 
@@ -142,6 +143,7 @@ Agent Process:
 ```
 
 ### Meeting Preparation
+
 ```
 User: "Prepare me for my call with Sarah"
 
@@ -153,6 +155,7 @@ Agent Process:
 ```
 
 ### Weekly Review
+
 ```
 User: "Run my weekly review"
 
@@ -165,12 +168,12 @@ Agent Process:
 
 ## Automation Scripts
 
-| Script | Purpose | Run Frequency |
-|--------|---------|---------------|
-| `weekly_review.py` | Generate review from data | Weekly |
-| `content_ideas.py` | Suggest content from knowledge | On-demand |
-| `stale_contacts.py` | Find neglected relationships | Weekly |
-| `idea_to_draft.py` | Expand idea to draft scaffold | On-demand |
+| Script              | Purpose                        | Run Frequency |
+| ------------------- | ------------------------------ | ------------- |
+| `weekly_review.py`  | Generate review from data      | Weekly        |
+| `content_ideas.py`  | Suggest content from knowledge | On-demand     |
+| `stale_contacts.py` | Find neglected relationships   | Weekly        |
+| `idea_to_draft.py`  | Expand idea to draft scaffold  | On-demand     |
 
 ```bash
 # Run directly
@@ -193,6 +196,7 @@ python agents/scripts/content_ideas.py --pillar ai_agents --count 5
 This is part of the [Agent Skills for Context Engineering](https://github.com/muratcankoylan/Agent-Skills-for-Context-Engineering) collection.
 
 Contributions welcome:
+
 - New content templates
 - Additional automation scripts
 - Module enhancements

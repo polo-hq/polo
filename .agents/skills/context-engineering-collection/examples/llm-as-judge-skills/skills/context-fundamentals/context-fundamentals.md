@@ -11,6 +11,7 @@ Context engineering is the systematic approach to managing what information an L
 The context window is finite. Every token counts. Prioritize information by relevance and recency.
 
 **Strategies:**
+
 - Summarize historical conversation turns
 - Use retrieval to inject only relevant context
 - Implement context compression for long documents
@@ -46,18 +47,21 @@ Not all context is equally useful. Apply relevance filtering:
 ## Context Types
 
 ### Static Context
+
 - System prompts
 - Role definitions
 - Tool descriptions
 - Format specifications
 
 ### Dynamic Context
+
 - Retrieved documents (RAG)
 - Conversation history
 - User preferences
 - Session state
 
 ### Ephemeral Context
+
 - Current tool outputs
 - Intermediate reasoning steps
 - Scratchpad content
@@ -73,6 +77,7 @@ Not all context is equally useful. Apply relevance filtering:
 ## Context Patterns
 
 ### RAG Integration Pattern
+
 ```
 [System Instructions]
 You are a helpful assistant. Use the provided context to answer questions.
@@ -88,6 +93,7 @@ Only use information from the context. If unsure, say so.
 ```
 
 ### Multi-Turn Context Pattern
+
 ```
 [System Instructions]
 ...
@@ -111,4 +117,3 @@ User: {current_input}
 - **Context Relevance Score**: Semantic similarity between context and response
 - **Context Compression Ratio**: Original size vs. compressed size
 - **Information Retention**: Key facts preserved after summarization
-

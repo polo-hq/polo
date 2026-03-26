@@ -40,12 +40,12 @@ model_input = types.ModelInput(chunks=[
 
 The weights array determines which tokens contribute to the loss:
 
-| Token Type | Weight | Description |
-|------------|--------|-------------|
-| System prompt | 0.0 | Context, not learned |
-| User message | 0.0 | Input prompt |
-| Assistant message | 1.0 | Target completion |
-| Special tokens | 0.0 | EOS, BOS, delimiters |
+| Token Type        | Weight | Description          |
+| ----------------- | ------ | -------------------- |
+| System prompt     | 0.0    | Context, not learned |
+| User message      | 0.0    | Input prompt         |
+| Assistant message | 1.0    | Target completion    |
+| Special tokens    | 0.0    | EOS, BOS, delimiters |
 
 ## Renderer System
 
@@ -111,24 +111,24 @@ from tinker_cookbook import renderers, tokenizer_utils
 
 def load_dataset(jsonl_path: str, model_name: str) -> list[types.Datum]:
     """Load JSONL and convert to Tinker Datum objects."""
-    
+
     tokenizer = tokenizer_utils.get_tokenizer(model_name)
     renderer = renderers.get_renderer("llama3", tokenizer)
-    
+
     data = []
     with open(jsonl_path) as f:
         for line in f:
             example = json.loads(line)
             messages = example["messages"]
-            
+
             model_input, weights = renderer.build_supervised_example(messages)
-            
+
             # Get token sequences
             input_tokens = model_input.to_ints()
             target_tokens = input_tokens[1:]  # Shift for next-token prediction
             input_tokens = input_tokens[:-1]
             weights = weights[1:]  # Align weights with targets
-            
+
             datum = types.Datum(
                 model_input=types.ModelInput.from_ints(tokens=input_tokens),
                 loss_fn_inputs={
@@ -137,7 +137,7 @@ def load_dataset(jsonl_path: str, model_name: str) -> list[types.Datum]:
                 }
             )
             data.append(datum)
-    
+
     return data
 ```
 
@@ -154,28 +154,28 @@ async def train_on_book_dataset(
     epochs: int = 1
 ):
     """Train on book SFT dataset."""
-    
+
     service_client = tinker.ServiceClient()
     training_client = await service_client.create_lora_training_client_async(
         base_model=model_name,
         rank=32
     )
-    
+
     for epoch in range(epochs):
         for batch_start in range(0, len(dataset), 1):  # Batch size 1
             batch = dataset[batch_start:batch_start + 1]
-            
+
             # Forward-backward with cross-entropy loss
             fwd_bwd_future = await training_client.forward_backward_async(
-                batch, 
+                batch,
                 loss_fn="cross_entropy"
             )
-            
+
             # Optimizer step with aggressive learning rate
             optim_future = await training_client.optim_step_async(
                 types.AdamParams(learning_rate=learning_rate * 2.0)
             )
-            
+
             # Wait for completion
             fwd_bwd_result = await fwd_bwd_future
             optim_result = await optim_future
@@ -197,15 +197,14 @@ async def train_on_book_dataset(
 
 For book SFT, consider:
 
-| Model | Use Case |
-|-------|----------|
-| meta-llama/Llama-3.1-8B-Instruct | General style transfer |
-| Qwen/Qwen3-30B-A3B | Higher quality, MoE efficiency |
-| GPT-4o (via OpenAI) | Data generation only, not Tinker |
+| Model                            | Use Case                         |
+| -------------------------------- | -------------------------------- |
+| meta-llama/Llama-3.1-8B-Instruct | General style transfer           |
+| Qwen/Qwen3-30B-A3B               | Higher quality, MoE efficiency   |
+| GPT-4o (via OpenAI)              | Data generation only, not Tinker |
 
 ## References
 
 - Tinker Cookbook: `tinker_cookbook/supervised/train.py`
 - Renderer implementations: `tinker_cookbook/renderers.py`
 - Type definitions: `tinker/types.py`
-

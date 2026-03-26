@@ -9,13 +9,13 @@ Your digital identity foundation. This module defines who you are, how you commu
 
 ## Files in This Module
 
-| File | Purpose |
-|------|---------|
-| `voice.md` | Tone, style, writing patterns |
-| `brand.md` | Positioning, topics, audience |
-| `values.yaml` | Core beliefs and principles |
-| `bio-variants.md` | Different bio lengths for platforms |
-| `prompts/` | Reusable prompts for content generation |
+| File              | Purpose                                 |
+| ----------------- | --------------------------------------- |
+| `voice.md`        | Tone, style, writing patterns           |
+| `brand.md`        | Positioning, topics, audience           |
+| `values.yaml`     | Core beliefs and principles             |
+| `bio-variants.md` | Different bio lengths for platforms     |
+| `prompts/`        | Reusable prompts for content generation |
 
 ## When to Use
 
@@ -40,6 +40,7 @@ When creating content for the user:
 For detailed voice guidelines, see [voice.md](voice.md).
 
 Key elements agents should internalize:
+
 - Communication style (formal/casual spectrum)
 - Signature phrases and vocabulary
 - Structural patterns (post formats, hooks)
