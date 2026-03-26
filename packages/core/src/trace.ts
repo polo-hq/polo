@@ -1,10 +1,11 @@
 import type { ChunkRecord, PolicyRecord, SourceRecord, SourceRecordType, Trace } from "./types.ts";
+import type { SourceTag } from "./types.ts";
 import { generateRunId } from "./utils.ts";
 
 export interface SourceTiming {
   key: string;
   type: SourceRecordType;
-  sensitivity: import("./types.ts").Sensitivity;
+  tags: SourceTag[];
   resolvedAt: Date;
   durationMs: number;
   chunkRecords?: ChunkRecord[];
@@ -36,7 +37,7 @@ export function buildTrace(options: {
       key: t.key,
       resolvedAt: t.resolvedAt,
       durationMs: t.durationMs,
-      sensitivity: t.sensitivity,
+      tags: t.tags,
     };
     if (t.type === "chunks") {
       return { ...base, type: "chunks" as const, chunks: t.chunkRecords ?? [] };

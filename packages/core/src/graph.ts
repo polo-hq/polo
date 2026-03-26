@@ -1,11 +1,25 @@
-import type { AnyInput, AnySource } from "./types.ts";
+import type { AnyInput, InputSource, ResolverSource } from "./types.ts";
 import { SourceResolutionError } from "./errors.ts";
 
+function isInputSource(source: unknown): source is InputSource<string> {
+  return (
+    typeof source === "object" &&
+    source !== null &&
+    "_type" in source &&
+    (source as { _type?: unknown })._type === "input"
+  );
+}
+
+function isResolverSource(source: unknown): source is ResolverSource<unknown> {
+  return (
+    typeof source === "object" &&
+    source !== null &&
+    "resolve" in source &&
+    typeof (source as { resolve?: unknown }).resolve === "function"
+  );
+}
+
 function stripCommentsAndLiterals(source: string): string {
-  // Single regex handles (in priority order):
-  // 1. line comments  2. block comments  3. double-quoted strings
-  // 4. single-quoted strings  5. regex literals
-  // Template literals are left alone so ${sources.foo} expressions are detected.
   return source.replace(
     /\/\/[^\n]*|\/\*[\s\S]*?\*\/|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|\/(?:\\[\s\S]|[^/\\\n])+\/[gimsuvy]*/g,
     (match) => match.replace(/[^\n]/g, " "),
@@ -14,7 +28,6 @@ function stripCommentsAndLiterals(source: string): string {
 
 function inferDestructuredDependencies(source: string, validKeys: Set<string>): Set<string> {
   const dependencies = new Set<string>();
-
   const parameterMatch = source.match(/^[^(]*\(([^)]*)\)/);
   const parameters = parameterMatch?.[1] ?? "";
   const secondParameter = parameters.split(/,(.+)/)[1]?.trim() ?? "";
@@ -39,34 +52,18 @@ function inferDestructuredDependencies(source: string, validKeys: Set<string>): 
   return dependencies;
 }
 
-/**
- * Infer which source keys a source function depends on by statically
- * analysing the function source string for `sources.KEY` access patterns and
- * destructured second-parameter dependencies.
- *
- * This avoids executing the function during the planning pass, which is
- * important because async functions execute side effects up to the first
- * `await` even when called with a proxy.
- *
- * Matches patterns like:
- *   sources.foo
- *   sources.foo.bar.baz
- *   sources["foo"]
- */
-function inferDependencies<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  TSourceMap extends Record<string, AnySource<any, any>>,
->(sourceMap: TSourceMap, key: string): Set<string> {
+function inferDependencies<TSourceMap extends Record<string, unknown>>(
+  sourceMap: TSourceMap,
+  key: string,
+): Set<string> {
   const source = sourceMap[key];
-  if (!source) return new Set();
-
-  // input sources have no dependencies
-  if (source._type === "input") return new Set();
+  if (!source || isInputSource(source) || !isResolverSource(source)) {
+    return new Set();
+  }
 
   const validKeys = new Set(Object.keys(sourceMap));
   const accessed = new Set<string>();
-
-  const fnStr = stripCommentsAndLiterals(source._fn.toString());
+  const fnStr = stripCommentsAndLiterals(source._dependencySource ?? source.resolve.toString());
 
   for (const dep of inferDestructuredDependencies(fnStr, validKeys)) {
     if (dep !== key) {
@@ -74,9 +71,8 @@ function inferDependencies<
     }
   }
 
-  // Match sources.identifier or sources["identifier"] or sources['identifier']
-  const dotPattern = /\bsources\.([a-zA-Z_$][a-zA-Z0-9_$]*)/g;
-  const bracketPattern = /\bsources\[["']([a-zA-Z_$][a-zA-Z0-9_$]*)["']\]/g;
+  const dotPattern = /\b(?:sources|context)\.([a-zA-Z_$][a-zA-Z0-9_$]*)/g;
+  const bracketPattern = /\b(?:sources|context)\[["']([a-zA-Z_$][a-zA-Z0-9_$]*)["']\]/g;
 
   for (const match of fnStr.matchAll(dotPattern)) {
     const dep = match[1];
@@ -103,10 +99,9 @@ interface Wave {
  * Build an ordered list of execution waves from the source map.
  * Sources in the same wave can be resolved in parallel.
  */
-export function buildWaves<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  TSourceMap extends Record<string, AnySource<any, any>>,
->(sourceMap: TSourceMap): Wave[] {
+export function buildWaves<TSourceMap extends Record<string, unknown>>(
+  sourceMap: TSourceMap,
+): Wave[] {
   const keys = Object.keys(sourceMap);
   const deps = new Map<string, Set<string>>();
 
@@ -148,10 +143,7 @@ export function buildWaves<
  * Sources within a wave resolve in parallel.
  * Returns a map of key -> resolved value.
  */
-export async function executeWaves<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  TSourceMap extends Record<string, AnySource<any, any>>,
->(
+export async function executeWaves<TSourceMap extends Record<string, unknown>>(
   sourceMap: TSourceMap,
   input: AnyInput,
   waves: Wave[],
@@ -173,16 +165,18 @@ export async function executeWaves<
   for (const wave of waves) {
     await Promise.all(
       wave.keys.map(async (key) => {
-        const source = sourceMap[key]!;
+        const source = sourceMap[key];
         const start = Date.now();
 
         try {
           let value: unknown;
 
-          if (source._type === "input") {
+          if (isInputSource(source)) {
             value = input[source._key];
+          } else if (isResolverSource(source)) {
+            value = await source.resolve(input, sourcesProxy);
           } else {
-            value = await source._fn(input, sourcesProxy);
+            throw new TypeError(`Invalid source definition for "${key}".`);
           }
 
           const durationMs = Date.now() - start;

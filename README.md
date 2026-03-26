@@ -1,173 +1,205 @@
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/polo-hq/polo)
-
 # Polo
 
-Polo is a context assembly runtime for production AI. Define what sources a task needs, set policies for what's allowed, and get back a typed context object ready to use in your prompt.
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/polo-hq/polo)
+
+Polo is a typed context assembly runtime for production AI. Create a Polo instance, register reusable context sources, define tasks that aggregate those sources, and resolve a context object that is ready to use in your prompt.
 
 ## Installation
 
+```sh
+pnpm add @polo/core zod
 ```
-pnpm add @polo/core
-```
+
+Examples below use `zod` for schemas, but Polo works with Standard Schema-compatible validators.
 
 ## Usage
 
-### Define a task
+### Create instance
 
 ```ts
-import { polo } from "@polo/core";
-import { prisma } from "@/db";
+import { createPolo } from "@polo/core";
 
-const generateAINote = polo.define({
-  id: "generate_ai_note",
+export const polo = createPolo();
+```
 
+`createPolo()` gives you an isolated runtime surface. You can also pass runtime hooks like `logger` and `onTrace` if you want to forward traces into your own observability layer.
+
+### Create context sources
+
+```ts
+import { registerSources } from "@polo/core";
+import { z } from "zod";
+
+const supportReplyInputSchema = z.object({
+  accountId: z.string(),
+  transcript: z.string(),
+});
+
+const accountSourceInputSchema = z.object({
+  accountId: z.string(),
+});
+
+const transcriptSourceInputSchema = z.object({
+  transcript: z.string(),
+});
+
+const supportReplySources = registerSources({
+  account: polo.source(accountSourceInputSchema, {
+    tags: ["internal"],
+    async resolve({ input }) {
+      return db.getAccount(input.accountId);
+    },
+  }),
+
+  billingNotes: polo.source(accountSourceInputSchema, {
+    tags: ["billing"],
+    async resolve({ context }: { context: { account: Account } }) {
+      return db.getBillingNotes(context.account.id);
+    },
+  }),
+
+  recentTickets: polo.source.chunks(transcriptSourceInputSchema, {
+    tags: ["internal"],
+    async resolve({
+      input,
+      context,
+    }: {
+      input: z.output<typeof transcriptSourceInputSchema>;
+      context: { account: Account };
+    }) {
+      return vectorDb.searchTickets(context.account.id, input.transcript);
+    },
+    normalize(item) {
+      return {
+        content: item.pageContent,
+        score: item.relevanceScore,
+        metadata: { ticketId: item.id },
+      };
+    },
+  }),
+});
+```
+
+Use `registerSources(...)` for shared resolver-style sources only. Input passthroughs like `transcript` stay local to each task definition.
+
+### Define tasks to aggregate sources
+
+```ts
+const supportReply = polo.define(supportReplyInputSchema, {
+  id: "support_reply",
   sources: {
-    transcript: polo.input("transcript", { sensitivity: "phi" }),
-
-    encounter: polo.source(
-      async (input) =>
-        prisma.encounter.findUniqueOrThrow({
-          where: { id: input.encounterId },
-          include: {
-            patient: { include: { user: true } },
-            provider: { include: { user: true, specialties: true } },
-          },
-        }),
-      { sensitivity: "phi" },
-    ),
-
-    intake: polo.source(
-      async (_input, sources) =>
-        prisma.patientIntake.findFirst({
-          where: { patientId: sources.encounter.patientId },
-        }),
-      { sensitivity: "phi" },
-    ),
-
-    priorNote: polo.source(
-      async (_input, sources) =>
-        prisma.providerNote.findFirst({
-          where: {
-            encounter: {
-              patientId: sources.encounter.patientId,
-              providerId: sources.encounter.providerId,
-              cancelledAt: null,
-              startedAt: { lt: sources.encounter.startedAt },
-            },
-            signedAt: { not: null },
-          },
-          orderBy: { encounter: { startedAt: "desc" } },
-        }),
-      { sensitivity: "phi" },
-    ),
-
-    noteSections: polo.source(
-      async (_input, sources) => {
-        const settings = await prisma.providerAiNoteSettings.findUnique({
-          where: { providerId: sources.encounter.providerId },
-          include: {
-            noteSections: {
-              where: { deletedAt: null },
-              orderBy: { sortOrder: "asc" },
-            },
-          },
-        });
-        return settings?.noteSections ?? DEFAULT_AI_NOTE_SECTIONS;
-      },
-      { sensitivity: "internal" },
-    ),
+    transcript: polo.source.fromInput("transcript", { tags: ["restricted"] }),
+    account: supportReplySources.account,
+    billingNotes: supportReplySources.billingNotes,
+    recentTickets: supportReplySources.recentTickets,
   },
 
   derive: ({ context }) => ({
-    patientType: context.encounter.patient.isSeen ? "Follow-up" : "New",
-    includeIntake: !context.priorNote,
-    noteSchema: buildNoteSchema(context.noteSections),
-    styleMirror: !!context.priorNote,
+    isEnterprise: context.account.plan === "enterprise",
+    replyStyle: context.account.tier === "priority" ? "concise" : "standard",
+    mentionsBilling: /\b(invoice|refund|charge|billing)\b/i.test(context.transcript),
   }),
 
   policies: {
-    require: ["transcript", "encounter", "noteSections"],
-    prefer: ["priorNote"],
+    require: ["transcript", "account"],
+    prefer: ["recentTickets", "billingNotes"],
     exclude: [
       ({ context }) =>
-        !context.includeIntake
-          ? { source: "intake", reason: "follow-up visits exclude patient intake" }
+        !context.mentionsBilling
+          ? {
+              source: "billingNotes",
+              reason: "billing notes are excluded unless the transcript is billing-related",
+            }
           : false,
     ],
-    budget: 12_000,
+    budget: 110,
   },
 });
 ```
 
-### Resolve at runtime
+`polo.define(inputSchema, config)` declares the contract for one task: what inputs are accepted, what sources can be resolved, what derived fields should exist, and what policies govern the final context.
+
+### Resolve context
 
 ```ts
-const { context, trace } = await polo.resolve(generateAINote, {
-  encounterId: "enc_123",
-  transcript: "...",
+const { context, trace } = await polo.resolve(supportReply, {
+  accountId: "acc_123",
+  transcript:
+    "Our webhook deliveries have been timing out in production since yesterday's deploy. Can you help us figure out the safest next step?",
 });
 ```
 
 ### Use context in your prompt
 
 ```ts
-import { generateText, Output, gateway } from "ai";
+import { generateText } from "ai";
 
-await generateText({
-  model: gateway("anthropic/claude-sonnet-4.6"),
+const { text } = await generateText({
+  model: "openai/gpt-5.4",
   system: buildSystemPrompt(context),
   prompt: buildPrompt(context),
-  output: Output.object({ schema: context.noteSchema }),
 });
 ```
 
-`context` contains only what policy allowed through. Excluded sources are absent at runtime — not nulled, absent. Polo does not own the prompt. It governs the data surface you use to build it.
+`context` contains only what policy allowed through. Excluded sources are absent at runtime, not nulled out. Polo does not own the prompt layer. It governs the data surface you use to build it.
 
 ---
 
 ## API
 
-|                                    |                                         |
-| ---------------------------------- | --------------------------------------- |
-| `polo.define(options)`             | Declare the context contract for a task |
-| `polo.resolve(definition, input)`  | Resolve context at runtime              |
-| `polo.input(key, options?)`        | Passthrough from call-time input        |
-| `polo.source(fn, options?)`        | Single async value from any source      |
-| `polo.chunks(promise, normalize?)` | Ranked multi-block source wrapper       |
+|                                               |                                                |
+| --------------------------------------------- | ---------------------------------------------- |
+| `createPolo(options?)`                        | Create an isolated Polo runtime                |
+| `registerSources(sources)`                    | Compose reusable shared resolver/chunk sources |
+| `polo.define(inputSchema, config)`            | Declare the context contract for a task        |
+| `polo.resolve(definition, input)`             | Resolve context at runtime                     |
+| `polo.source.fromInput(key, options?)`        | Passthrough from call-time input               |
+| `polo.source(inputSchema, config)`            | Resolve a single async value                   |
+| `polo.source.chunks(inputSchema, config)`     | Resolve ranked multi-block context             |
 
 ---
 
 ## Sources
 
-`polo.input()` passes through a value from call-time input. `polo.source()` wraps any async function — database queries, HTTP requests, file reads, whatever you have.
+`polo.source.fromInput()` passes through a value from task input. `polo.source()` wraps any async resolver: database queries, HTTP requests, file reads, whatever you already have.
 
-Sources can reference other resolved sources via the `sources` argument. Polo infers the dependency graph automatically and runs independent sources in parallel.
+Resolvers receive a single argument object with:
+
+- `input`: task input narrowed by the source's schema
+- `context`: already-resolved source values the resolver depends on
+
+Polo infers the dependency graph automatically from resolver usage and runs independent sources in parallel.
 
 ```ts
-// runs immediately
-encounter: polo.source(async (input) =>
-  prisma.encounter.findUniqueOrThrow({ where: { id: input.encounterId } }),
-);
+account: polo.source(accountSourceInputSchema, {
+  async resolve({ input }) {
+    return db.getAccount(input.accountId);
+  },
+});
 
-// runs after encounter resolves
-priorNote: polo.source(async (_input, sources) =>
-  prisma.providerNote.findFirst({
-    where: { encounter: { patientId: sources.encounter.patientId } },
-  }),
-);
+billingNotes: polo.source(accountSourceInputSchema, {
+  async resolve({ context }: { context: { account: Account } }) {
+    return db.getBillingNotes(context.account.id);
+  },
+});
 ```
 
 ## Chunks
 
-`polo.chunks()` wraps a source that returns multiple ranked blocks. Polo fits as many as the token budget allows, drops the rest, and records each decision in the trace.
+`polo.source.chunks()` is for sources that return multiple ranked blocks. Polo fits as many as the token budget allows, drops the rest, and records each decision in the trace.
 
 ```ts
-guidelines: polo.source(async (_input, sources) =>
-  polo.chunks(vectorDb.search({ query: sources.transcript, topK: 10 }), (item) => ({
-    content: item.pageContent,
-    score: item.relevanceScore,
-  })),
-);
+recentTickets: polo.source.chunks(transcriptSourceInputSchema, {
+  async resolve({ input, context }: { input: { transcript: string }; context: { account: Account } }) {
+    return vectorDb.searchTickets(context.account.id, input.transcript);
+  },
+  normalize(item) {
+    return {
+      content: item.pageContent,
+      score: item.relevanceScore,
+    };
+  },
+});
 ```
 
 ## Derive
@@ -176,9 +208,9 @@ guidelines: polo.source(async (_input, sources) =>
 
 ```ts
 derive: ({ context }) => ({
-  patientType: context.encounter.patient.isSeen ? "Follow-up" : "New",
-  noteSchema: buildNoteSchema(context.noteSections),
-  styleMirror: !!context.priorNote,
+  isEnterprise: context.account.plan === "enterprise",
+  replyStyle: context.account.tier === "priority" ? "concise" : "standard",
+  mentionsBilling: /\b(invoice|refund|charge|billing)\b/i.test(context.transcript),
 });
 ```
 
@@ -186,15 +218,18 @@ derive: ({ context }) => ({
 
 ```ts
 policies: {
-  require: ["transcript", "encounter"],
-  prefer:  ["priorNote"],
+  require: ["transcript", "account"],
+  prefer:  ["recentTickets", "billingNotes"],
   exclude: [
     ({ context }) =>
-      !context.includeIntake
-        ? { source: "intake", reason: "follow-up visits exclude patient intake" }
+      !context.mentionsBilling
+        ? {
+            source: "billingNotes",
+            reason: "billing notes are excluded unless the transcript is billing-related",
+          }
         : false,
   ],
-  budget: 12_000,
+  budget: 110,
 }
 ```
 
@@ -207,38 +242,38 @@ policies: {
 
 ## Trace
 
-`polo.resolve()` returns a `trace` alongside `context`. The trace records source resolution timing, sensitivity, policy decisions, chunk inclusion, and budget usage. Raw resolved values are not stored unless you opt in.
+`polo.resolve()` returns a `trace` alongside `context`. The trace records source resolution timing, tags, policy decisions, chunk inclusion, and budget usage. Raw resolved values are not stored.
 
 ```json
 {
   "sources": [
-    { "key": "transcript", "type": "input", "sensitivity": "phi" },
-    { "key": "encounter", "type": "value", "sensitivity": "phi", "durationMs": 12 },
+    { "key": "transcript", "type": "input", "tags": ["restricted"] },
+    { "key": "account", "type": "value", "tags": ["internal"], "durationMs": 1 },
     {
-      "key": "priorNote",
+      "key": "billingNotes",
       "type": "value",
-      "sensitivity": "phi",
-      "durationMs": 8
+      "tags": ["billing"],
+      "durationMs": 0
     },
     {
       "key": "recentTickets",
       "type": "chunks",
+      "tags": ["internal"],
       "chunks": [
-        { "included": true, "score": 0.91 },
-        { "included": true, "score": 0.87 },
-        { "included": false, "score": 0.42, "reason": "over_budget" }
+        { "included": true, "score": 0.36 },
+        { "included": false, "score": 0.14, "reason": "over_budget" }
       ]
     }
   ],
   "policies": [
     { "source": "transcript", "action": "required", "reason": "required by task" },
     {
-      "source": "intake",
+      "source": "billingNotes",
       "action": "excluded",
-      "reason": "follow-up visits exclude patient intake"
+      "reason": "billing notes are excluded unless the transcript is billing-related"
     }
   ],
-  "budget": { "max": 12000, "used": 8430 }
+  "budget": { "max": 110, "used": 102 }
 }
 ```
 
@@ -251,7 +286,7 @@ Context assembly is usually handwritten glue — sources fetched manually, inclu
 Polo gives you:
 
 - **consistent outputs** — same policies run every time, same sources, same budget
-- **explicit contracts** — policies live next to source definitions, not buried in prompt templates
+- **explicit contracts** — input schemas, source schemas, and policies live next to the task
 - **typed context** — `context` is fully typed from your source definitions, no casting
 - **automatic dependency resolution** — sources run in parallel waves, no manual sequencing
 - **debuggable** — when outputs go wrong, the trace tells you exactly what the model saw
@@ -260,8 +295,8 @@ Polo gives you:
 
 ## Fits Your Stack
 
-- **AI SDK** — use `context` directly with `generateText`, `generateObject`, `streamText`
-- **Prisma / Drizzle / any ORM** — `polo.source()` takes any async function
+- **AI SDK** — use `context` directly with `generateText`, `generateObject`, or streaming APIs
+- **`Prisma` / Drizzle / any ORM** — `polo.source(inputSchema, { resolve })` takes any async resolver
 - **LangSmith / Braintrust** — pass `trace` to your existing observability layer
 
 ---

@@ -1,21 +1,21 @@
-import type { AnyInput, AnySource, Definition, DeriveFn, InferSources, Policies } from "./types.ts";
+import type { AnyInput, Definition, DefinitionConfig, InferSources, InputSchema } from "./types.ts";
 
 export function createDefinition<
   TInput extends AnyInput,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  TSourceMap extends Record<string, AnySource<any, any>>,
-  TSources extends InferSources<TSourceMap>,
-  TDerived extends Record<string, unknown>,
->(options: {
-  id: string;
-  sources: TSourceMap;
-  derive?: DeriveFn<TSources, TDerived>;
-  policies?: Policies<TSources, TDerived>;
-}): Definition<TInput, TSourceMap, TSources, TDerived> {
+  const TSourceMap extends Record<string, unknown>,
+  TDerived extends Record<string, unknown> = Record<string, never>,
+  const TRequired extends readonly Extract<keyof InferSources<TInput, TSourceMap>, string>[] = [],
+  const TPrefer extends readonly Extract<keyof InferSources<TInput, TSourceMap>, string>[] = [],
+  TResolveInput extends AnyInput = TInput,
+>(
+  input: InputSchema<TResolveInput, TInput>,
+  config: DefinitionConfig<TInput, TSourceMap, TDerived, TRequired, TPrefer>,
+): Definition<TInput, TSourceMap, TDerived, TRequired, TPrefer, TResolveInput> {
   return {
-    _id: options.id,
-    _sources: options.sources,
-    _derive: options.derive,
-    _policies: options.policies ?? {},
+    _id: config.id,
+    _inputSchema: input,
+    _sources: config.sources,
+    _derive: config.derive,
+    _policies: config.policies ?? {},
   };
 }

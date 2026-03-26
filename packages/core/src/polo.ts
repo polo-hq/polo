@@ -1,112 +1,186 @@
 import type {
   AnyInput,
-  AnySource,
-  Chunks,
-  Chunk,
+  AnySchema,
+  AnyResolverSource,
+  ChunkSource,
+  ChunkSourceConfig,
   Definition,
+  DefinitionConfig,
   DeriveFn,
+  FromInputSourceOptions,
+  InferSchemaInputObject,
+  InferSchemaOutputObject,
   InferSources,
+  InputSchema,
   InputSource,
-  InputSourceOptions,
   Policies,
+  PoloOptions,
   Resolution,
-  SourceOptions,
-  ValueSource,
+  ResolverSource,
+  SourceConfig,
+  SourceShape,
 } from "./types.ts";
-import { createInput } from "./input.ts";
-import { createSource, createChunkSource } from "./source.ts";
-import { createChunks } from "./chunks.ts";
 import { createDefinition } from "./define.ts";
 import { resolveDefinition } from "./resolve.ts";
+import { createChunkSource, createFromInputSource, createValueSource } from "./source.ts";
 
-interface Polo {
+interface SourceFactory {
+  <TSchema extends AnySchema, TContext extends Record<string, unknown>, TOutput>(
+    input: TSchema,
+    config: SourceConfig<InferSchemaOutputObject<TSchema>, TContext, TOutput>,
+  ): ResolverSource<Awaited<TOutput>, InferSchemaOutputObject<TSchema>>;
+
+  fromInput<TKey extends string>(key: TKey, options?: FromInputSourceOptions): InputSource<TKey>;
+
+  chunks<TSchema extends AnySchema, TContext extends Record<string, unknown>, TItem>(
+    input: TSchema,
+    config: ChunkSourceConfig<InferSchemaOutputObject<TSchema>, TContext, TItem>,
+  ): ChunkSource<InferSchemaOutputObject<TSchema>>;
+}
+
+export interface PoloInstance {
   /**
    * Declare the context contract for a task.
    */
   define<
-    TInput extends AnyInput,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    TSourceMap extends Record<string, AnySource<any, any>>,
-    TSources extends InferSources<TSourceMap>,
+    TSchema extends AnySchema,
+    const TSourceMap extends Record<string, unknown>,
     TDerived extends Record<string, unknown> = Record<string, never>,
-  >(options: {
-    id: string;
-    sources: TSourceMap;
-    derive?: DeriveFn<TSources, TDerived>;
-    policies?: Policies<TSources, TDerived>;
-  }): Definition<TInput, TSourceMap, TSources, TDerived>;
+    const TRequired extends readonly Extract<
+      keyof InferSources<InferSchemaOutputObject<TSchema>, TSourceMap>,
+      string
+    >[] = [],
+    const TPrefer extends readonly Extract<
+      keyof InferSources<InferSchemaOutputObject<TSchema>, TSourceMap>,
+      string
+    >[] = [],
+  >(
+    input: TSchema,
+    config: {
+      id: string;
+      sources: TSourceMap & SourceShape<InferSchemaOutputObject<TSchema>, NoInfer<TSourceMap>>;
+      derive?: DeriveFn<InferSources<InferSchemaOutputObject<TSchema>, TSourceMap>, TDerived>;
+      policies?: Policies<
+        InferSources<InferSchemaOutputObject<TSchema>, TSourceMap>,
+        NoInfer<TDerived>,
+        TRequired,
+        TPrefer
+      >;
+    },
+  ): Definition<
+    InferSchemaOutputObject<TSchema>,
+    TSourceMap,
+    TDerived,
+    TRequired,
+    TPrefer,
+    InferSchemaInputObject<TSchema>
+  >;
 
   /**
    * Resolve context at runtime for a task definition.
    */
   resolve<
     TInput extends AnyInput,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    TSourceMap extends Record<string, AnySource<any, any>>,
-    TSources extends InferSources<TSourceMap>,
+    TSourceMap extends Record<string, unknown>,
     TDerived extends Record<string, unknown>,
+    TRequired extends readonly Extract<keyof InferSources<TInput, TSourceMap>, string>[] = [],
+    TPrefer extends readonly Extract<keyof InferSources<TInput, TSourceMap>, string>[] = [],
+    TResolveInput extends AnyInput = TInput,
   >(
-    definition: Definition<TInput, TSourceMap, TSources, TDerived>,
-    input: TInput,
-  ): Promise<Resolution<TSources, TDerived>>;
+    definition: Definition<TInput, TSourceMap, TDerived, TRequired, TPrefer, TResolveInput>,
+    input: TResolveInput,
+  ): Promise<Resolution<InferSources<TInput, TSourceMap>, TDerived, TRequired>>;
 
-  /**
-   * Declare an input source that passes through a value from call-time input.
-   */
-  input<TInput extends AnyInput, TKey extends string & keyof TInput>(
-    key: TKey,
-    options?: InputSourceOptions,
-  ): InputSource<TInput, TKey>;
-
-  /**
-   * Declare a source that resolves an async value.
-   */
-  source<TInput extends AnyInput, TSources extends Record<string, unknown>, TResult>(
-    fn: (input: TInput, sources: TSources) => Promise<TResult>,
-    options?: SourceOptions,
-  ): ValueSource<TInput, TSources, TResult>;
-
-  /**
-   * Wrap a ranked multi-block source result.
-   * Polo will pack as many chunks as the budget allows and record dropped chunks.
-   */
-  chunks<T>(promise: Promise<T[]>, normalize?: (item: T) => Chunk): Promise<Chunks>;
+  source: SourceFactory;
 }
 
-export const polo: Polo = {
-  define(options) {
-    return createDefinition(options);
-  },
+function createSourceFactory(): SourceFactory {
+  return Object.assign(
+    function source<TSchema extends AnySchema, TContext extends Record<string, unknown>, TOutput>(
+      input: TSchema,
+      config: SourceConfig<InferSchemaOutputObject<TSchema>, TContext, TOutput>,
+    ): ResolverSource<Awaited<TOutput>, InferSchemaOutputObject<TSchema>> {
+      return createValueSource(input, config);
+    },
+    {
+      fromInput<TKey extends string>(
+        key: TKey,
+        options?: FromInputSourceOptions,
+      ): InputSource<TKey> {
+        return createFromInputSource(key, options);
+      },
+      chunks<TSchema extends AnySchema, TContext extends Record<string, unknown>, TItem>(
+        input: TSchema,
+        config: ChunkSourceConfig<InferSchemaOutputObject<TSchema>, TContext, TItem>,
+      ): ChunkSource<InferSchemaOutputObject<TSchema>> {
+        return createChunkSource(input, config);
+      },
+    },
+  );
+}
 
-  resolve(definition, input) {
-    return resolveDefinition(definition, input);
-  },
+export function registerSources<const TSourceRegistry extends Record<string, AnyResolverSource>>(
+  sources: TSourceRegistry,
+): TSourceRegistry {
+  return sources;
+}
 
-  input(key, options) {
-    return createInput(key, options);
-  },
+export function createPolo(options: PoloOptions = {}): PoloInstance {
+  const source = createSourceFactory();
 
-  source(fn, options) {
-    // When a source fn returns a Chunks result, treat it as a chunk source
-    return createSource(fn, options);
-  },
+  return {
+    define<
+      TSchema extends AnySchema,
+      const TSourceMap extends Record<string, unknown>,
+      TDerived extends Record<string, unknown> = Record<string, never>,
+      const TRequired extends readonly Extract<
+        keyof InferSources<InferSchemaOutputObject<TSchema>, TSourceMap>,
+        string
+      >[] = [],
+      const TPrefer extends readonly Extract<
+        keyof InferSources<InferSchemaOutputObject<TSchema>, TSourceMap>,
+        string
+      >[] = [],
+    >(
+      input: TSchema,
+      config: {
+        id: string;
+        sources: TSourceMap & SourceShape<InferSchemaOutputObject<TSchema>, NoInfer<TSourceMap>>;
+        derive?: DeriveFn<InferSources<InferSchemaOutputObject<TSchema>, TSourceMap>, TDerived>;
+        policies?: Policies<
+          InferSources<InferSchemaOutputObject<TSchema>, TSourceMap>,
+          NoInfer<TDerived>,
+          TRequired,
+          TPrefer
+        >;
+      },
+    ) {
+      return createDefinition<
+        InferSchemaOutputObject<TSchema>,
+        TSourceMap,
+        TDerived,
+        TRequired,
+        TPrefer,
+        InferSchemaInputObject<TSchema>
+      >(
+        input as InputSchema<InferSchemaInputObject<TSchema>, InferSchemaOutputObject<TSchema>>,
+        config as DefinitionConfig<
+          InferSchemaOutputObject<TSchema>,
+          TSourceMap,
+          TDerived,
+          TRequired,
+          TPrefer
+        >,
+      );
+    },
 
-  chunks(promise, normalize) {
-    if (normalize) {
-      return createChunks(promise, normalize);
-    }
+    async resolve(definition, input) {
+      const resolution = await resolveDefinition(definition, input);
+      options.onTrace?.(resolution.trace);
+      options.logger?.info?.({ trace: resolution.trace });
+      return resolution;
+    },
 
-    return createChunks(promise as Promise<Chunk[]>);
-  },
-};
-
-/**
- * Helper that wraps a source fn returning Chunks as a ChunkSource.
- * Use this inside polo.define when you want chunk packing behaviour.
- */
-export function chunkSource<TInput extends AnyInput, TSources extends Record<string, unknown>>(
-  fn: (input: TInput, sources: TSources) => Promise<Chunks>,
-  options?: SourceOptions,
-) {
-  return createChunkSource<TInput, TSources>(fn, options);
+    source,
+  } satisfies PoloInstance;
 }

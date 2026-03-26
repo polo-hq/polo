@@ -1,59 +1,23 @@
-import { chunkSource, polo, type Chunk, type Trace } from "@polo/core";
-import type { Account, BillingNotes } from "./data.ts";
-import { db, vectorDb } from "./data.ts";
+import type { InferContext, Trace } from "@polo/core";
+import { z } from "zod";
+import { polo } from "./polo.ts";
+import { supportReplySources } from "./sourceRegistry.ts";
 
-interface SupportReplyInput extends Record<string, unknown> {
-  accountId: string;
-  transcript: string;
-}
+const supportReplyInputSchema = z.object({
+  accountId: z.string(),
+  transcript: z.string(),
+});
 
-type SupportReplySources = {
-  transcript: string;
-  account: Account;
-  billingNotes: BillingNotes | null;
-  recentTickets: Chunk[];
-};
-
-interface SupportReplyContext {
-  transcript?: string;
-  account?: Account;
-  billingNotes?: BillingNotes | null;
-  recentTickets?: Chunk[];
-  isEnterprise: boolean;
-  replyStyle: "concise" | "standard";
-  mentionsBilling: boolean;
-}
-
-export const supportReply = polo.define({
+export const supportReply = polo.define(supportReplyInputSchema, {
   id: "support_reply",
-
   sources: {
-    transcript: polo.input<SupportReplyInput, "transcript">("transcript", {
-      sensitivity: "restricted",
-    }),
-
-    account: polo.source<SupportReplyInput, Record<string, never>, Account>(
-      async (input) => db.getAccount(input.accountId),
-      { sensitivity: "internal" },
-    ),
-
-    billingNotes: polo.source<SupportReplyInput, { account: Account }, BillingNotes | null>(
-      async (_input, sources) => db.getBillingNotes(sources.account.id),
-      { sensitivity: "restricted" },
-    ),
-
-    recentTickets: chunkSource<SupportReplyInput, { account: Account }>(
-      async (input, sources) =>
-        polo.chunks(vectorDb.searchTickets(sources.account.id, input.transcript), (item) => ({
-          content: item.pageContent,
-          score: item.relevanceScore,
-          metadata: { ticketId: item.id },
-        })),
-      { sensitivity: "internal" },
-    ),
+    transcript: polo.source.fromInput("transcript", { tags: ["restricted"] }),
+    account: supportReplySources.account,
+    billingNotes: supportReplySources.billingNotes,
+    recentTickets: supportReplySources.recentTickets,
   },
 
-  derive: ({ context }: { context: SupportReplySources }) => ({
+  derive: ({ context }) => ({
     isEnterprise: context.account.plan === "enterprise",
     replyStyle: context.account.tier === "priority" ? ("concise" as const) : ("standard" as const),
     mentionsBilling: /\b(invoice|refund|charge|billing)\b/i.test(context.transcript),
@@ -75,6 +39,8 @@ export const supportReply = polo.define({
   },
 });
 
+type SupportReplyContext = InferContext<typeof supportReply>;
+
 export function buildSystemPrompt(context: SupportReplyContext): string {
   return [
     "You are a support engineer drafting a customer reply.",
@@ -88,19 +54,17 @@ export function buildSystemPrompt(context: SupportReplyContext): string {
 export function buildPrompt(context: SupportReplyContext): string {
   const sections: string[] = [];
 
-  sections.push(`Transcript:\n${context.transcript ?? ""}`);
+  sections.push(`Transcript:\n${context.transcript}`);
 
-  if (context.account) {
-    sections.push(
-      [
-        "Account:",
-        `- ${context.account.name}`,
-        `- plan: ${context.account.plan}`,
-        `- tier: ${context.account.tier}`,
-        `- region: ${context.account.region}`,
-      ].join("\n"),
-    );
-  }
+  sections.push(
+    [
+      "Account:",
+      `- ${context.account.name}`,
+      `- plan: ${context.account.plan}`,
+      `- tier: ${context.account.tier}`,
+      `- region: ${context.account.region}`,
+    ].join("\n"),
+  );
 
   if (context.recentTickets?.length) {
     sections.push(

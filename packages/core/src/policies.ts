@@ -13,10 +13,12 @@ interface PolicyResult {
 export function applyPolicies<
   TSources extends Record<string, unknown>,
   TDerived extends Record<string, unknown>,
+  TRequired extends readonly Extract<keyof TSources, string>[] = [],
+  TPrefer extends readonly Extract<keyof TSources, string>[] = [],
 >(
   resolvedSources: Map<string, unknown>,
   derived: TDerived,
-  policies: Policies<TSources, TDerived>,
+  policies: Policies<TSources, TDerived, TRequired, TPrefer>,
   taskId: string,
 ): PolicyResult {
   const records: PolicyRecord[] = [];
@@ -58,6 +60,11 @@ export function applyPolicies<
     const decision = excludeFn({ context: mergedContext });
     if (decision !== false) {
       const { source, reason } = decision;
+
+      if ((policies.require ?? []).map(String).includes(source)) {
+        throw new Error(`Required source "${source}" cannot be excluded.`);
+      }
+
       allowed.delete(source);
       records.push({
         source,
@@ -68,15 +75,15 @@ export function applyPolicies<
   }
 
   // Mark all non-excluded, non-required, non-preferred sources as included
+  const excludedKeys = (policies.exclude ?? []).flatMap((fn) => {
+    const decision = fn({ context: mergedContext });
+    return decision !== false ? [decision.source] : [];
+  });
+
   const explicitKeys = new Set([
     ...(policies.require ?? []).map(String),
     ...(policies.prefer ?? []).map(String),
-    ...(policies.exclude ?? [])
-      .map((fn) => {
-        const d = fn({ context: mergedContext });
-        return d !== false ? d.source : null;
-      })
-      .filter((s): s is string => s !== null),
+    ...excludedKeys.map(String),
   ]);
 
   for (const key of sourceKeys) {

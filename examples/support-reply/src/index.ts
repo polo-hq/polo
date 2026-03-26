@@ -1,4 +1,4 @@
-import { polo } from "@polo/core";
+import { polo } from "./polo.ts";
 import { buildPrompt, buildSystemPrompt, summarizeTrace, supportReply } from "./supportReply.ts";
 
 const input = {

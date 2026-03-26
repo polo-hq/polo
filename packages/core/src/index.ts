@@ -1,9 +1,10 @@
 // Public API
-export { polo } from "./polo.ts";
-export { chunkSource } from "./polo.ts";
+export { createPolo, registerSources } from "./polo.ts";
+export type { PoloInstance } from "./polo.ts";
 
 // Public types
 export type {
+  AnySchema,
   AnySource,
   AnyInput,
   Chunk,
@@ -13,15 +14,28 @@ export type {
   Definition,
   DeriveFn,
   ExcludeDecision,
+  FromInputSourceOptions,
+  InferContext,
+  InferSchemaInput,
+  InferSchemaInputObject,
+  InferSchemaOutput,
+  InferSchemaOutputObject,
   InferSource,
   InferSources,
+  InputSchema,
   InputSource,
-  InputSourceOptions,
   Policies,
   PolicyExcludeFn,
+  PoloLogger,
+  PoloOptions,
   PolicyRecord,
+  ResolverSource,
   Resolution,
-  Sensitivity,
+  SourceConfig,
+  SourceResolveArgs,
+  SourceTag,
+  SourceShape,
+  ChunkSourceConfig,
   SourceOptions,
   SourceRecord,
   SourceRecordType,

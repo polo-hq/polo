@@ -15,7 +15,8 @@
     "demo": "node dist/index.mjs"
   },
   "dependencies": {
-    "@polo/core": "workspace:*"
+    "@polo/core": "workspace:*",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",

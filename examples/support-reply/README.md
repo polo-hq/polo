@@ -3,8 +3,8 @@
 This example shows the smallest useful `@polo/core` flow:
 
 - `polo.input()` for transcript input
-- `polo.source()` for account and billing data
-- `chunkSource()` + `polo.chunks()` for ranked ticket retrieval
+- inline `sources` descriptors with `resolve()` for account and billing data
+- `polo.chunks()` for ranked ticket retrieval
 - `derive()` for prompt-ready values
 - `exclude` to remove billing notes when the task is not billing-related
 - budget-aware chunk dropping with a trace

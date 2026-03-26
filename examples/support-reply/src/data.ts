@@ -18,7 +18,7 @@ interface Ticket {
   tags: string[];
 }
 
-interface SearchResult {
+export interface SearchResult {
   id: string;
   pageContent: string;
   relevanceScore: number;
