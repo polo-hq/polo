@@ -724,7 +724,57 @@ describe("template", () => {
       (trace.prompt?.systemTokens ?? 0) + (trace.prompt?.promptTokens ?? 0),
     );
     expect(trace.prompt?.rawContextTokens).toBeGreaterThan(0);
+    expect(trace.prompt?.includedContextTokens).toBeGreaterThan(0);
     expect(typeof trace.prompt?.compressionRatio).toBe("number");
+    expect(typeof trace.prompt?.includedCompressionRatio).toBe("number");
+  });
+
+  test("included prompt metrics exclude policy-gated sources", async () => {
+    const task = polo.define(emptyInputSchema, {
+      id: "test_template_included_metrics",
+      sources: {
+        visible: polo.source(emptyInputSchema, {
+          resolve: async () => ({ text: "short" }),
+        }),
+        hidden: polo.source(emptyInputSchema, {
+          resolve: async () => "x".repeat(2_000),
+        }),
+      },
+      policies: {
+        exclude: [() => ({ source: "hidden", reason: "hidden from prompt" })],
+      },
+      template: ({ context }) => ({
+        system: "System prompt.",
+        prompt: `${context.visible}`,
+      }),
+    });
+
+    const { trace } = await polo.resolve(task, {});
+    expect(trace.prompt?.rawContextTokens).toBeGreaterThan(
+      trace.prompt?.includedContextTokens ?? 0,
+    );
+    expect(trace.prompt?.compressionRatio).toBeGreaterThan(
+      trace.prompt?.includedCompressionRatio ?? 0,
+    );
+  });
+
+  test("compression ratios are clamped at zero when templates add fixed overhead", async () => {
+    const task = polo.define(emptyInputSchema, {
+      id: "test_template_clamped_compression_ratio",
+      sources: {
+        brief: polo.source(emptyInputSchema, {
+          resolve: async () => "ok",
+        }),
+      },
+      template: ({ context }) => ({
+        system: `Instructions:\n${"Always be careful. ".repeat(100)}`,
+        prompt: `${context.brief}`,
+      }),
+    });
+
+    const { trace } = await polo.resolve(task, {});
+    expect(trace.prompt?.compressionRatio).toBe(0);
+    expect(trace.prompt?.includedCompressionRatio).toBe(0);
   });
 
   test("trace has no prompt key when no template is defined", async () => {
@@ -819,6 +869,28 @@ describe("template", () => {
     const { prompt } = await polo.resolve(task, {});
     expect(prompt?.system).toContain("name: Acme");
     expect(prompt?.prompt).toBe('{"name":"Acme","plan":"enterprise"}');
+  });
+
+  test("literal slot-like text is not rewritten during materialization", async () => {
+    const task = polo.define(emptyInputSchema, {
+      id: "test_template_slot_collision",
+      sources: {
+        account: polo.source(emptyInputSchema, {
+          resolve: async () => ({ name: "Acme", plan: "enterprise" as const }),
+        }),
+        notes: polo.source(emptyInputSchema, {
+          resolve: async () => "\u001fPOLO_SLOT_0\u001f",
+        }),
+      },
+      template: ({ context }) => ({
+        system: "System prompt.",
+        prompt: `${context.account}\n${context.notes}`,
+      }),
+    });
+
+    const { prompt } = await polo.resolve(task, {});
+    expect(prompt?.prompt).toContain("name: Acme");
+    expect(prompt?.prompt).toContain("\u001fPOLO_SLOT_0\u001f");
   });
 });
 

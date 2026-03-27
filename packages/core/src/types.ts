@@ -229,10 +229,14 @@ export interface PromptTrace {
   systemTokens: number;
   promptTokens: number;
   totalTokens: number;
-  /** Token cost if context had been serialized as JSON (for computing compression ratio). */
+  /** Token cost of naively JSON-stringifying all resolved source values before policy/budget filtering. */
   rawContextTokens: number;
-  /** Fraction of tokens saved vs raw JSON: 1 - totalTokens / rawContextTokens. */
+  /** Token cost of naively JSON-stringifying the final template context after policy/budget filtering. */
+  includedContextTokens: number;
+  /** Clamped fraction of tokens saved vs all resolved sources: max(0, 1 - totalTokens / rawContextTokens). */
   compressionRatio: number;
+  /** Clamped fraction of tokens saved vs the final included context: max(0, 1 - totalTokens / includedContextTokens). */
+  includedCompressionRatio: number;
 }
 
 // ============================================================

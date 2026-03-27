@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type {
   AllowedContext,
   AnyInput,
@@ -52,16 +53,39 @@ async function validateInput<TResolveInput extends AnyInput, TInput extends AnyI
 }
 
 /**
- * Compute the raw JSON token cost of all resolved sources.
- * Used to calculate compression ratio when a template is present.
+ * Compute the token cost of serializing a collection of values as JSON.
  */
-function computeRawContextTokens(resolvedRaw: Map<string, unknown>): number {
+function computeJsonValueTokens(values: Iterable<unknown>): number {
   let total = 0;
-  for (const raw of resolvedRaw.values()) {
-    const str = raw === null || raw === undefined ? "" : JSON.stringify(raw);
+  for (const value of values) {
+    const str = value === null || value === undefined ? "" : JSON.stringify(value);
     total += estimateTokens(str);
   }
   return total;
+}
+
+/**
+ * Compute the raw JSON token cost of all resolved sources.
+ * Used to calculate the full-resolution compression ratio when a template is present.
+ */
+function computeRawContextTokens(resolvedRaw: Map<string, unknown>): number {
+  return computeJsonValueTokens(resolvedRaw.values());
+}
+
+/**
+ * Compute the raw JSON token cost of the final context that the template can read.
+ * This excludes policy-gated or budget-dropped sources, but includes derived values.
+ */
+function computeIncludedContextTokens(context: Record<string, unknown>): number {
+  return computeJsonValueTokens(Object.values(context));
+}
+
+function computeCompressionRatio(totalTokens: number, baselineTokens: number): number {
+  if (baselineTokens <= 0) {
+    return 0;
+  }
+
+  return Math.max(0, 1 - totalTokens / baselineTokens);
 }
 
 interface TemplateRenderState {
@@ -69,6 +93,7 @@ interface TemplateRenderState {
   proxyCache: WeakMap<object, unknown>;
   slotCache: WeakMap<object, string>;
   slotValues: Map<string, unknown>;
+  slotNonce: string;
   slotCounter: number;
 }
 
@@ -82,7 +107,7 @@ function createSlotToken(state: TemplateRenderState, value: object): string {
     return existing;
   }
 
-  const token = `\u001fPOLO_SLOT_${state.slotCounter++}\u001f`;
+  const token = `\u001fPOLO_SLOT_${state.slotNonce}_${state.slotCounter++}\u001f`;
   state.slotCache.set(value, token);
   state.slotValues.set(token, value);
   return token;
@@ -168,6 +193,7 @@ function renderTemplate(
     proxyCache: new WeakMap(),
     slotCache: new WeakMap(),
     slotValues: new Map(),
+    slotNonce: randomUUID(),
     slotCounter: 0,
   };
 
@@ -267,6 +293,7 @@ export async function resolveDefinition<
     });
 
     const rawContextTokens = computeRawContextTokens(resolvedRaw);
+    const includedContextTokens = computeIncludedContextTokens(resolution.context);
     const systemTokens = estimateTokens(resolution.prompt.system);
     const promptTokens = estimateTokens(resolution.prompt.prompt);
     const totalTokens = systemTokens + promptTokens;
@@ -276,7 +303,9 @@ export async function resolveDefinition<
       promptTokens,
       totalTokens,
       rawContextTokens,
-      compressionRatio: rawContextTokens > 0 ? 1 - totalTokens / rawContextTokens : 0,
+      includedContextTokens,
+      compressionRatio: computeCompressionRatio(totalTokens, rawContextTokens),
+      includedCompressionRatio: computeCompressionRatio(totalTokens, includedContextTokens),
     };
 
     const completedAt = new Date();
@@ -342,7 +371,9 @@ export async function resolveDefinition<
     }
   }
 
-  // --- merge derived values onto context ---
+  // Derived values are computed once from the full resolved source set before
+  // policy and budget filtering. They intentionally remain stable even if
+  // later source drops remove the raw inputs they were derived from.
   Object.assign(context, derived);
 
   // --- build trace ---
@@ -432,6 +463,9 @@ function resolveWithTemplate(options: {
     }
   }
 
+  // Derived values are computed once from the full resolved source set before
+  // policy and budget fitting. They intentionally remain stable even if later
+  // source drops or chunk trimming remove the raw inputs they were derived from.
   Object.assign(context, derived);
 
   // If no budget, skip fitting

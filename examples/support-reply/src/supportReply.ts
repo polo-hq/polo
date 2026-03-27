@@ -3,7 +3,6 @@ import { z } from "zod";
 import { polo } from "./polo.ts";
 import { supportReplySources } from "./sourceRegistry.ts";
 
-
 const supportReplyInputSchema = z.object({
   accountId: z.string(),
   transcript: z.string(),
@@ -75,7 +74,9 @@ export function summarizeTrace(trace: Trace): string {
     lines.push(
       `prompt tokens: ${trace.prompt.totalTokens} (system: ${trace.prompt.systemTokens}, user: ${trace.prompt.promptTokens})`,
       `raw context tokens: ${trace.prompt.rawContextTokens}`,
-      `compression: ${(trace.prompt.compressionRatio * 100).toFixed(1)}% reduction`,
+      `included context tokens: ${trace.prompt.includedContextTokens}`,
+      `compression vs resolved context: ${(trace.prompt.compressionRatio * 100).toFixed(1)}% reduction`,
+      `compression vs included context: ${(trace.prompt.includedCompressionRatio * 100).toFixed(1)}% reduction`,
     );
   }
 

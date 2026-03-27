@@ -135,8 +135,7 @@ The `template` function receives the fully resolved, policy-gated `context` and 
 ```ts
 const { context, prompt, trace } = await polo.resolve(supportReply, {
   accountId: "acc_123",
-  transcript:
-    "Our webhook deliveries have been timing out in production since yesterday's deploy.",
+  transcript: "Our webhook deliveries have been timing out in production since yesterday's deploy.",
 });
 
 // Pass directly to your model
@@ -147,7 +146,9 @@ const { text } = await generateText({
 });
 
 // Inspect the compression
-console.log(`Compressed to ${(trace.prompt.compressionRatio * 100).toFixed(1)}% fewer tokens than raw JSON`);
+console.log(
+  `Compressed to ${(trace.prompt.includedCompressionRatio * 100).toFixed(1)}% fewer tokens than the final included context`,
+);
 ```
 
 `prompt` is absent when no `template` is defined — the resolved `context` object is still available for manual prompt construction.
@@ -322,12 +323,20 @@ policies: {
     "promptTokens": 76,
     "totalTokens": 98,
     "rawContextTokens": 163,
-    "compressionRatio": 0.399
+    "includedContextTokens": 121,
+    "compressionRatio": 0.399,
+    "includedCompressionRatio": 0.19
   }
 }
 ```
 
-`prompt.compressionRatio` is `1 - totalTokens / rawContextTokens` — the fraction of tokens saved versus naively `JSON.stringify`-ing all resolved sources. A ratio of 0.4 means Polo sent 40% fewer tokens than the unoptimized baseline.
+`prompt.rawContextTokens` measures the naive JSON baseline for all resolved sources before policy exclusions or budget fitting.
+
+`prompt.includedContextTokens` measures the naive JSON baseline for the final template context after policy exclusions and budget fitting.
+
+`prompt.compressionRatio` is `max(0, 1 - totalTokens / rawContextTokens)` — the clamped fraction of tokens saved versus all resolved sources.
+
+`prompt.includedCompressionRatio` is `max(0, 1 - totalTokens / includedContextTokens)` — the clamped fraction of tokens saved versus the final included context. This is usually the better metric for comparing prompt compaction strategies.
 
 ---
 
@@ -342,7 +351,7 @@ Polo gives you:
 - **typed context** — `context` is fully typed from your source definitions, no casting
 - **automatic dependency resolution** — sources run in parallel waves, no manual sequencing
 - **token-efficient serialization** — TOON encoding delivers ~40% fewer tokens than JSON on structured data, with equal or better model accuracy
-- **measurable optimization** — `compressionRatio` in every trace tells you exactly how much was saved; the foundation for A/B testing prompt strategies
+- **measurable optimization** — prompt traces include both full-resolution and final-included compression metrics for A/B testing prompt strategies
 - **debuggable** — when outputs go wrong, the trace tells you exactly what the model saw
 
 ---
