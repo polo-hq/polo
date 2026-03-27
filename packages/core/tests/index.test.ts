@@ -6,7 +6,7 @@ import {
   RequiredSourceMissingError,
   type InferContext,
 } from "../src/index.ts";
-import { serialize } from "../src/pack.ts";
+import { estimateTokens, serialize } from "../src/pack.ts";
 
 /* eslint-disable @typescript-eslint/restrict-template-expressions -- Tests intentionally interpolate render-aware context proxies. */
 
@@ -1100,6 +1100,7 @@ describe("template budget fitting", () => {
       { content: "duplicate ".repeat(20), score: 0.9 },
       { content: "duplicate ".repeat(20), score: 0.1 },
     ];
+    const budget = estimateTokens(items.map((item) => item.content).join("\n")) - 1;
 
     const task = polo.define(emptyInputSchema, {
       id: "test_template_chunk_trim_duplicate_content",
@@ -1113,7 +1114,7 @@ describe("template budget fitting", () => {
       },
       policies: {
         prefer: ["docs"],
-        budget: 30,
+        budget,
       },
       template: ({ context }) => ({
         system: "",
