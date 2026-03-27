@@ -507,8 +507,9 @@ function resolveWithTemplate(options: {
     while (renderTokens(prompt) > budget && trimmed) {
       trimmed = false;
 
-      // Find a chunk source still in context that has more than one chunk
+      // Find a non-required chunk source still in context that has more than one chunk
       for (const key of chunkContextKeys) {
+        if (requiredKeys.has(key)) continue;
         if (!(key in context)) continue;
         const chunks = context[key] as Array<{ content: string; score?: number }>;
         if (chunks.length <= 1) continue;

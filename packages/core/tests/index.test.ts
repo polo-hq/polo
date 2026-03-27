@@ -1011,6 +1011,52 @@ describe("template budget fitting", () => {
     expect(prompt?.prompt).toContain("c".repeat(100));
   });
 
+  test("required chunk sources are never trimmed when over budget", async () => {
+    const items = [
+      { content: "chunk-high ".repeat(10), score: 0.9 },
+      { content: "chunk-mid ".repeat(10), score: 0.5 },
+      { content: "chunk-low ".repeat(10), score: 0.1 },
+    ];
+
+    const task = polo.define(emptyInputSchema, {
+      id: "test_template_required_chunk_never_trimmed",
+      sources: {
+        docs: polo.source.chunks(emptyInputSchema, {
+          async resolve() {
+            return items;
+          },
+          normalize: (item) => ({ content: item.content, score: item.score }),
+        }),
+      },
+      policies: {
+        require: ["docs"],
+        budget: 1,
+      },
+      template: ({ context }) => ({
+        system: "",
+        prompt: (context.docs ?? []).map((chunk) => chunk.content).join("\n"),
+      }),
+    });
+
+    const { context, prompt, trace } = await polo.resolve(task, {});
+    expect(context.docs).toHaveLength(3);
+    expect(prompt?.prompt).toContain("chunk-high");
+    expect(prompt?.prompt).toContain("chunk-mid");
+    expect(prompt?.prompt).toContain("chunk-low");
+
+    const docsRecord = trace.sources.find((source) => source.key === "docs");
+    expect(docsRecord?.type).toBe("chunks");
+    if (docsRecord?.type === "chunks") {
+      expect(docsRecord.chunks).toHaveLength(3);
+      expect(docsRecord.chunks.every((chunk) => chunk.included)).toBe(true);
+    }
+
+    const droppedPolicy = trace.policies.find(
+      (policy) => policy.source === "docs" && policy.action === "dropped",
+    );
+    expect(droppedPolicy).toBeUndefined();
+  });
+
   test("chunks in template are trimmed when over budget", async () => {
     const items = [
       { content: "chunk-high ".repeat(10), score: 0.9 },
