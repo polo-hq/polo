@@ -187,6 +187,55 @@ export interface Policies<
 }
 
 // ============================================================
+// Template
+// ============================================================
+
+type Primitive = string | number | boolean | bigint | symbol | null | undefined;
+
+interface RenderInterpolable {
+  [Symbol.toPrimitive](hint: string): string;
+  toString(): string;
+  valueOf(): string;
+}
+
+export type RenderableValue<T> = T extends Primitive
+  ? T
+  : T extends readonly (infer U)[]
+    ? Array<RenderableValue<U>> & RenderInterpolable
+    : T extends object
+      ? { [K in keyof T]: RenderableValue<T[K]> } & RenderInterpolable
+      : T;
+
+export type TemplateContext<
+  TSources extends Record<string, unknown>,
+  TDerived extends Record<string, unknown>,
+  TRequired extends readonly Extract<keyof TSources, string>[] = [],
+> = RenderableValue<AllowedContext<TSources, TDerived, TRequired>> & {
+  raw: AllowedContext<TSources, TDerived, TRequired>;
+};
+
+export interface PromptOutput {
+  system: string;
+  prompt: string;
+}
+
+export type TemplateFn<
+  TSources extends Record<string, unknown>,
+  TDerived extends Record<string, unknown>,
+  TRequired extends readonly Extract<keyof TSources, string>[] = [],
+> = (args: { context: TemplateContext<TSources, TDerived, TRequired> }) => PromptOutput;
+
+export interface PromptTrace {
+  systemTokens: number;
+  promptTokens: number;
+  totalTokens: number;
+  /** Token cost if context had been serialized as JSON (for computing compression ratio). */
+  rawContextTokens: number;
+  /** Fraction of tokens saved vs raw JSON: 1 - totalTokens / rawContextTokens. */
+  compressionRatio: number;
+}
+
+// ============================================================
 // Trace
 // ============================================================
 
@@ -226,6 +275,7 @@ export interface Trace {
   policies: PolicyRecord[];
   derived: Record<string, unknown>;
   budget: { max: number; used: number };
+  prompt?: PromptTrace;
 }
 
 // ============================================================
@@ -258,6 +308,7 @@ export interface Resolution<
   TRequired extends readonly Extract<keyof TSources, string>[] = [],
 > {
   context: AllowedContext<TSources, TDerived, TRequired>;
+  prompt?: PromptOutput;
   trace: Trace;
 }
 
@@ -276,6 +327,7 @@ export interface DefinitionConfig<
   sources: TSourceMap & SourceShape<TInput, NoInfer<TSourceMap>>;
   derive?: DeriveFn<InferSources<TInput, TSourceMap>, TDerived>;
   policies?: Policies<InferSources<TInput, TSourceMap>, NoInfer<TDerived>, TRequired, TPrefer>;
+  template?: TemplateFn<InferSources<TInput, TSourceMap>, NoInfer<TDerived>, TRequired>;
 }
 
 export interface Definition<
@@ -291,6 +343,7 @@ export interface Definition<
   _sources: TSourceMap;
   _derive: DeriveFn<InferSources<TInput, TSourceMap>, TDerived> | undefined;
   _policies: Policies<InferSources<TInput, TSourceMap>, TDerived, TRequired, TPrefer>;
+  _template: TemplateFn<InferSources<TInput, TSourceMap>, TDerived, TRequired> | undefined;
   _input?: TInput; // phantom type for inference only
   _resolveInput?: TResolveInput; // phantom type for inference only
 }
