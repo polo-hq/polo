@@ -20,10 +20,7 @@ describe("greedyScore", () => {
   });
 
   test("treats missing score as 0", () => {
-    const chunks: Chunk[] = [
-      { content: "scored", score: 0.5 },
-      { content: "unscored" },
-    ];
+    const chunks: Chunk[] = [{ content: "scored", score: 0.5 }, { content: "unscored" }];
     const result = greedyScore(chunks, ctx(Infinity));
     expect(result.included[0]!.content).toBe("scored");
     expect(result.included[1]!.content).toBe("unscored");
@@ -106,21 +103,26 @@ describe("scorePerToken", () => {
 
   test("produces different selection than greedyScore when sizes vary", () => {
     const big: Chunk = { content: "x".repeat(200), score: 0.9 };
-    const med1: Chunk = { content: "a".repeat(40), score: 0.6 };
-    const med2: Chunk = { content: "b".repeat(40), score: 0.5 };
+    const small1: Chunk = { content: "a".repeat(30), score: 0.6 };
+    const small2: Chunk = { content: "b".repeat(30), score: 0.5 };
 
-    const medTokens = estimateTokens(med1.content);
-    // Budget fits both meds but not big
-    const budget = medTokens * 2 + 1;
+    const bigTokens = estimateTokens(big.content);
+    // Budget fits big alone OR both smalls, but not big + any small
+    const budget = bigTokens + 1;
 
-    const greedy = greedyScore([big, med1, med2], ctx(budget));
-    const efficient = scorePerToken()([big, med1, med2], ctx(budget));
+    const greedy = greedyScore([big, small1, small2], ctx(budget));
+    const efficient = scorePerToken()([big, small1, small2], ctx(budget));
 
-    // Greedy tries big first (score 0.9), fails, then fits med1+med2
-    // scorePerToken ranks by efficiency so med1+med2 come first
-    // Both should include med1+med2, but scorePerToken orders by efficiency
+    // Greedy picks big first (highest score 0.9), leaving ~1 token —
+    // neither small chunk fits afterward
+    expect(greedy.included).toHaveLength(1);
+    expect(greedy.included[0]!.score).toBe(0.9);
+
+    // scorePerToken ranks by efficiency (score/tokens), so small chunks
+    // rank higher and both fit, yielding 2 chunks instead of 1
     expect(efficient.included).toHaveLength(2);
-    expect(efficient.included.map((c) => c.score)).toEqual([0.6, 0.5]);
+    expect(efficient.included[0]!.score).toBe(0.6);
+    expect(efficient.included[1]!.score).toBe(0.5);
   });
 });
 
