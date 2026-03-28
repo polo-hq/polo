@@ -525,15 +525,28 @@ function resolveWithTemplate(options: {
     const raw = resolvedRaw.get(key);
     if (isChunks(raw)) {
       templateCandidates += raw.items.length;
-      // Pre-sort chunks using the strategy's ordering so that Phase 2 trimming
-      // drops the least-valuable-per-strategy chunks first.
-      const ranked = strategyFn(raw.items, { budget: Infinity, estimateTokens });
-      context[key] = [...ranked.included];
       chunkContextKeys.add(key);
-      // Attach all chunk records to timing — includes exclusions from custom strategies
-      const timing = sourceTimings.find((t) => t.key === key);
-      if (timing) {
-        timing.chunkRecords = ranked.records;
+
+      if (budget === Infinity) {
+        // No budget configured — preserve original insertion order
+        context[key] = [...raw.items];
+        const timing = sourceTimings.find((t) => t.key === key);
+        if (timing) {
+          timing.chunkRecords = raw.items.map((c) => ({
+            content: c.content,
+            score: c.score,
+            included: true,
+          }));
+        }
+      } else {
+        // Pre-sort chunks using the strategy's ordering so that Phase 2
+        // trimming drops the least-valuable-per-strategy chunks first.
+        const ranked = strategyFn(raw.items, { budget: Infinity, estimateTokens });
+        context[key] = [...ranked.included];
+        const timing = sourceTimings.find((t) => t.key === key);
+        if (timing) {
+          timing.chunkRecords = ranked.records;
+        }
       }
     } else {
       if (declaredChunkSourceKeys.has(key) && isChunkEnvelope(raw)) {

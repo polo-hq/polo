@@ -306,10 +306,22 @@ export interface PackedResult {
   tokensUsed: number;
 }
 
+/**
+ * A function that selects and orders chunks for a token budget.
+ *
+ * The returned `included` array MUST be ordered most-valuable-first.
+ * In template mode, Phase 2 trimming drops `included[included.length - 1]`
+ * to stay within budget, so the last element should be the chunk the
+ * strategy considers least important.
+ */
 export type BudgetStrategyFn = (chunks: Chunk[], ctx: BudgetStrategyContext) => PackedResult;
 
 export interface ScorePerTokenOptions {
-  /** Exponent applied to score before dividing by token cost. Default: 1. */
+  /**
+   * Exponent applied to score before dividing by token cost. Default: 1.
+   * At alpha=0, score^0=1 for all scores so ranking is purely by 1/tokenCost.
+   * At alpha>0, zero-scored chunks receive efficiency=0 and rank last.
+   */
   alpha?: number;
   /** Floor for token cost to prevent division by near-zero. Default: 1. */
   minChunkTokens?: number;
