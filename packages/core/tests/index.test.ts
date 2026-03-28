@@ -805,7 +805,7 @@ describe("polo.source.chunks", () => {
         };
       },
     });
-    (malformedChunksSource as AnyResolverSource)._sourceKind = "chunks";
+    (malformedChunksSource as AnyResolverSource)._sourceKind = "chunks"; // Bypass the normal polo.source.chunks() API to exercise the defence-in-depth envelope check in resolve.ts
 
     const task = polo.define(emptyInputSchema, {
       id: "test_chunks_malformed_envelope",
