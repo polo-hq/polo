@@ -72,7 +72,9 @@ export function scorePerToken(options?: ScorePerTokenOptions): BudgetStrategyFn 
       const efficiencyDelta = b.efficiency - a.efficiency;
       if (efficiencyDelta !== 0) return efficiencyDelta;
 
-      const scoreDelta = b.score - a.score;
+      // With alpha=0, callers explicitly request pure token-efficiency ordering
+      // (score^0 / tokens), so score must not act as a secondary key.
+      const scoreDelta = alpha > 0 ? b.score - a.score : 0;
       if (scoreDelta !== 0) return scoreDelta;
 
       const tokenDelta = a.actualTokens - b.actualTokens;

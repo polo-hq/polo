@@ -92,6 +92,25 @@ describe("scorePerToken", () => {
     expect(result.included[0]!.content).toBe(small.content);
   });
 
+  test("with alpha=0 and equal token cost, score does not break ties", () => {
+    const strategy = scorePerToken({ alpha: 0 });
+    const result = strategy(
+      [
+        { content: "first", score: 10 },
+        { content: "second", score: 1 },
+      ],
+      {
+        budget: Infinity,
+        estimateTokens() {
+          return 10;
+        },
+      },
+    );
+
+    expect(result.included[0]!.content).toBe("first");
+    expect(result.included[1]!.content).toBe("second");
+  });
+
   test("with alpha=2 heavily favors high-score chunks", () => {
     // Two chunks of similar size but different scores
     const highScore: Chunk = { content: "a".repeat(50), score: 0.9 };
