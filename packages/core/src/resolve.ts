@@ -599,7 +599,9 @@ function resolveWithTemplate(options: {
     prompt = renderTemplate(templateFn, context);
   }
 
-  // Phase 2: trim chunks one-at-a-time from chunk sources (lowest score first)
+  // Phase 2: trim chunks one-at-a-time from chunk sources.
+  // Chunks are already pre-sorted by the budget strategy (most valuable first),
+  // so dropping the last element removes the least-valuable-per-strategy chunk.
   if (renderTokens(prompt) > budget) {
     let trimmed = true;
     while (renderTokens(prompt) > budget && trimmed) {
@@ -612,17 +614,16 @@ function resolveWithTemplate(options: {
         const chunks = context[key] as Array<{ content: string; score?: number }>;
         if (chunks.length <= 1) continue;
 
-        // Drop the lowest-score chunk
-        const lowestIdx = chunks.reduce(
-          (minIdx, c, i) => ((c.score ?? 0) < (chunks[minIdx]?.score ?? 0) ? i : minIdx),
-          0,
-        );
-        chunks.splice(lowestIdx, 1);
+        // Drop the strategy's least-valuable chunk (last in pre-sorted order)
+        const dropped = chunks.pop()!;
 
-        // Update chunk records in timing
+        // Update chunk records in timing — match by content + score, searching
+        // from the end so that duplicates are marked in reverse strategy order
         const timing = sourceTimings.find((t) => t.key === key);
         if (timing?.chunkRecords) {
-          const record = timing.chunkRecords.filter((record) => record.included)[lowestIdx];
+          const record = timing.chunkRecords.findLast(
+            (r) => r.included && r.content === dropped.content && r.score === dropped.score,
+          );
           if (record) {
             record.included = false;
             record.reason = "chunk_trimmed_over_budget";
