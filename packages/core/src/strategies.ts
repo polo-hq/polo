@@ -53,10 +53,11 @@ export function scorePerToken(options?: ScorePerTokenOptions): BudgetStrategyFn 
 
   return (chunks: Chunk[], ctx: BudgetStrategyContext): PackedResult => {
     const withEfficiency = chunks.map((chunk) => {
-      const tokens = Math.max(minChunkTokens, ctx.estimateTokens(chunk.content));
-      const score = chunk.score ?? 0;
-      const efficiency = Math.pow(score, alpha) / tokens;
-      return { chunk, tokens, efficiency };
+      const actualTokens = ctx.estimateTokens(chunk.content);
+      const tokensForEfficiency = Math.max(minChunkTokens, actualTokens);
+      const score = Math.max(0, chunk.score ?? 0);
+      const efficiency = Math.pow(score, alpha) / tokensForEfficiency;
+      return { chunk, actualTokens, efficiency };
     });
 
     withEfficiency.sort((a, b) => b.efficiency - a.efficiency);
@@ -65,10 +66,10 @@ export function scorePerToken(options?: ScorePerTokenOptions): BudgetStrategyFn 
     const records: ChunkRecord[] = [];
     let tokensUsed = 0;
 
-    for (const { chunk, tokens } of withEfficiency) {
-      if (tokensUsed + tokens <= ctx.budget) {
+    for (const { chunk, actualTokens } of withEfficiency) {
+      if (tokensUsed + actualTokens <= ctx.budget) {
         included.push(chunk);
-        tokensUsed += tokens;
+        tokensUsed += actualTokens;
         records.push({ content: chunk.content, score: chunk.score, included: true });
       } else {
         records.push({

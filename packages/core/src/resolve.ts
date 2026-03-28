@@ -530,14 +530,10 @@ function resolveWithTemplate(options: {
       const ranked = strategyFn(raw.items, { budget: Infinity, estimateTokens });
       context[key] = [...ranked.included];
       chunkContextKeys.add(key);
-      // Attach full chunk records to timing
+      // Attach all chunk records to timing — includes exclusions from custom strategies
       const timing = sourceTimings.find((t) => t.key === key);
       if (timing) {
-        timing.chunkRecords = ranked.included.map((c) => ({
-          content: c.content,
-          score: c.score,
-          included: true,
-        }));
+        timing.chunkRecords = ranked.records;
       }
     } else {
       if (declaredChunkSourceKeys.has(key) && isChunkEnvelope(raw)) {
