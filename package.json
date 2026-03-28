@@ -9,12 +9,13 @@
     "fix": "turbo run fix"
   },
   "devDependencies": {
-    "turbo": "^2.8.20",
-    "typescript": "5.9.2",
-    "vite-plus": "^0.1.11"
+    "@vitest/coverage-v8": "^4.1.2",
+    "turbo": "^2.8.21",
+    "typescript": "catalog:",
+    "vite-plus": "^0.1.14"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   },
-  "packageManager": "pnpm@9.0.0"
+  "packageManager": "pnpm@9.5.0"
 }

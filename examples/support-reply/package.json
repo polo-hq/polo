@@ -17,11 +17,11 @@
   },
   "dependencies": {
     "@polo/core": "workspace:*",
-    "zod": "^4.3.6"
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "^25.5.0",
-    "@typescript/native-preview": "7.0.0-dev.20260316.1",
-    "typescript": "^5.9.3"
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:"
   }
 }
