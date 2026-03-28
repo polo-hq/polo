@@ -51,16 +51,35 @@ export function scorePerToken(options?: ScorePerTokenOptions): BudgetStrategyFn 
   const alpha = options?.alpha ?? 1;
   const minChunkTokens = options?.minChunkTokens ?? 1;
 
+  if (!Number.isFinite(alpha) || alpha < 0) {
+    throw new RangeError("score_per_token: alpha must be a finite number >= 0.");
+  }
+
+  if (!Number.isFinite(minChunkTokens) || minChunkTokens < 1) {
+    throw new RangeError("score_per_token: minChunkTokens must be a finite number >= 1.");
+  }
+
   return (chunks: Chunk[], ctx: BudgetStrategyContext): PackedResult => {
-    const withEfficiency = chunks.map((chunk) => {
+    const withEfficiency = chunks.map((chunk, index) => {
       const actualTokens = ctx.estimateTokens(chunk.content);
       const tokensForEfficiency = Math.max(minChunkTokens, actualTokens);
       const score = Math.max(0, chunk.score ?? 0);
       const efficiency = Math.pow(score, alpha) / tokensForEfficiency;
-      return { chunk, actualTokens, efficiency };
+      return { chunk, score, actualTokens, efficiency, index };
     });
 
-    withEfficiency.sort((a, b) => b.efficiency - a.efficiency);
+    withEfficiency.sort((a, b) => {
+      const efficiencyDelta = b.efficiency - a.efficiency;
+      if (efficiencyDelta !== 0) return efficiencyDelta;
+
+      const scoreDelta = b.score - a.score;
+      if (scoreDelta !== 0) return scoreDelta;
+
+      const tokenDelta = a.actualTokens - b.actualTokens;
+      if (tokenDelta !== 0) return tokenDelta;
+
+      return a.index - b.index;
+    });
 
     const included: Chunk[] = [];
     const records: ChunkRecord[] = [];
