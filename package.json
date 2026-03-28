@@ -5,6 +5,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "check": "turbo run check",
+    "test": "turbo run test",
     "fix": "turbo run fix"
   },
   "devDependencies": {

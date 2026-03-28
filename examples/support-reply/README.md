@@ -1,24 +1,42 @@
 # Support Reply Example
 
-This example shows the smallest useful `@polo/core` flow:
+This example shows a practical, end-to-end `@polo/core` task definition for
+generating a support reply prompt under a strict token budget.
 
-- `polo.input()` for transcript input
-- inline `sources` descriptors with `resolve()` for account and billing data
-- `polo.chunks()` for ranked ticket retrieval
-- `derive()` for prompt-ready values
-- `exclude` to remove billing notes when the task is not billing-related
-- budget-aware chunk dropping with a trace
+It demonstrates:
+
+- passthrough input sources via `polo.source.fromInput()`
+- resolver sources for account and billing context
+- chunk sources for ranked ticket retrieval
+- `derive()` for prompt-ready flags (`isEnterprise`, `replyStyle`, `mentionsBilling`)
+- policy controls (`require`, `prefer`, `exclude`, `budget`)
+- trace inspection for policy decisions and compression metrics
+
+## Files
+
+- `src/sourceRegistry.ts` defines reusable sources
+- `src/supportReply.ts` defines the task, policies, template, and trace summary helper
+- `src/index.ts` runs the demo and prints context/prompt/trace output
 
 ## Run
+
+From this example directory (`examples/support-reply`):
 
 ```bash
 vp pack
 vp run demo
 ```
 
-The demo prints:
+The demo resolves an input transcript and prints:
 
 - the final authoritative context keys
 - a sample system prompt
 - a sample user prompt
+- a human-readable trace summary
 - the full trace JSON
+
+## What to look for
+
+- `billingNotes` is excluded unless the transcript is billing-related.
+- lower-ranked ticket chunks may be trimmed when over budget.
+- trace output shows exactly what was included, excluded, or dropped.
