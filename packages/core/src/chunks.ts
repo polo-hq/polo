@@ -38,9 +38,17 @@ export async function createChunks<T>(
   const items = await promise;
 
   if (normalize) {
+    const normalizedItems = items.map((item) => normalize(item as T));
+
+    if (!isChunkArray(normalizedItems)) {
+      throw new TypeError(
+        "polo.source.chunks() normalize() must return Chunk objects with string content.",
+      );
+    }
+
     return {
       _type: "chunks",
-      items: items.map((item) => normalize(item as T)),
+      items: normalizedItems,
     };
   }
 

@@ -733,6 +733,89 @@ describe("polo.source.chunks", () => {
     expect(chunks[1]?.content).toBe("mid");
     expect(chunks[2]?.content).toBe("low");
   });
+
+  test("throws when normalize returns invalid chunks", async () => {
+    const task = polo.define(emptyInputSchema, {
+      id: "test_chunks_invalid_normalize",
+      sources: {
+        docs: polo.source.chunks(emptyInputSchema, {
+          async resolve() {
+            return [{ value: "not-content" }];
+          },
+          normalize(item) {
+            return {
+              content: (item as { missing?: string }).missing as string,
+            };
+          },
+        }),
+      },
+    });
+
+    await expect(polo.resolve(task, {})).rejects.toThrow(
+      /normalize\(\) must return Chunk objects with string content/,
+    );
+  });
+
+  test("dependent chunk sources also reject invalid normalize output", async () => {
+    const sharedSourceSet = polo.sourceSet((sources) => {
+      const account = sources.value(emptyInputSchema, {
+        async resolve() {
+          return { id: "acc_1" };
+        },
+      });
+
+      const docs = sources.chunks(
+        emptyInputSchema,
+        { account },
+        {
+          async resolve() {
+            return [{ value: "not-content" }];
+          },
+          normalize(item) {
+            return {
+              content: (item as { missing?: string }).missing as string,
+            };
+          },
+        },
+      );
+
+      return { account, docs };
+    });
+
+    const sourceRegistry = registerSources(sharedSourceSet);
+    const task = polo.define(emptyInputSchema, {
+      id: "test_dep_chunks_invalid_normalize",
+      sources: {
+        account: sourceRegistry.account,
+        docs: sourceRegistry.docs,
+      },
+    });
+
+    await expect(polo.resolve(task, {})).rejects.toThrow(
+      /normalize\(\) must return Chunk objects with string content/,
+    );
+  });
+
+  test("throws when a chunk source resolves malformed chunk envelopes", async () => {
+    const malformedChunksSource = polo.source(emptyInputSchema, {
+      async resolve() {
+        return {
+          _type: "chunks",
+          items: [{ content: undefined }],
+        };
+      },
+    });
+    (malformedChunksSource as AnyResolverSource)._sourceKind = "chunks";
+
+    const task = polo.define(emptyInputSchema, {
+      id: "test_chunks_malformed_envelope",
+      sources: {
+        docs: malformedChunksSource,
+      },
+    });
+
+    await expect(polo.resolve(task, {})).rejects.toThrow(/resolved malformed chunks/);
+  });
 });
 
 // ============================================================

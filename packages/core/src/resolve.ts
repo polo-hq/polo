@@ -38,6 +38,15 @@ function isResolverSource(source: unknown): source is ResolverSource<unknown> {
   );
 }
 
+function isChunkEnvelope(value: unknown): value is { _type: "chunks" } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "_type" in value &&
+    (value as { _type?: unknown })._type === "chunks"
+  );
+}
+
 async function validateInput<TResolveInput extends AnyInput, TInput extends AnyInput>(
   schema: InputSchema<TResolveInput, TInput>,
   input: TResolveInput,
@@ -278,6 +287,11 @@ export async function resolveDefinition<
 
   const requiredKeys = new Set((policies.require ?? []).map(String));
   const preferredKeys = new Set((policies.prefer ?? []).map(String));
+  const declaredChunkSourceKeys = new Set(
+    Object.entries(sourceMap)
+      .filter(([, source]) => isResolverSource(source) && source._sourceKind === "chunks")
+      .map(([key]) => key),
+  );
 
   if (templateFn) {
     // --- template path: render-measure-fit ---
@@ -290,6 +304,7 @@ export async function resolveDefinition<
       preferredKeys,
       sourceTimings,
       budget,
+      declaredChunkSourceKeys,
       templateFn: templateFn as (args: { context: Record<string, unknown> }) => PromptOutput,
       taskId,
     });
@@ -361,6 +376,12 @@ export async function resolveDefinition<
       const timing = sourceTimings.find((t) => t.key === key);
       if (timing) timing.chunkRecords = packed.records;
     } else {
+      if (declaredChunkSourceKeys.has(key) && isChunkEnvelope(raw)) {
+        throw new TypeError(
+          `Source "${key}" resolved malformed chunks. Expected Chunk[] items with string content.`,
+        );
+      }
+
       const tokens = estimateTokens(serialize(raw));
 
       if (!requiredKeys.has(key) && budget !== Infinity && budgetUsed + tokens > budget) {
@@ -425,6 +446,7 @@ function resolveWithTemplate(options: {
   preferredKeys: Set<string>;
   sourceTimings: SourceTiming[];
   budget: number;
+  declaredChunkSourceKeys: Set<string>;
   templateFn: (args: { context: Record<string, unknown> }) => PromptOutput;
   taskId: string;
 }): TemplateResolutionResult {
@@ -437,6 +459,7 @@ function resolveWithTemplate(options: {
     preferredKeys,
     sourceTimings,
     budget,
+    declaredChunkSourceKeys,
     templateFn,
   } = options;
 
@@ -461,6 +484,12 @@ function resolveWithTemplate(options: {
         }));
       }
     } else {
+      if (declaredChunkSourceKeys.has(key) && isChunkEnvelope(raw)) {
+        throw new TypeError(
+          `Source "${key}" resolved malformed chunks. Expected Chunk[] items with string content.`,
+        );
+      }
+
       context[key] = raw;
     }
   }
