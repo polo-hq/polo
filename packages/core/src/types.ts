@@ -288,7 +288,42 @@ export interface Policies<
   exclude?: Array<
     PolicyExcludeFn<TSources, TDerived, Exclude<Extract<keyof TSources, string>, TRequired[number]>>
   >;
-  budget?: number;
+  budget?: number | BudgetConfig;
+}
+
+// ============================================================
+// Budget strategies
+// ============================================================
+
+export interface BudgetStrategyContext {
+  budget: number;
+  estimateTokens: (text: string) => number;
+}
+
+export interface PackedResult {
+  included: Chunk[];
+  records: ChunkRecord[];
+  tokensUsed: number;
+}
+
+export type BudgetStrategyFn = (chunks: Chunk[], ctx: BudgetStrategyContext) => PackedResult;
+
+export interface ScorePerTokenOptions {
+  /** Exponent applied to score before dividing by token cost. Default: 1. */
+  alpha?: number;
+  /** Floor for token cost to prevent division by near-zero. Default: 1. */
+  minChunkTokens?: number;
+}
+
+export type BuiltinBudgetStrategy =
+  | { type: "greedy_score" }
+  | { type: "score_per_token"; options?: ScorePerTokenOptions };
+
+export type BudgetStrategy = BuiltinBudgetStrategy | BudgetStrategyFn;
+
+export interface BudgetConfig {
+  maxTokens: number;
+  strategy?: BudgetStrategy;
 }
 
 // ============================================================
@@ -383,7 +418,7 @@ export interface Trace {
   sources: SourceRecord[];
   policies: PolicyRecord[];
   derived: Record<string, unknown>;
-  budget: { max: number; used: number };
+  budget: { max: number; used: number; strategy?: string; candidates?: number; selected?: number };
   prompt?: PromptTrace;
 }
 

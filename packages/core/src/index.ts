@@ -8,6 +8,11 @@ export type {
   AnySource,
   AnyInput,
   AnyResolverSource,
+  BudgetConfig,
+  BudgetStrategy,
+  BudgetStrategyContext,
+  BudgetStrategyFn,
+  BuiltinBudgetStrategy,
   Chunk,
   ChunkSource,
   ChunkRecord,
@@ -28,6 +33,7 @@ export type {
   InferSources,
   InputSchema,
   InputSource,
+  PackedResult,
   Policies,
   PolicyExcludeFn,
   PoloLogger,
@@ -38,6 +44,7 @@ export type {
   RenderableValue,
   ResolverSource,
   Resolution,
+  ScorePerTokenOptions,
   SourceConfig,
   SourceDepValues,
   SourceResolveArgs,
@@ -55,6 +62,9 @@ export type {
   Trace,
   ValueSource,
 } from "./types.ts";
+
+// Budget strategies
+export { greedyScore, scorePerToken } from "./strategies.ts";
 
 // Errors
 export {
