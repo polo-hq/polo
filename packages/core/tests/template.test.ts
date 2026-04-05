@@ -9,57 +9,62 @@ import type { AnyResolverSource } from "../src/types.ts";
 const polo = createPolo();
 const emptyInputSchema = z.object({});
 
-describe("template", () => {
+describe("rendering", () => {
   test("renders system and prompt from context", async () => {
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_basic",
       sources: {
-        account: polo.source(emptyInputSchema, {
-          resolve: async () => ({ name: "Acme", plan: "enterprise" as const }),
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          account: source.value(emptyInputSchema, {
+            resolve: async () => ({ name: "Acme", plan: "enterprise" as const }),
+          }),
+        })),
       },
-      template: ({ context }) => ({
-        system: `You are helping ${context.account?.name}.`,
-        prompt: `account:\n${context.account}`,
-      }),
+      system: (context) => `You are helping ${context.account?.name}.`,
+      prompt: (context) => `account:\n${context.account}`,
     });
 
-    const result = await polo.resolve(task, {});
+    const result = await run({});
     expect(result.prompt).toBeDefined();
-    expect(result.prompt?.system).toContain("Acme");
-    expect(result.prompt?.prompt).toContain("account:");
-    expect(result.prompt?.prompt).toContain("name: Acme");
+    expect(result.system).toContain("Acme");
+    expect(result.prompt).toContain("account:");
+    expect(result.prompt).toContain("name: Acme");
   });
 
   test("no template means prompt is absent from resolution", async () => {
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_no_template",
       sources: {
-        data: polo.source(emptyInputSchema, {
-          resolve: async () => "hello",
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          data: source.value(emptyInputSchema, {
+            resolve: async () => "hello",
+          }),
+        })),
       },
     });
 
-    const result = await polo.resolve(task, {});
+    const result = await run({});
     expect(result.prompt).toBeUndefined();
   });
 
   test("trace includes prompt metrics when template is used", async () => {
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_trace",
       sources: {
-        account: polo.source(emptyInputSchema, {
-          resolve: async () => ({ name: "Acme", plan: "enterprise" }),
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          account: source.value(emptyInputSchema, {
+            resolve: async () => ({ name: "Acme", plan: "enterprise" }),
+          }),
+        })),
       },
-      template: ({ context }) => ({
-        system: `You are a helpful assistant for ${context.account}.`,
-        prompt: "done",
-      }),
+      system: (context) => `You are a helpful assistant for ${context.account}.`,
+      prompt: "done",
     });
 
-    const { trace } = await polo.resolve(task, {});
+    const { trace } = await run({});
     expect(trace.prompt).toBeDefined();
     expect(trace.prompt?.systemTokens).toBeGreaterThan(0);
     expect(trace.prompt?.promptTokens).toBeGreaterThan(0);
@@ -73,20 +78,21 @@ describe("template", () => {
   });
 
   test("trace token accounting does not throw for BigInt source values", async () => {
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_trace_bigint",
       sources: {
-        data: polo.source(emptyInputSchema, {
-          resolve: async () => 1n,
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          data: source.value(emptyInputSchema, {
+            resolve: async () => 1n,
+          }),
+        })),
       },
-      template: () => ({
-        system: "System prompt.",
-        prompt: "ok",
-      }),
+      system: "System prompt.",
+      prompt: "ok",
     });
 
-    const { trace } = await polo.resolve(task, {});
+    const { trace } = await run({});
     expect(trace.prompt).toBeDefined();
     expect(typeof trace.prompt?.rawContextTokens).toBe("number");
     expect(typeof trace.prompt?.includedContextTokens).toBe("number");
@@ -96,46 +102,65 @@ describe("template", () => {
     const circular: { self?: unknown } = {};
     circular.self = circular;
 
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_trace_circular",
       sources: {
-        data: polo.source(emptyInputSchema, {
-          resolve: async () => circular,
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          data: source.value(emptyInputSchema, {
+            resolve: async () => circular,
+          }),
+        })),
       },
-      template: () => ({
-        system: "System prompt.",
-        prompt: "ok",
-      }),
+      system: "System prompt.",
+      prompt: "ok",
     });
 
-    const { trace } = await polo.resolve(task, {});
+    const { trace } = await run({});
     expect(trace.prompt).toBeDefined();
     expect(typeof trace.prompt?.rawContextTokens).toBe("number");
     expect(typeof trace.prompt?.includedContextTokens).toBe("number");
   });
 
+  test("raw is reserved as a selected source key at type level", () => {
+    const typecheckOnly = Date.now() < 0;
+
+    if (typecheckOnly) {
+      // @ts-expect-error raw is reserved for render contexts
+      polo.window({
+        input: z.object({ raw: z.string() }),
+        id: "typecheck_reserved_raw_source",
+        sources: {
+          raw: polo.input("raw"),
+        },
+      });
+    }
+
+    expect(true).toBe(true);
+  });
+
   test("included prompt metrics exclude policy-gated sources", async () => {
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_included_metrics",
       sources: {
-        visible: polo.source(emptyInputSchema, {
-          resolve: async () => ({ text: "short" }),
-        }),
-        hidden: polo.source(emptyInputSchema, {
-          resolve: async () => "x".repeat(2_000),
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          visible: source.value(emptyInputSchema, {
+            resolve: async () => ({ text: "short" }),
+          }),
+          hidden: source.value(emptyInputSchema, {
+            resolve: async () => "x".repeat(2_000),
+          }),
+        })),
       },
       policies: {
         exclude: [() => ({ source: "hidden", reason: "hidden from prompt" })],
       },
-      template: ({ context }) => ({
-        system: "System prompt.",
-        prompt: `${context.visible}`,
-      }),
+      system: "System prompt.",
+      prompt: (context) => `${context.visible}`,
     });
 
-    const { trace } = await polo.resolve(task, {});
+    const { trace } = await run({});
     expect(trace.prompt?.rawContextTokens).toBeGreaterThan(
       trace.prompt?.includedContextTokens ?? 0,
     );
@@ -145,241 +170,257 @@ describe("template", () => {
   });
 
   test("compression ratios are clamped at zero when templates add fixed overhead", async () => {
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_clamped_compression_ratio",
       sources: {
-        brief: polo.source(emptyInputSchema, {
-          resolve: async () => "ok",
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          brief: source.value(emptyInputSchema, {
+            resolve: async () => "ok",
+          }),
+        })),
       },
-      template: ({ context }) => ({
-        system: `Instructions:\n${"Always be careful. ".repeat(100)}`,
-        prompt: `${context.brief}`,
-      }),
+      system: `Instructions:\n${"Always be careful. ".repeat(100)}`,
+      prompt: (context) => `${context.brief}`,
     });
 
-    const { trace } = await polo.resolve(task, {});
+    const { trace } = await run({});
     expect(trace.prompt?.compressionRatio).toBe(0);
     expect(trace.prompt?.includedCompressionRatio).toBe(0);
   });
 
   test("trace has no prompt key when no template is defined", async () => {
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_no_template_trace",
       sources: {
-        data: polo.source(emptyInputSchema, {
-          resolve: async () => ({ value: 1 }),
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          data: source.value(emptyInputSchema, {
+            resolve: async () => ({ value: 1 }),
+          }),
+        })),
       },
     });
 
-    const { trace } = await polo.resolve(task, {});
+    const { trace } = await run({});
     expect(trace.prompt).toBeUndefined();
   });
 
-  test("template receives derived values in context", async () => {
-    const task = polo.define(emptyInputSchema, {
+  test("prompt receives derived values in context", async () => {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_derived",
       sources: {
-        account: polo.source(emptyInputSchema, {
-          resolve: async () => ({ plan: "enterprise" as const }),
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          account: source.value(emptyInputSchema, {
+            resolve: async () => ({ plan: "enterprise" as const }),
+          }),
+        })),
       },
-      derive: ({ context }) => ({
-        isEnterprise: context.account.plan === "enterprise",
+      derive: (ctx) => ({
+        isEnterprise: ctx.account!.plan === "enterprise",
       }),
-      template: ({ context }) => ({
-        system: context.isEnterprise ? "Enterprise mode." : "Standard mode.",
-        prompt: "",
-      }),
+      system: (context) => (context.isEnterprise ? "Enterprise mode." : "Standard mode."),
+      prompt: "",
     });
 
-    const { prompt } = await polo.resolve(task, {});
-    expect(prompt?.system).toBe("Enterprise mode.");
+    const { system } = await run({});
+    expect(system).toBe("Enterprise mode.");
   });
 
-  test("template handles undefined optional sources gracefully", async () => {
-    const task = polo.define(emptyInputSchema, {
+  test("prompt handles undefined optional sources gracefully", async () => {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_optional",
       sources: {
-        required: polo.source(emptyInputSchema, {
-          resolve: async () => "present",
-        }),
-        optional: polo.source(emptyInputSchema, {
-          resolve: async () => null,
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          required: source.value(emptyInputSchema, {
+            resolve: async () => "present",
+          }),
+          optional: source.value(emptyInputSchema, {
+            resolve: async () => null,
+          }),
+        })),
       },
-      template: ({ context }) => ({
-        system: "System prompt.",
-        prompt: `${context.required}${context.optional ? `\n${context.optional}` : ""}`,
-      }),
+      system: "System prompt.",
+      prompt: (context) => `${context.required}${context.optional ? `\n${context.optional}` : ""}`,
     });
 
-    const { prompt } = await polo.resolve(task, {});
-    expect(prompt?.prompt).toBe("present");
+    const { prompt } = await run({});
+    expect(prompt).toBe("present");
   });
 
   test("system prompt can interpolate objects under the hood", async () => {
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_system_object",
       sources: {
-        account: polo.source(emptyInputSchema, {
-          resolve: async () => ({ name: "Acme", plan: "enterprise" as const }),
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          account: source.value(emptyInputSchema, {
+            resolve: async () => ({ name: "Acme", plan: "enterprise" as const }),
+          }),
+        })),
       },
-      template: ({ context }) => ({
-        system: `System account:\n${context.account}`,
-        prompt: "ok",
-      }),
+      system: (context) => `System account:\n${context.account}`,
+      prompt: "ok",
     });
 
-    const { prompt } = await polo.resolve(task, {});
-    expect(prompt?.system).toContain("name: Acme");
-    expect(prompt?.system).toContain("plan: enterprise");
+    const { system } = await run({});
+    expect(system).toContain("name: Acme");
+    expect(system).toContain("plan: enterprise");
   });
 
   test("context.raw exposes original values for custom formatting", async () => {
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_raw_escape_hatch",
       sources: {
-        account: polo.source(emptyInputSchema, {
-          resolve: async () => ({ name: "Acme", plan: "enterprise" as const }),
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          account: source.value(emptyInputSchema, {
+            resolve: async () => ({ name: "Acme", plan: "enterprise" as const }),
+          }),
+        })),
       },
-      template: ({ context }) => ({
-        system: `${context.account}`,
-        prompt: JSON.stringify(context.raw.account),
-      }),
+      system: (context) => `${context.account}`,
+      prompt: (context) => JSON.stringify(context.raw.account),
     });
 
-    const { prompt } = await polo.resolve(task, {});
-    expect(prompt?.system).toContain("name: Acme");
-    expect(prompt?.prompt).toBe('{"name":"Acme","plan":"enterprise"}');
+    const { system, prompt } = await run({});
+    expect(system).toContain("name: Acme");
+    expect(prompt).toBe('{"name":"Acme","plan":"enterprise"}');
   });
 
   test("literal slot-like text is not rewritten during materialization", async () => {
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_slot_collision",
       sources: {
-        account: polo.source(emptyInputSchema, {
-          resolve: async () => ({ name: "Acme", plan: "enterprise" as const }),
-        }),
-        notes: polo.source(emptyInputSchema, {
-          resolve: async () => "\u001fPOLO_SLOT_0\u001f",
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          account: source.value(emptyInputSchema, {
+            resolve: async () => ({ name: "Acme", plan: "enterprise" as const }),
+          }),
+          notes: source.value(emptyInputSchema, {
+            resolve: async () => "\u001fPOLO_SLOT_0\u001f",
+          }),
+        })),
       },
-      template: ({ context }) => ({
-        system: "System prompt.",
-        prompt: `${context.account}\n${context.notes}`,
-      }),
+      system: "System prompt.",
+      prompt: (context) => `${context.account}\n${context.notes}`,
     });
 
-    const { prompt } = await polo.resolve(task, {});
-    expect(prompt?.prompt).toContain("name: Acme");
-    expect(prompt?.prompt).toContain("\u001fPOLO_SLOT_0\u001f");
+    const { prompt } = await run({});
+    expect(prompt).toContain("name: Acme");
+    expect(prompt).toContain("\u001fPOLO_SLOT_0\u001f");
   });
 
-  test("template proxy supports ownKeys and descriptor access for context.raw", async () => {
-    const task = polo.define(emptyInputSchema, {
+  test("render context supports ownKeys and descriptor access for context.raw", async () => {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_proxy_raw_own_keys",
       sources: {
-        account: polo.source(emptyInputSchema, {
-          resolve: async () => ({ name: "Acme" }),
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          account: source.value(emptyInputSchema, {
+            resolve: async () => ({ name: "Acme" }),
+          }),
+        })),
       },
-      template: ({ context }) => {
+      system: (context) => {
         const keys = Object.keys(context).sort().join(",");
         const hasRaw = "raw" in context;
         const rawDescriptor = Object.getOwnPropertyDescriptor(context, "raw");
 
-        return {
-          system: `keys=${keys} hasRaw=${hasRaw}`,
-          prompt:
-            rawDescriptor && rawDescriptor.enumerable === false ? "raw-hidden" : "raw-missing",
-        };
+        void rawDescriptor;
+        return `keys=${keys} hasRaw=${hasRaw}`;
+      },
+      prompt: (context) => {
+        const rawDescriptor = Object.getOwnPropertyDescriptor(context, "raw");
+        return rawDescriptor && rawDescriptor.enumerable === false ? "raw-hidden" : "raw-missing";
       },
     });
 
-    const { prompt } = await polo.resolve(task, {});
-    expect(prompt?.system).toContain("keys=account");
-    expect(prompt?.system).toContain("hasRaw=true");
-    expect(prompt?.prompt).toBe("raw-hidden");
+    const { system, prompt } = await run({});
+    expect(system).toContain("keys=account");
+    expect(system).toContain("hasRaw=true");
+    expect(prompt).toBe("raw-hidden");
   });
 
-  test("template proxy materializes objects via toString/valueOf coercion", async () => {
-    const task = polo.define(emptyInputSchema, {
+  test("render context materializes objects via toString/valueOf coercion", async () => {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_proxy_to_string_and_value_of",
       sources: {
-        account: polo.source(emptyInputSchema, {
-          resolve: async () => ({ name: "Acme", plan: "enterprise" as const }),
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          account: source.value(emptyInputSchema, {
+            resolve: async () => ({ name: "Acme", plan: "enterprise" as const }),
+          }),
+        })),
       },
-      template: ({ context }) => ({
-        system: `${context.account}`,
-        prompt: String(context.account?.valueOf()),
-      }),
+      system: (context) => `${context.account}`,
+      prompt: (context) => String(context.account?.valueOf()),
     });
 
-    const { prompt } = await polo.resolve(task, {});
-    expect(prompt?.system).toContain("name: Acme");
-    expect(prompt?.prompt).toContain("plan: enterprise");
+    const { system, prompt } = await run({});
+    expect(system).toContain("name: Acme");
+    expect(prompt).toContain("plan: enterprise");
   });
 
-  test("template path throws for malformed chunk envelopes", async () => {
-    const malformedChunksSource = polo.source(emptyInputSchema, {
-      async resolve() {
-        return {
-          _type: "rag",
-          items: [{ content: undefined }],
-        };
-      },
-    });
-    (malformedChunksSource as AnyResolverSource)._sourceKind = "rag";
+  test("render path throws for malformed chunk envelopes", async () => {
+    const ragLikeSet = polo.sourceSet(({ source }) => ({
+      docs: source.value(emptyInputSchema, {
+        async resolve() {
+          return {
+            _type: "rag",
+            items: [{ content: undefined }],
+          };
+        },
+      }),
+    }));
+    (ragLikeSet.docs as AnyResolverSource)._sourceKind = "rag";
 
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_malformed_chunk_envelope",
       sources: {
-        docs: malformedChunksSource,
+        docs: ragLikeSet.docs,
       },
-      template: ({ context }) => ({
-        system: "",
-        prompt: `${context.docs ?? "none"}`,
-      }),
+      system: "",
+      prompt: (context) => `${context.docs ?? "none"}`,
     });
 
-    await expect(polo.resolve(task, {})).rejects.toThrow(/resolved malformed rag items/);
+    await expect(run({})).rejects.toThrow(/resolved malformed rag items/);
   });
 });
 
-describe("template budget fitting", () => {
-  test("drops lowest-priority source when template output exceeds budget", async () => {
+describe("render budget fitting", () => {
+  test("drops lowest-priority source when prompt output exceeds budget", async () => {
     const droppedLog: string[] = [];
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_drop_default",
       sources: {
-        required: polo.source(emptyInputSchema, {
-          resolve: async () => "short required text",
-        }),
-        extra: polo.source(emptyInputSchema, {
-          resolve: async () => "x".repeat(500),
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          required: source.value(emptyInputSchema, {
+            resolve: async () => "short required text",
+          }),
+          extra: source.value(emptyInputSchema, {
+            resolve: async () => "x".repeat(500),
+          }),
+        })),
       },
       policies: {
         require: ["required"],
         budget: 5,
       },
-      template: ({ context }) => {
+      system: "sys",
+      prompt: (context) => {
         if (!("extra" in context)) droppedLog.push("extra");
-        return {
-          system: "sys",
-          prompt: context.required + (context.extra ? String(context.extra) : ""),
-        };
+        return context.required + (context.extra ? String(context.extra) : "");
       },
     });
 
-    const { prompt, trace } = await polo.resolve(task, {});
+    const { prompt, trace } = await run({});
     expect(droppedLog).toContain("extra");
-    expect(prompt?.prompt).toContain("short required text");
+    expect(prompt).toContain("short required text");
     const dropped = trace.policies.find(
       (p) => p.source === "extra" && p.action === "dropped" && p.reason === "over_budget",
     );
@@ -388,41 +429,42 @@ describe("template budget fitting", () => {
 
   test("prefers to drop default-included before preferred sources", async () => {
     const droppedSources: string[] = [];
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_drop_order",
       sources: {
-        required: polo.source(emptyInputSchema, {
-          resolve: async () => "req",
-        }),
-        preferred: polo.source(emptyInputSchema, {
-          resolve: async () => "p".repeat(200),
-        }),
-        defaultIncluded: polo.source(emptyInputSchema, {
-          resolve: async () => "d".repeat(200),
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          required: source.value(emptyInputSchema, {
+            resolve: async () => "req",
+          }),
+          preferred: source.value(emptyInputSchema, {
+            resolve: async () => "p".repeat(200),
+          }),
+          defaultIncluded: source.value(emptyInputSchema, {
+            resolve: async () => "d".repeat(200),
+          }),
+        })),
       },
       policies: {
         require: ["required"],
         prefer: ["preferred"],
         budget: 10,
       },
-      template: ({ context }) => {
+      system: "",
+      prompt: (context) => {
         if (!("defaultIncluded" in context)) droppedSources.push("defaultIncluded");
         if (!("preferred" in context)) droppedSources.push("preferred");
-        return {
-          system: "",
-          prompt: [
-            context.required,
-            "defaultIncluded" in context ? String(context.defaultIncluded) : "",
-            "preferred" in context ? String(context.preferred) : "",
-          ]
-            .filter(Boolean)
-            .join(" "),
-        };
+        return [
+          context.required,
+          "defaultIncluded" in context ? String(context.defaultIncluded) : "",
+          "preferred" in context ? String(context.preferred) : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
       },
     });
 
-    await polo.resolve(task, {});
+    await run({});
     const defaultIdx = droppedSources.indexOf("defaultIncluded");
     const preferredIdx = droppedSources.indexOf("preferred");
     if (defaultIdx !== -1 && preferredIdx !== -1) {
@@ -433,26 +475,27 @@ describe("template budget fitting", () => {
   });
 
   test("required sources are never dropped even when over budget", async () => {
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_required_never_dropped",
       sources: {
-        critical: polo.source(emptyInputSchema, {
-          resolve: async () => "c".repeat(1000),
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          critical: source.value(emptyInputSchema, {
+            resolve: async () => "c".repeat(1000),
+          }),
+        })),
       },
       policies: {
         require: ["critical"],
         budget: 1,
       },
-      template: ({ context }) => ({
-        system: "",
-        prompt: String(context.critical),
-      }),
+      system: "",
+      prompt: (context) => String(context.critical),
     });
 
-    const { context, prompt } = await polo.resolve(task, {});
+    const { context, prompt } = await run({});
     expect(context.critical).toBeDefined();
-    expect(prompt?.prompt).toContain("c".repeat(100));
+    expect(prompt).toContain("c".repeat(100));
   });
 
   test("required chunk sources are never trimmed when over budget", async () => {
@@ -462,31 +505,32 @@ describe("template budget fitting", () => {
       { content: "chunk-low ".repeat(10), score: 0.1 },
     ];
 
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_required_chunk_never_trimmed",
       sources: {
-        docs: polo.source.rag(emptyInputSchema, {
-          async resolve() {
-            return items;
-          },
-          normalize: (item) => ({ content: item.content, score: item.score }),
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          docs: source.rag(emptyInputSchema, {
+            async resolve() {
+              return items;
+            },
+            normalize: (item) => ({ content: item.content, score: item.score }),
+          }),
+        })),
       },
       policies: {
         require: ["docs"],
         budget: 1,
       },
-      template: ({ context }) => ({
-        system: "",
-        prompt: (context.docs ?? []).map((chunk) => chunk.content).join("\n"),
-      }),
+      system: "",
+      prompt: (context) => (context.docs ?? []).map((chunk) => chunk.content).join("\n"),
     });
 
-    const { context, prompt, trace } = await polo.resolve(task, {});
+    const { context, prompt, trace } = await run({});
     expect(context.docs).toHaveLength(3);
-    expect(prompt?.prompt).toContain("chunk-high");
-    expect(prompt?.prompt).toContain("chunk-mid");
-    expect(prompt?.prompt).toContain("chunk-low");
+    expect(prompt).toContain("chunk-high");
+    expect(prompt).toContain("chunk-mid");
+    expect(prompt).toContain("chunk-low");
 
     const docsRecord = trace.sources.find((source) => source.key === "docs");
     expect(docsRecord?.type).toBe("rag");
@@ -508,27 +552,28 @@ describe("template budget fitting", () => {
       { content: "chunk-low ".repeat(10), score: 0.1 },
     ];
 
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_chunk_trim",
       sources: {
-        docs: polo.source.rag(emptyInputSchema, {
-          async resolve() {
-            return items;
-          },
-          normalize: (item) => ({ content: item.content, score: item.score }),
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          docs: source.rag(emptyInputSchema, {
+            async resolve() {
+              return items;
+            },
+            normalize: (item) => ({ content: item.content, score: item.score }),
+          }),
+        })),
       },
       policies: {
         prefer: ["docs"],
         budget: 30,
       },
-      template: ({ context }) => ({
-        system: "",
-        prompt: (context.docs ?? []).map((c) => c.content).join("\n"),
-      }),
+      system: "",
+      prompt: (context) => (context.docs ?? []).map((c) => c.content).join("\n"),
     });
 
-    const { context } = await polo.resolve(task, {});
+    const { context } = await run({});
     const chunks = context.docs ?? [];
     expect(chunks.length).toBeLessThan(3);
     const contents = chunks.map((c) => c.content);
@@ -542,27 +587,28 @@ describe("template budget fitting", () => {
     ];
     const budget = estimateTokens(items.map((item) => item.content).join("\n")) - 1;
 
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_chunk_trim_duplicate_content",
       sources: {
-        docs: polo.source.rag(emptyInputSchema, {
-          async resolve() {
-            return items;
-          },
-          normalize: (item) => ({ content: item.content, score: item.score }),
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          docs: source.rag(emptyInputSchema, {
+            async resolve() {
+              return items;
+            },
+            normalize: (item) => ({ content: item.content, score: item.score }),
+          }),
+        })),
       },
       policies: {
         prefer: ["docs"],
         budget,
       },
-      template: ({ context }) => ({
-        system: "",
-        prompt: (context.docs ?? []).map((chunk) => chunk.content).join("\n"),
-      }),
+      system: "",
+      prompt: (context) => (context.docs ?? []).map((chunk) => chunk.content).join("\n"),
     });
 
-    const { context, trace } = await polo.resolve(task, {});
+    const { context, trace } = await run({});
     expect(context.docs).toHaveLength(1);
     expect(context.docs?.[0]?.score).toBe(0.9);
 
@@ -586,42 +632,35 @@ describe("template budget fitting", () => {
   });
 
   test("Phase 2 trimming respects scorePerToken strategy ordering", async () => {
-    // Chunk A: high score, many tokens (low efficiency)
-    // Chunk B: low score, few tokens (high efficiency)
-    // Under scorePerToken, B is more valuable and should be kept when trimming.
-    // A naive lowest-score trim would incorrectly drop B.
     const chunkA = { content: "x".repeat(200), score: 0.9 };
     const chunkB = { content: "y".repeat(20), score: 0.2 };
 
-    // Budget tight enough that only one chunk survives after template rendering.
-    // Both chunks joined by newline exceed this, forcing Phase 2 to trim one.
     const bothRendered = [chunkA.content, chunkB.content].join("\n");
     const budget = estimateTokens(bothRendered) - 1;
 
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_phase2_strategy_ordering",
       sources: {
-        docs: polo.source.rag(emptyInputSchema, {
-          async resolve() {
-            return [chunkA, chunkB];
-          },
-          normalize: (item) => ({ content: item.content, score: item.score }),
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          docs: source.rag(emptyInputSchema, {
+            async resolve() {
+              return [chunkA, chunkB];
+            },
+            normalize: (item) => ({ content: item.content, score: item.score }),
+          }),
+        })),
       },
       policies: {
         prefer: ["docs"],
         budget: { maxTokens: budget, strategy: { type: "score_per_token" } },
       },
-      template: ({ context }) => ({
-        system: "",
-        prompt: (context.docs ?? []).map((chunk) => chunk.content).join("\n"),
-      }),
+      system: "",
+      prompt: (context) => (context.docs ?? []).map((chunk) => chunk.content).join("\n"),
     });
 
-    const { context, trace } = await polo.resolve(task, {});
+    const { context, trace } = await run({});
 
-    // scorePerToken ranks B higher (more efficient), so Phase 2 should
-    // trim A (last in strategy order) and keep B
     const docs = context.docs as Array<{ content: string; score?: number }>;
     expect(docs).toHaveLength(1);
     expect(docs[0]!.content).toBe(chunkB.content);
@@ -643,32 +682,33 @@ describe("template budget fitting", () => {
       { content: "chunk-low ".repeat(10), score: 0.1 },
     ];
 
-    const task = polo.define(emptyInputSchema, {
+    const run = polo.window({
+      input: emptyInputSchema,
       id: "test_template_chunk_whole_drop_trace",
       sources: {
-        transcript: polo.source(emptyInputSchema, {
-          resolve: async () => "t".repeat(120),
-        }),
-        docs: polo.source.rag(emptyInputSchema, {
-          async resolve() {
-            return items;
-          },
-          normalize: (item) => ({ content: item.content, score: item.score }),
-        }),
+        ...polo.sourceSet(({ source }) => ({
+          transcript: source.value(emptyInputSchema, {
+            resolve: async () => "t".repeat(120),
+          }),
+          docs: source.rag(emptyInputSchema, {
+            async resolve() {
+              return items;
+            },
+            normalize: (item) => ({ content: item.content, score: item.score }),
+          }),
+        })),
       },
       policies: {
         require: ["transcript"],
         prefer: ["docs"],
         budget: 25,
       },
-      template: ({ context }) => ({
-        system: "",
-        prompt: `Transcript:\n${context.transcript}\n\nDocs:\n${context.docs ?? "N/A"}`,
-      }),
+      system: "",
+      prompt: (context) => `Transcript:\n${context.transcript}\n\nDocs:\n${context.docs ?? "N/A"}`,
     });
 
-    const { prompt, trace } = await polo.resolve(task, {});
-    expect(prompt?.prompt).not.toContain("chunk-high");
+    const { prompt, trace } = await run({});
+    expect(prompt).not.toContain("chunk-high");
 
     const docsRecord = trace.sources.find((source) => source.key === "docs");
     expect(docsRecord?.type).toBe("rag");

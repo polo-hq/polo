@@ -1,5 +1,6 @@
 import type { AnyInput, AnyResolverSource, InputSource } from "./types.ts";
 import { DepGraph, DepGraphCycleError } from "dependency-graph";
+import { isRagItems } from "./rag.ts";
 import {
   CircularSourceDependencyError,
   MissingSourceDependencyError,
@@ -40,12 +41,14 @@ function getDependencyRefs(source: unknown) {
   return [...(source._dependencyRefs ?? [])];
 }
 
+function materializeDependencyValue(value: unknown): unknown {
+  return isRagItems(value) ? value.items : value;
+}
+
 function hydrateSelectedSourceMetadata<TSourceMap extends Record<string, unknown>>(
   sourceMap: TSourceMap,
   ownerLabel: string,
 ): void {
-  const selectedKeysByInternalId = new Map<string, string>();
-
   for (const [selectedKey, source] of Object.entries(sourceMap)) {
     if (!isResolverSource(source)) {
       continue;
@@ -54,8 +57,6 @@ function hydrateSelectedSourceMetadata<TSourceMap extends Record<string, unknown
     if (!source._internalId) {
       throw new Error(`Source "${selectedKey}" is missing an internal id in ${ownerLabel}.`);
     }
-
-    selectedKeysByInternalId.set(source._internalId, selectedKey);
   }
 
   for (const [selectedKey, source] of Object.entries(sourceMap)) {
@@ -74,15 +75,6 @@ function hydrateSelectedSourceMetadata<TSourceMap extends Record<string, unknown
       if (!dependencyId) {
         throw new Error(
           `Source "${selectedKey}" references an unresolved dependency in ${ownerLabel}.`,
-        );
-      }
-
-      const expectedDependencyKey =
-        dependencySource._registeredId ?? selectedKeysByInternalId.get(dependencyId);
-
-      if (expectedDependencyKey && alias !== expectedDependencyKey) {
-        throw new Error(
-          `Dependency aliases are not supported yet. Source "${selectedKey}" must reference dependency "${expectedDependencyKey}" under its own key.`,
         );
       }
 
@@ -237,7 +229,7 @@ export async function executeWaves<TSourceMap extends Record<string, unknown>>(
   input: AnyInput,
   waves: Wave[],
   sourceKeysById: Map<string, string>,
-  taskId: string,
+  windowId: string,
   onResolved: (key: string, value: unknown, durationMs: number) => void,
 ): Promise<Map<string, unknown>> {
   const resolved = new Map<string, unknown>();
@@ -257,7 +249,9 @@ export async function executeWaves<TSourceMap extends Record<string, unknown>>(
             const dependencyContext = Object.fromEntries(
               getDependencyRefs(source).map((dependency) => [
                 dependency.alias,
-                resolved.get(sourceKeysById.get(dependency.internalId)!),
+                materializeDependencyValue(
+                  resolved.get(sourceKeysById.get(dependency.internalId)!),
+                ),
               ]),
             );
             value = await source.resolve(input, dependencyContext);
@@ -269,7 +263,7 @@ export async function executeWaves<TSourceMap extends Record<string, unknown>>(
           resolved.set(key, value);
           onResolved(key, value, durationMs);
         } catch (error) {
-          throw new SourceResolutionError(key, taskId, error);
+          throw new SourceResolutionError(key, windowId, error);
         }
       }),
     );

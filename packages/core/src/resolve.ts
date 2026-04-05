@@ -8,12 +8,11 @@ import type {
   InputSchema,
   InputSource,
   PolicyRecord,
+  PromptTrace,
+  RenderContext,
   ResolverSource,
   InferSources,
-  PromptOutput,
-  PromptTrace,
   Resolution,
-  TemplateContext,
 } from "./types.ts";
 import { isRagItems } from "./rag.ts";
 import { buildWaves, executeWaves, validateSourceDependencies } from "./graph.ts";
@@ -52,12 +51,12 @@ function isRagEnvelope(value: unknown): value is { _type: "rag" } {
 async function validateInput<TResolveInput extends AnyInput, TInput extends AnyInput>(
   schema: InputSchema<TResolveInput, TInput>,
   input: TResolveInput,
-  taskId: string,
+  windowId: string,
 ): Promise<TInput> {
   const result = await schema["~standard"].validate(input);
   if (result.issues !== undefined) {
     const details = result.issues.map((issue) => issue.message).join("; ");
-    throw new Error(`Input validation failed for task "${taskId}": ${details}`);
+    throw new Error(`Input validation failed for context window "${windowId}": ${details}`);
   }
 
   return result.value;
@@ -81,14 +80,14 @@ function computeJsonValueTokens(values: Iterable<unknown>): number {
 
 /**
  * Compute the raw JSON token cost of all resolved sources.
- * Used to calculate the full-resolution compression ratio when a template is present.
+ * Used to calculate the full-resolution compression ratio when rendering is enabled.
  */
 function computeRawContextTokens(resolvedRaw: Map<string, unknown>): number {
   return computeJsonValueTokens(resolvedRaw.values());
 }
 
 /**
- * Compute the raw JSON token cost of the final context that the template can read.
+ * Compute the raw JSON token cost of the final context that render functions can read.
  * This excludes policy-gated or budget-dropped sources, but includes derived values.
  */
 function computeIncludedContextTokens(context: Record<string, unknown>): number {
@@ -103,7 +102,7 @@ function computeCompressionRatio(totalTokens: number, baselineTokens: number): n
   return Math.max(0, 1 - totalTokens / baselineTokens);
 }
 
-interface TemplateRenderState {
+interface RenderState {
   rawContext: Record<string, unknown>;
   proxyCache: WeakMap<object, unknown>;
   slotCache: WeakMap<object, string>;
@@ -112,11 +111,18 @@ interface TemplateRenderState {
   slotCounter: number;
 }
 
+interface RenderedOutput {
+  system?: string;
+  prompt?: string;
+}
+
+type RenderField = string | ((context: Record<string, unknown>) => string);
+
 function isRenderableObject(value: unknown): value is object {
   return typeof value === "object" && value !== null;
 }
 
-function createSlotToken(state: TemplateRenderState, value: object): string {
+function createSlotToken(state: RenderState, value: object): string {
   const existing = state.slotCache.get(value);
   if (existing) {
     return existing;
@@ -128,7 +134,7 @@ function createSlotToken(state: TemplateRenderState, value: object): string {
   return token;
 }
 
-function wrapRenderableValue(value: unknown, state: TemplateRenderState, isRoot = false): unknown {
+function wrapRenderableValue(value: unknown, state: RenderState, isRoot = false): unknown {
   if (!isRenderableObject(value)) {
     return value;
   }
@@ -199,11 +205,26 @@ function materializeText(text: string, slotValues: Map<string, unknown>): string
   return output;
 }
 
-function renderTemplate(
-  templateFn: (args: { context: Record<string, unknown> }) => PromptOutput,
+function renderField(
+  field: RenderField | undefined,
+  renderContext: RenderContext<Record<string, unknown>, Record<string, unknown>, []>,
+  state: RenderState,
+): string | undefined {
+  if (field === undefined) {
+    return undefined;
+  }
+
+  const text =
+    typeof field === "function" ? field(renderContext as Record<string, unknown>) : field;
+  return materializeText(text, state.slotValues);
+}
+
+function renderOutput(
+  system: RenderField | undefined,
+  prompt: RenderField | undefined,
   rawContext: Record<string, unknown>,
-): PromptOutput {
-  const state: TemplateRenderState = {
+): RenderedOutput {
+  const state: RenderState = {
     rawContext,
     proxyCache: new WeakMap(),
     slotCache: new WeakMap(),
@@ -212,17 +233,35 @@ function renderTemplate(
     slotCounter: 0,
   };
 
-  const renderContext = wrapRenderableValue(rawContext, state, true) as TemplateContext<
+  const renderContext = wrapRenderableValue(rawContext, state, true) as RenderContext<
     Record<string, unknown>,
     Record<string, unknown>,
     []
   >;
-  const prompt = templateFn({ context: renderContext as Record<string, unknown> });
 
   return {
-    system: materializeText(prompt.system, state.slotValues),
-    prompt: materializeText(prompt.prompt, state.slotValues),
+    system: renderField(system, renderContext, state),
+    prompt: renderField(prompt, renderContext, state),
   };
+}
+
+function countRenderedTokens(output: RenderedOutput): number {
+  return estimateTokens(output.system ?? "") + estimateTokens(output.prompt ?? "");
+}
+
+function validateDerivedContextKeys(
+  sources: Record<string, unknown>,
+  derived: Record<string, unknown>,
+): void {
+  for (const key of Object.keys(derived)) {
+    if (key === "raw") {
+      throw new TypeError('derive() cannot return the reserved context key "raw".');
+    }
+
+    if (key in sources) {
+      throw new TypeError(`derive() cannot overwrite source key "${key}".`);
+    }
+  }
 }
 
 export async function resolveDefinition<
@@ -238,14 +277,15 @@ export async function resolveDefinition<
 ): Promise<Resolution<InferSources<TInput, TSourceMap>, TDerived, TRequired>> {
   const startedAt = new Date();
   const {
-    _id: taskId,
+    _id: windowId,
     _inputSchema: inputSchema,
     _sources: sourceMap,
     _derive: deriveFn,
     _policies: policies,
-    _template: templateFn,
+    _system: systemField,
+    _prompt: promptField,
   } = definition;
-  const normalizedInput = await validateInput(inputSchema, input, taskId);
+  const normalizedInput = await validateInput(inputSchema, input, windowId);
 
   // --- build execution plan ---
   const sourceKeysById = validateSourceDependencies(sourceMap, "source map");
@@ -259,7 +299,7 @@ export async function resolveDefinition<
     normalizedInput,
     waves,
     sourceKeysById,
-    taskId,
+    windowId,
     (key, value, durationMs) => {
       const source = sourceMap[key]!;
       const type = isInputSource(source) ? "input" : isRagItems(value) ? "rag" : "value";
@@ -280,7 +320,8 @@ export async function resolveDefinition<
 
   // --- derive ---
   const resolvedForDerive = Object.fromEntries(resolvedRaw) as InferSources<TInput, TSourceMap>;
-  const derived: TDerived = deriveFn ? deriveFn({ context: resolvedForDerive }) : ({} as TDerived);
+  const derived: TDerived = deriveFn ? deriveFn(resolvedForDerive) : ({} as TDerived);
+  validateDerivedContextKeys(resolvedForDerive, derived);
 
   // --- apply policies ---
   const { maxTokens: budget, strategyFn, strategyName } = normalizeBudget(policies.budget);
@@ -291,7 +332,7 @@ export async function resolveDefinition<
     TDerived,
     TRequired,
     TPrefer
-  >(resolvedRaw, derived, policies, taskId);
+  >(resolvedRaw, derived, policies, windowId);
 
   // Excluded chunk sources are resolved before policies run. Attach redacted
   // chunk records so source-level trace entries remain self-contained and
@@ -325,9 +366,9 @@ export async function resolveDefinition<
       .map(([key]) => key),
   );
 
-  if (templateFn) {
-    // --- template path: render-measure-fit ---
-    const resolution = resolveWithTemplate({
+  if (systemField !== undefined || promptField !== undefined) {
+    // --- render path: render-measure-fit ---
+    const resolution = resolveWithRendering({
       resolvedRaw,
       derived,
       allowed,
@@ -338,14 +379,15 @@ export async function resolveDefinition<
       budget,
       strategyFn,
       declaredRagSourceKeys,
-      templateFn: templateFn as (args: { context: Record<string, unknown> }) => PromptOutput,
-      taskId,
+      system: systemField as RenderField | undefined,
+      prompt: promptField as RenderField | undefined,
+      windowId,
     });
 
     const rawContextTokens = computeRawContextTokens(resolvedRaw);
     const includedContextTokens = computeIncludedContextTokens(resolution.context);
-    const systemTokens = estimateTokens(resolution.prompt.system);
-    const promptTokens = estimateTokens(resolution.prompt.prompt);
+    const systemTokens = estimateTokens(resolution.system ?? "");
+    const promptTokens = estimateTokens(resolution.prompt ?? "");
     const totalTokens = systemTokens + promptTokens;
 
     const promptTrace: PromptTrace = {
@@ -360,7 +402,7 @@ export async function resolveDefinition<
 
     const completedAt = new Date();
     const trace = buildTrace({
-      taskId,
+      windowId,
       startedAt,
       completedAt,
       sourceTimings: resolution.sourceTimings,
@@ -380,12 +422,13 @@ export async function resolveDefinition<
         TDerived,
         TRequired
       >,
+      system: resolution.system,
       prompt: resolution.prompt,
       trace,
     };
   }
 
-  // --- non-template path: per-source TOON estimation (existing behavior) ---
+  // --- non-render path: per-source TOON estimation (existing behavior) ---
   const context: Record<string, unknown> = {};
   let budgetUsed = 0;
 
@@ -447,7 +490,7 @@ export async function resolveDefinition<
   // --- build trace ---
   const completedAt = new Date();
   const trace = buildTrace({
-    taskId,
+    windowId,
     startedAt,
     completedAt,
     sourceTimings,
@@ -466,9 +509,10 @@ export async function resolveDefinition<
   };
 }
 
-interface TemplateResolutionResult {
+interface RenderResolutionResult {
   context: Record<string, unknown>;
-  prompt: PromptOutput;
+  system?: string;
+  prompt?: string;
   policyRecords: PolicyRecord[];
   sourceTimings: SourceTiming[];
   budgetCandidates: number;
@@ -476,7 +520,8 @@ interface TemplateResolutionResult {
 }
 
 /**
- * Render the template with the current context, then iteratively drop the lowest-priority
+ * Render the configured system/prompt strings with the current context, then iteratively drop the
+ * lowest-priority
  * non-required sources and re-render until the output fits the budget.
  *
  * Drop order (ascending priority = first to drop):
@@ -487,7 +532,7 @@ interface TemplateResolutionResult {
  * After exhausting whole-source drops, trim the lowest-score chunks from rag sources
  * one at a time until the prompt fits.
  */
-function resolveWithTemplate(options: {
+function resolveWithRendering(options: {
   resolvedRaw: Map<string, unknown>;
   derived: Record<string, unknown>;
   allowed: Set<string>;
@@ -498,9 +543,10 @@ function resolveWithTemplate(options: {
   budget: number;
   strategyFn: BudgetStrategyFn;
   declaredRagSourceKeys: Set<string>;
-  templateFn: (args: { context: Record<string, unknown> }) => PromptOutput;
-  taskId: string;
-}): TemplateResolutionResult {
+  system?: RenderField;
+  prompt?: RenderField;
+  windowId: string;
+}): RenderResolutionResult {
   const {
     resolvedRaw,
     derived,
@@ -512,7 +558,8 @@ function resolveWithTemplate(options: {
     budget,
     strategyFn,
     declaredRagSourceKeys,
-    templateFn,
+    system,
+    prompt,
   } = options;
 
   // Build mutable context with all non-excluded sources (chunks included in full)
@@ -566,14 +613,15 @@ function resolveWithTemplate(options: {
 
   // If no budget, skip fitting
   if (budget === Infinity) {
-    const prompt = renderTemplate(templateFn, context);
+    const rendered = renderOutput(system, prompt, context);
     const selectedCount = [...chunkContextKeys].reduce((sum, key) => {
       const chunks = context[key] as unknown[];
       return sum + (chunks?.length ?? 0);
     }, 0);
     return {
       context,
-      prompt,
+      system: rendered.system,
+      prompt: rendered.prompt,
       policyRecords,
       sourceTimings,
       budgetCandidates: templateCandidates,
@@ -596,24 +644,22 @@ function resolveWithTemplate(options: {
     ...preferKeys.filter((k) => chunkContextKeys.has(k)),
   ];
 
-  const renderTokens = (p: PromptOutput) => estimateTokens(p.system) + estimateTokens(p.prompt);
-
-  let prompt = renderTemplate(templateFn, context);
+  let rendered = renderOutput(system, prompt, context);
 
   // Phase 1: drop whole non-chunk sources (default-included before preferred)
-  while (renderTokens(prompt) > budget && droppableNonChunk.length > 0) {
+  while (countRenderedTokens(rendered) > budget && droppableNonChunk.length > 0) {
     const keyToDrop = droppableNonChunk.shift()!;
     policyRecords.push({ source: keyToDrop, action: "dropped", reason: "over_budget" });
     delete context[keyToDrop];
-    prompt = renderTemplate(templateFn, context);
+    rendered = renderOutput(system, prompt, context);
   }
 
   // Phase 2: trim chunks one-at-a-time from rag sources.
   // Items are already pre-sorted by the budget strategy (most valuable first),
   // so dropping the last element removes the least-valuable-per-strategy chunk.
-  if (renderTokens(prompt) > budget) {
+  if (countRenderedTokens(rendered) > budget) {
     let trimmed = true;
-    while (renderTokens(prompt) > budget && trimmed) {
+    while (countRenderedTokens(rendered) > budget && trimmed) {
       trimmed = false;
 
       // Find a non-required chunk source still in context that has more than one chunk
@@ -639,7 +685,7 @@ function resolveWithTemplate(options: {
           }
         }
 
-        prompt = renderTemplate(templateFn, context);
+        rendered = renderOutput(system, prompt, context);
         trimmed = true;
         break;
       }
@@ -647,7 +693,7 @@ function resolveWithTemplate(options: {
   }
 
   // Phase 3: drop whole chunk sources if still over budget (last resort)
-  while (renderTokens(prompt) > budget && droppableChunkWhole.length > 0) {
+  while (countRenderedTokens(rendered) > budget && droppableChunkWhole.length > 0) {
     const keyToDrop = droppableChunkWhole.shift()!;
     policyRecords.push({
       source: keyToDrop,
@@ -662,7 +708,7 @@ function resolveWithTemplate(options: {
       }
     }
     delete context[keyToDrop];
-    prompt = renderTemplate(templateFn, context);
+    rendered = renderOutput(system, prompt, context);
   }
 
   const selectedCount = [...chunkContextKeys].reduce((sum, key) => {
@@ -671,7 +717,8 @@ function resolveWithTemplate(options: {
   }, 0);
   return {
     context,
-    prompt,
+    system: rendered.system,
+    prompt: rendered.prompt,
     policyRecords,
     sourceTimings,
     budgetCandidates: templateCandidates,
