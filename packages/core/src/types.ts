@@ -27,11 +27,6 @@ export interface Chunk {
   metadata?: Record<string, unknown>;
 }
 
-export interface RagItems {
-  _type: "rag";
-  items: Chunk[];
-}
-
 export interface SourceOptions {
   tags?: SourceTag[];
 }
@@ -57,64 +52,37 @@ export interface RagSourceConfig<
   resolve(args: SourceResolveArgs<TInput>): Promise<TItem[] | Chunk[]> | TItem[] | Chunk[];
 }
 
-export interface ResolverSource<
-  TResult = unknown,
-  TSourceInput extends AnyInput = AnyInput,
-  TResolveInput extends AnyInput = TSourceInput,
-> {
+export interface ResolverSource<TResult = unknown, TResolveInput extends AnyInput = AnyInput> {
   _type: "resolver";
   _internalId: string;
   _sourceKind: "value" | "rag";
   output?: AnySchema;
   tags?: SourceTag[];
-  resolve(input: AnyInput): Promise<TResult>;
-  _input?: TSourceInput;
-  _resolveInput?: TResolveInput;
+  resolve(input: TResolveInput): Promise<TResult>;
 }
 
 export type ValueSource<
   TResult = unknown,
-  TSourceInput extends AnyInput = AnyInput,
-  TResolveInput extends AnyInput = TSourceInput,
-> = ResolverSource<TResult, TSourceInput, TResolveInput>;
+  TResolveInput extends AnyInput = AnyInput,
+> = ResolverSource<TResult, TResolveInput>;
 
-export type RagSource<
-  TSourceInput extends AnyInput = AnyInput,
-  TResolveInput extends AnyInput = TSourceInput,
-> = ResolverSource<RagItems, TSourceInput, TResolveInput>;
+export type RagSource<TResolveInput extends AnyInput = AnyInput> = ResolverSource<
+  Chunk[],
+  TResolveInput
+>;
 
-export type AnyResolverSource = ResolverSource<unknown, AnyInput, AnyInput>;
+export type AnyResolverSource = ResolverSource<unknown, AnyInput>;
 
-type InferResolvedValue<TResult> = Awaited<TResult> extends RagItems ? Chunk[] : Awaited<TResult>;
+export type InferSource<TSource extends AnyResolverSource> = Awaited<
+  ReturnType<TSource["resolve"]>
+>;
 
-export type InferSource<TSource> =
-  TSource extends ResolverSource<infer TResult, AnyInput, AnyInput>
-    ? InferResolvedValue<TResult>
-    : never;
-
-export type InferSourceInput<TSource> =
-  TSource extends ResolverSource<unknown, AnyInput, infer TResolveInput> ? TResolveInput : never;
-
-type Primitive = string | number | boolean | bigint | symbol | null | undefined;
-
-interface RenderInterpolable {
-  [Symbol.toPrimitive](hint: string): string;
-  toString(): string;
-  valueOf(): string;
-}
-
-export type RenderableValue<T> = T extends Primitive
-  ? T
-  : T extends readonly (infer U)[]
-    ? Array<RenderableValue<U>> & RenderInterpolable
-    : T extends object
-      ? { [K in keyof T]: RenderableValue<T[K]> } & RenderInterpolable
-      : T;
+export type InferSourceInput<TSource extends AnyResolverSource> = Parameters<TSource["resolve"]>[0];
 
 export type UseFn = <TSource extends AnyResolverSource>(
   source: TSource,
   input: InferSourceInput<TSource>,
-) => Promise<NonNullable<RenderableValue<InferSource<TSource>>>>;
+) => Promise<NonNullable<InferSource<TSource>>>;
 
 export interface ComposeContext<TInput extends AnyInput> {
   input: TInput;
@@ -130,13 +98,14 @@ export type ComposeFn<TInput extends AnyInput> = (
   context: ComposeContext<TInput>,
 ) => ComposeResult | Promise<ComposeResult>;
 
-export interface Definition<TInput extends AnyInput, TResolveInput extends AnyInput = TInput> {
+export interface WindowSpec<
+  TComposeInput extends AnyInput,
+  TResolveInput extends AnyInput = TComposeInput,
+> {
   _id: string;
-  _inputSchema: InputSchema<TResolveInput, TInput>;
+  _inputSchema: InputSchema<TResolveInput, TComposeInput>;
   _maxTokens: number;
-  _compose: ComposeFn<TInput>;
-  _input?: TInput;
-  _resolveInput?: TResolveInput;
+  _compose: ComposeFn<TComposeInput>;
 }
 
 export interface PromptTrace {

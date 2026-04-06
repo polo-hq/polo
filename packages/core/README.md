@@ -105,7 +105,7 @@ const docsSource = budge.source.rag(z.object({ query: z.string() }), {
 });
 ```
 
-RAG sources resolve to chunk arrays when used inside `compose`.
+RAG sources resolve to chunk arrays.
 
 ## Context windows
 
@@ -167,7 +167,7 @@ Structured values interpolate directly inside strings:
 prompt: `Account:\n${account}\n\nDocs:\n${docs}`;
 ```
 
-Budge does not stringify these values as `[object Object]`.
+Budge does not turn these values into `[object Object]`.
 
 Instead:
 
