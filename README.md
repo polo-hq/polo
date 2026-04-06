@@ -1,5 +1,78 @@
 # Budge
 
+**The control plane for agent context.**
+
+Budge helps agent builders resolve data, shape prompts, serialize structured context efficiently, enforce token budgets, and emit exact traces for what the model received.
+
+## Core idea
+
+The primary API is a context window:
+
+```ts
+import { createBudge } from "@budge/core";
+import { z } from "zod";
+
+const budge = createBudge();
+
+const accountSource = budge.source.value(z.object({ accountId: z.string() }), {
+  async resolve({ input }) {
+    return db.getAccount(input.accountId);
+  },
+});
+
+const supportReply = budge.window({
+  id: "support-reply",
+  input: z.object({
+    accountId: z.string(),
+    transcript: z.string(),
+  }),
+  maxTokens: 4000,
+  async compose({ input, use }) {
+    const account = await use(accountSource, { accountId: input.accountId });
+
+    return {
+      system: `You are helping ${account.name}.`,
+      prompt: `Customer message:\n${input.transcript}\n\nAccount:\n${account}`,
+    };
+  },
+});
+
+const result = await supportReply.resolve({
+  input: {
+    accountId: "acc_123",
+    transcript: "Our webhook deliveries are timing out.",
+  },
+});
+```
+
+`result` contains:
+
+- `system`
+- `prompt`
+- `trace`
+
+## What Budge owns
+
+- typed, reusable context sources
+- prompt budgeting
+- efficient serialization with TOON for structured values
+- strict prompt measurement on the rendered output
+- exact traces for what ran and what the model saw
+
+## Package layout
+
+- `@budge/core` — core window/source/trace runtime
+- `examples/support-reply` — end-to-end example using the new `compose` API
+
+## Development
+
+```bash
+vp check
+vp test
+```
+
+# Budge
+
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/budge-hq/budge)
 
 **The best context management framework for agents.**

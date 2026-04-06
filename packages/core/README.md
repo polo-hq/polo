@@ -1,8 +1,6 @@
 # @budge/core
 
-**The best context management framework for agents** — typed sources, policies, token budgets, rendering, and traces for production agent systems.
-
-`@budge/core` is the runtime that resolves context windows: where data comes from, how it is filtered, and how it must fit under a token ceiling. At runtime, Budge returns a typed `context`, optional top-level `system` and `prompt` strings, and a detailed `trace`.
+`@budge/core` is the runtime for Budge windows: reusable sources, `compose`, `.resolve`, token budgeting, TOON-backed serialization, and trace receipts.
 
 ## Install
 
@@ -10,9 +8,7 @@
 pnpm add @budge/core zod
 ```
 
-`zod` is shown in examples, but any Standard Schema-compatible validator works.
-
-## Quick Start
+## Quick start
 
 ```ts
 import { createBudge } from "@budge/core";
@@ -20,73 +16,42 @@ import { z } from "zod";
 
 const budge = createBudge();
 
-const taskInput = z.object({
-  accountId: z.string(),
-  transcript: z.string(),
+const noteSource = budge.source.value(z.object({ encounterId: z.string() }), {
+  async resolve({ input }) {
+    return db.getNote(input.encounterId);
+  },
 });
-
-const transcript = budge.input("transcript", { tags: ["restricted"] });
-
-const { account } = budge.sourceSet(({ source }) => ({
-  account: source.value(z.object({ accountId: z.string() }), {
-    tags: ["internal"],
-    async resolve({ input }) {
-      return db.getAccount(input.accountId);
-    },
-  }),
-}));
 
 const window = budge.window({
-  input: taskInput,
-  id: "support_reply",
-  sources: { transcript, account },
-  policies: {
-    require: ["transcript", "account"],
-    budget: 300,
+  id: "scribe-note",
+  input: z.object({ encounterId: z.string() }),
+  maxTokens: 2000,
+  async compose({ input, use }) {
+    const note = await use(noteSource, { encounterId: input.encounterId });
+
+    return {
+      system: "You are an AI medical scribe.",
+      prompt: `Prior note:\n${note}`,
+    };
   },
-  system: "You are a support engineer.",
-  prompt: (context) => `Customer message:\n${context.transcript}\n\nAccount:\n${context.account}`,
 });
 
-const { context, system, prompt, trace } = await window({
-  accountId: "acc_123",
-  transcript: "Our webhook deliveries are timing out.",
+const result = await window.resolve({
+  input: { encounterId: "enc_123" },
 });
 ```
 
-## Core Concepts
+## Main concepts
 
-- `budge.window({ input, sources, … })` — declare one context window; the return value is an async function you call each turn with input.
-- `budge.input(key, options?)` — pass through a value from call-time input as a tagged source.
-- `budge.sourceSet(({ source }) => …)` — define reusable resolver/chunk sources; use `source.value` and `source.rag` inside the builder.
-- `budge.sources(...sourceSets)` — compose reusable source sets into a shared registry.
-- `derive()` adds computed values to the final context.
-- `policies: { require, prefer, exclude, budget }` controls inclusion, exclusions, and budgets.
-- `system` and `prompt` render model-ready strings and enable exact prompt-token measurement.
+- `budge.source.value(...)` and `budge.source.rag(...)` define reusable source handles.
+- `budge.window({ id, input, maxTokens, compose })` declares one context window.
+- `use(source, input)` resolves a source during `compose`.
+- `.resolve({ input })` validates input, runs `compose`, measures the final prompt, and returns `trace`.
 
-## Return Value
-
-Calling the function returned by `budge.window()` yields:
-
-- `context`: final typed context after source resolution and policy application.
-- `system`: rendered system string when configured.
-- `prompt`: rendered prompt string when configured.
-- `trace`: source timings, budget decisions, policy records, and prompt token metrics.
-
-`id` is required and should be stable for the logical window definition. Budge Cloud uses it to group runs of the same window.
-
-## Local Development
-
-From this package directory (`packages/core`):
+## Local development
 
 ```bash
-vp install
 vp test
 vp check
 vp pack
 ```
-
-## Example
-
-See the working end-to-end example in
-`examples/support-reply/README.md`.
