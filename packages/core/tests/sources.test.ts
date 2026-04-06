@@ -65,6 +65,54 @@ describe("sources", () => {
     ).rejects.toThrow("Source output validation failed");
   });
 
+  test("applies output schema transforms to resolved source values", async () => {
+    const budge = createBudge();
+
+    const transformedSource = budge.source.value(
+      z.object({
+        encounterId: z.string(),
+      }),
+      {
+        output: z
+          .object({
+            text: z.string(),
+            internal: z.string(),
+          })
+          .transform(({ text }) => ({ text })),
+        async resolve() {
+          return {
+            text: "hello",
+            internal: "secret",
+          };
+        },
+      },
+    );
+
+    const window = budge.window({
+      id: "transformed-source",
+      maxTokens: Infinity,
+      input: z.object({
+        encounterId: z.string(),
+      }),
+      async compose({ input, use }) {
+        const value = await use(transformedSource, { encounterId: input.encounterId });
+
+        return {
+          prompt: JSON.stringify(value),
+        };
+      },
+    });
+
+    const result = await window.resolve({
+      input: {
+        encounterId: "enc_123",
+      },
+    });
+
+    expect(result.prompt).toContain('"text":"hello"');
+    expect(result.prompt).not.toContain("secret");
+  });
+
   test("treats use() as required and throws when a source resolves empty", async () => {
     const budge = createBudge();
 

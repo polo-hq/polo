@@ -57,7 +57,7 @@ async function validateSourceOutput<TOutput>(
     throw new Error(`Source output validation failed: ${details}`);
   }
 
-  return value;
+  return result.value as TOutput;
 }
 
 export function createValueSource<TSchema extends InputSchema<AnyInput, AnyInput>, TOutput>(
