@@ -1,5 +1,5 @@
-import { createDefinition } from "./define.ts";
-import { resolveDefinition } from "./resolve.ts";
+import { createWindowSpec } from "./window-spec.ts";
+import { resolveWindowSpec } from "./resolve.ts";
 import { createRagSource, createValueSource } from "./source.ts";
 import type {
   AnyInput,
@@ -11,8 +11,8 @@ import type {
   InputSchema,
   RagSource,
   RagSourceConfig,
-  ResolverSource,
   SourceConfig,
+  ValueSource,
   WindowHandle,
 } from "./types.ts";
 
@@ -20,18 +20,14 @@ export interface ValueSourceFactory {
   <TSchema extends InputSchema<AnyInput, AnyInput>, TOutput>(
     input: TSchema,
     config: SourceConfig<InferSchemaOutputObject<TSchema>, TOutput>,
-  ): ResolverSource<
-    Awaited<TOutput>,
-    InferSchemaOutputObject<TSchema>,
-    InferSchemaInputObject<TSchema>
-  >;
+  ): ValueSource<Awaited<TOutput>, InferSchemaInputObject<TSchema>>;
 }
 
 export interface RagSourceFactory {
   <TSchema extends InputSchema<AnyInput, AnyInput>, TItem>(
     input: TSchema,
     config: RagSourceConfig<InferSchemaOutputObject<TSchema>, TItem>,
-  ): RagSource<InferSchemaOutputObject<TSchema>, InferSchemaInputObject<TSchema>>;
+  ): RagSource<InferSchemaInputObject<TSchema>>;
 }
 
 export interface SourceFactory {
@@ -94,23 +90,17 @@ export function createBudge(options: BudgeOptions = {}): BudgeInstance {
         context: ComposeContext<InferSchemaOutputObject<TSchema>>,
       ) => ComposeResult | Promise<ComposeResult>;
     }): WindowHandle<InferSchemaInputObject<TSchema>> {
-      const definition = createDefinition(
-        config.input as unknown as InputSchema<
-          InferSchemaInputObject<TSchema>,
-          InferSchemaOutputObject<TSchema>
-        >,
-        {
-          id: config.id,
-          maxTokens: config.maxTokens,
-          compose: config.compose,
-        },
-      );
+      const windowSpec = createWindowSpec(config.input, {
+        id: config.id,
+        maxTokens: config.maxTokens,
+        compose: config.compose,
+      });
 
       return {
         id: config.id,
         async resolve(payload: { input: InferSchemaInputObject<TSchema> }) {
           try {
-            const result = await resolveDefinition(definition, payload);
+            const result = await resolveWindowSpec(windowSpec, payload);
             emitTrace(options, result);
             return result;
           } catch (error) {

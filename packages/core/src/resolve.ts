@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import { BudgetExceededError, RequiredSourceValueError, SourceResolutionError } from "./errors.ts";
-import { isRagItems } from "./rag.ts";
 import { estimateTokens, serialize } from "./pack.ts";
 import { buildTrace } from "./trace.ts";
 import type { SourceTiming } from "./trace.ts";
@@ -9,28 +8,27 @@ import type {
   AnyResolverSource,
   ComposeContext,
   ComposeResult,
-  Definition,
   InferSource,
   InferSourceInput,
   PromptTrace,
-  RenderableValue,
   ResolveResult,
   UseFn,
+  WindowSpec,
 } from "./types.ts";
 
-interface RenderState {
+interface InterpolationState {
   proxyCache: WeakMap<object, unknown>;
   slotCache: WeakMap<object, string>;
-  slotValues: Map<string, unknown>;
+  slotStrings: Map<string, string>;
   slotNonce: string;
   slotCounter: number;
 }
 
-function isRenderableObject(value: unknown): value is object {
+function isInterpolatedObject(value: unknown): value is object {
   return typeof value === "object" && value !== null;
 }
 
-function createSlotToken(state: RenderState, value: object): string {
+function createSerializationSlot(state: InterpolationState, value: object): string {
   const existing = state.slotCache.get(value);
   if (existing) {
     return existing;
@@ -38,54 +36,54 @@ function createSlotToken(state: RenderState, value: object): string {
 
   const token = `\u001fBUDGE_SLOT_${state.slotNonce}_${state.slotCounter++}\u001f`;
   state.slotCache.set(value, token);
-  state.slotValues.set(token, value);
+  state.slotStrings.set(token, serialize(value));
   return token;
 }
 
-function wrapRenderableValue<T>(value: T, state: RenderState): RenderableValue<T> {
-  if (!isRenderableObject(value)) {
-    return value as RenderableValue<T>;
+function wrapInterpolatedValue<T>(value: T, state: InterpolationState): T {
+  if (!isInterpolatedObject(value)) {
+    return value;
   }
 
   const cached = state.proxyCache.get(value);
   if (cached !== undefined) {
-    return cached as RenderableValue<T>;
+    return cached as T;
   }
 
   const proxy = new Proxy(value, {
     get(target, prop, receiver) {
       if (prop === Symbol.toPrimitive) {
-        return () => createSlotToken(state, target);
+        return () => createSerializationSlot(state, target);
       }
 
       if (prop === "toString") {
-        return () => createSlotToken(state, target);
+        return () => createSerializationSlot(state, target);
       }
 
       if (prop === "valueOf") {
-        return () => createSlotToken(state, target);
+        return () => createSerializationSlot(state, target);
       }
 
       const result = Reflect.get(target, prop, receiver);
-      return wrapRenderableValue(result, state);
+      return wrapInterpolatedValue(result, state);
     },
   });
 
   state.proxyCache.set(value, proxy);
-  return proxy as RenderableValue<T>;
+  return proxy as T;
 }
 
-function materializeText(
+function materializeInterpolatedText(
   text: string | undefined,
-  slotValues: Map<string, unknown>,
+  slotStrings: Map<string, string>,
 ): string | undefined {
   if (text === undefined) {
     return undefined;
   }
 
   let output = text;
-  for (const [token, value] of slotValues) {
-    output = output.split(token).join(serialize(value));
+  for (const [token, serializedValue] of slotStrings) {
+    output = output.split(token).join(serializedValue);
   }
   return output;
 }
@@ -103,7 +101,7 @@ function normalizeComposeResult(result: ComposeResult): ComposeResult {
 }
 
 async function validateInput<TResolveInput extends AnyInput, TInput extends AnyInput>(
-  schema: Definition<TInput, TResolveInput>["_inputSchema"],
+  schema: WindowSpec<TInput, TResolveInput>["_inputSchema"],
   input: TResolveInput,
   windowId: string,
 ): Promise<TInput> {
@@ -114,10 +112,6 @@ async function validateInput<TResolveInput extends AnyInput, TInput extends AnyI
   }
 
   return result.value;
-}
-
-function unwrapSourceValue(value: unknown): unknown {
-  return isRagItems(value) ? value.items : value;
 }
 
 function createPromptTrace(system: string | undefined, prompt: string | undefined): PromptTrace {
@@ -131,26 +125,37 @@ function createPromptTrace(system: string | undefined, prompt: string | undefine
   };
 }
 
+const EMPTY_PROMPT_TRACE: PromptTrace = {
+  systemTokens: 0,
+  promptTokens: 0,
+  totalTokens: 0,
+};
+
 function attachTrace(error: unknown, trace: ResolveResult["trace"]): void {
   if (typeof error === "object" && error !== null) {
     (error as { trace?: ResolveResult["trace"] }).trace = trace;
   }
 }
 
-function createUse(windowId: string, state: RenderState, sourceTimings: SourceTiming[]): UseFn {
+function createUse(
+  windowId: string,
+  state: InterpolationState,
+  sourceTimings: SourceTiming[],
+): UseFn {
   const use = async <TSource extends AnyResolverSource>(
     source: TSource,
     input: InferSourceInput<TSource>,
-  ): Promise<NonNullable<RenderableValue<InferSource<TSource>>>> => {
+  ): Promise<NonNullable<InferSource<TSource>>> => {
     const startedAt = Date.now();
 
     try {
       const resolved = await source.resolve(input);
-      const unwrapped = unwrapSourceValue(resolved);
 
-      if (unwrapped === null || unwrapped === undefined) {
+      if (resolved === null || resolved === undefined) {
         throw new RequiredSourceValueError(source._internalId, windowId);
       }
+
+      const requiredResolved = resolved as NonNullable<InferSource<TSource>>;
 
       const resolvedAt = new Date();
       sourceTimings.push({
@@ -159,14 +164,12 @@ function createUse(windowId: string, state: RenderState, sourceTimings: SourceTi
         tags: source.tags ?? [],
         resolvedAt,
         durationMs: Date.now() - startedAt,
-        ...(Array.isArray(unwrapped) && source._sourceKind === "rag"
-          ? { itemCount: unwrapped.length }
+        ...(Array.isArray(requiredResolved) && source._sourceKind === "rag"
+          ? { itemCount: requiredResolved.length }
           : {}),
       });
 
-      return wrapRenderableValue(unwrapped, state) as unknown as NonNullable<
-        RenderableValue<InferSource<TSource>>
-      >;
+      return wrapInterpolatedValue(requiredResolved, state);
     } catch (error) {
       if (error instanceof RequiredSourceValueError) {
         throw error;
@@ -179,56 +182,69 @@ function createUse(windowId: string, state: RenderState, sourceTimings: SourceTi
   return use satisfies UseFn;
 }
 
-export async function resolveDefinition<
+export async function resolveWindowSpec<
   TInput extends AnyInput,
   TResolveInput extends AnyInput = TInput,
 >(
-  definition: Definition<TInput, TResolveInput>,
+  windowSpec: WindowSpec<TInput, TResolveInput>,
   payload: { input: TResolveInput },
 ): Promise<ResolveResult> {
   const startedAt = new Date();
   const sourceTimings: SourceTiming[] = [];
-  const renderState: RenderState = {
+  const interpolationState: InterpolationState = {
     proxyCache: new WeakMap(),
     slotCache: new WeakMap(),
-    slotValues: new Map(),
+    slotStrings: new Map(),
     slotNonce: randomUUID(),
     slotCounter: 0,
   };
 
   const normalizedInput = await validateInput(
-    definition._inputSchema,
+    windowSpec._inputSchema,
     payload.input,
-    definition._id,
+    windowSpec._id,
   );
   const composeContext: ComposeContext<TInput> = {
     input: normalizedInput,
-    use: createUse(definition._id, renderState, sourceTimings),
+    use: createUse(windowSpec._id, interpolationState, sourceTimings),
   };
-
-  try {
-    const composed = normalizeComposeResult(await definition._compose(composeContext));
-    const system = materializeText(composed.system, renderState.slotValues);
-    const prompt = materializeText(composed.prompt, renderState.slotValues);
-    const promptTrace = createPromptTrace(system, prompt);
-    const budgetExceeded =
-      Number.isFinite(definition._maxTokens) && promptTrace.totalTokens > definition._maxTokens;
-    const completedAt = new Date();
-    const trace = buildTrace({
-      windowId: definition._id,
+  const createTrace = (
+    completedAt: Date,
+    options: {
+      prompt?: PromptTrace;
+      budgetUsed?: number;
+      budgetExceeded?: boolean;
+    } = {},
+  ): ResolveResult["trace"] =>
+    buildTrace({
+      windowId: windowSpec._id,
       startedAt,
       completedAt,
       sourceTimings,
-      budgetMax: definition._maxTokens,
+      budgetMax: windowSpec._maxTokens,
+      budgetUsed: options.budgetUsed ?? 0,
+      budgetExceeded: options.budgetExceeded ?? false,
+      prompt: options.prompt ?? EMPTY_PROMPT_TRACE,
+    });
+
+  try {
+    const composed = normalizeComposeResult(await windowSpec._compose(composeContext));
+    const system = materializeInterpolatedText(composed.system, interpolationState.slotStrings);
+    const prompt = materializeInterpolatedText(composed.prompt, interpolationState.slotStrings);
+    const promptTrace = createPromptTrace(system, prompt);
+    const budgetExceeded =
+      Number.isFinite(windowSpec._maxTokens) && promptTrace.totalTokens > windowSpec._maxTokens;
+    const completedAt = new Date();
+    const trace = createTrace(completedAt, {
+      prompt: promptTrace,
       budgetUsed: promptTrace.totalTokens,
       budgetExceeded,
-      prompt: promptTrace,
     });
 
     if (budgetExceeded) {
       const error = new BudgetExceededError(
-        definition._id,
-        definition._maxTokens,
+        windowSpec._id,
+        windowSpec._maxTokens,
         promptTrace.totalTokens,
       );
       error.trace = trace;
@@ -243,43 +259,13 @@ export async function resolveDefinition<
       error instanceof SourceResolutionError
     ) {
       if (!error.trace) {
-        const completedAt = new Date();
-        const trace = buildTrace({
-          windowId: definition._id,
-          startedAt,
-          completedAt,
-          sourceTimings,
-          budgetMax: definition._maxTokens,
-          budgetUsed: 0,
-          budgetExceeded: false,
-          prompt: {
-            systemTokens: 0,
-            promptTokens: 0,
-            totalTokens: 0,
-          },
-        });
-        error.trace = trace;
+        error.trace = createTrace(new Date());
       }
 
       throw error;
     }
 
-    const completedAt = new Date();
-    const trace = buildTrace({
-      windowId: definition._id,
-      startedAt,
-      completedAt,
-      sourceTimings,
-      budgetMax: definition._maxTokens,
-      budgetUsed: 0,
-      budgetExceeded: false,
-      prompt: {
-        systemTokens: 0,
-        promptTokens: 0,
-        totalTokens: 0,
-      },
-    });
-
+    const trace = createTrace(new Date());
     attachTrace(error, trace);
     throw error;
   }

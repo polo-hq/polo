@@ -3,7 +3,60 @@ import { z } from "zod";
 import { createBudge } from "../src/index.ts";
 
 describe("rag sources", () => {
-  test("unwraps rag results to chunk arrays and interpolates them safely", async () => {
+  test("normalizes rag results into chunks", async () => {
+    const budge = createBudge();
+
+    const docsSource = budge.source.rag(
+      z.object({
+        query: z.string(),
+      }),
+      {
+        normalize(item: { body: string; relevance: number }) {
+          return {
+            content: item.body,
+            score: item.relevance,
+          };
+        },
+        async resolve({ input }) {
+          return [
+            { body: `Doc for ${input.query}`, relevance: 0.9 },
+            { body: "Fallback doc", relevance: 0.5 },
+          ];
+        },
+      },
+    );
+
+    await expect(docsSource.resolve({ query: "refund policy" })).resolves.toEqual([
+      { content: "Doc for refund policy", score: 0.9 },
+      { content: "Fallback doc", score: 0.5 },
+    ]);
+  });
+
+  test("rejects invalid normalized rag results", async () => {
+    const budge = createBudge();
+
+    const docsSource = budge.source.rag(
+      z.object({
+        query: z.string(),
+      }),
+      {
+        normalize(item: { body: string }) {
+          return {
+            body: item.body,
+          } as unknown as { content: string };
+        },
+        async resolve() {
+          return [{ body: "Not a chunk" }];
+        },
+      },
+    );
+
+    await expect(docsSource.resolve({ query: "refund policy" })).rejects.toThrow(
+      "budge.source.rag() normalize() must return Chunk objects with string content.",
+    );
+  });
+
+  test("resolves rag sources to chunk arrays and interpolates them safely", async () => {
     const budge = createBudge();
 
     const docsSource = budge.source.rag(
@@ -19,6 +72,11 @@ describe("rag sources", () => {
         },
       },
     );
+
+    await expect(docsSource.resolve({ query: "refund policy" })).resolves.toEqual([
+      { content: "Doc for refund policy", score: 0.9 },
+      { content: "Fallback doc", score: 0.5 },
+    ]);
 
     const window = budge.window({
       id: "rag-window",

@@ -3,6 +3,27 @@ import { z } from "zod";
 import { RequiredSourceValueError, createBudge } from "../src/index.ts";
 
 describe("sources", () => {
+  test("validates source input schemas before calling resolve", async () => {
+    const budge = createBudge();
+
+    const source = budge.source.value(
+      z.object({
+        encounterId: z.string(),
+      }),
+      {
+        async resolve({ input }) {
+          return input.encounterId;
+        },
+      },
+    );
+
+    await expect(
+      source.resolve({
+        encounterId: 42,
+      } as unknown as { encounterId: string }),
+    ).rejects.toThrow("Source input validation failed");
+  });
+
   test("validates source output schemas", async () => {
     const budge = createBudge();
 
