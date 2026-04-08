@@ -158,7 +158,7 @@ const historySource = budge.source.history(z.object({ threadId: z.string() }), {
 });
 ```
 
-History sources resolve to `Message[]`. In v0, compaction is count-based and only supports a sliding window.
+History sources resolve to `Message[]`. In v0, compaction is count-based and only supports a sliding window. If you omit `compaction`, Budge still applies a default sliding window of `20` messages and reports that applied window in the trace.
 
 ### `source.rag(input, deps, config)`
 
@@ -289,8 +289,9 @@ type Trace = {
     itemCount?: number;
     totalMessages?: number;
     includedMessages?: number;
-    droppedMessages?: number;
-    droppedByKind?: Record<string, number>;
+    droppedMessages?: number; // filtered + compaction drops
+    droppedByKind?: Record<string, number>; // filtered drops only
+    compactionDroppedMessages?: number;
     strategy?: "sliding";
     maxMessages?: number;
   }>;

@@ -231,6 +231,7 @@ export interface SourceTrace {
   includedMessages?: number;
   droppedMessages?: number;
   droppedByKind?: Record<string, number>;
+  compactionDroppedMessages?: number;
   strategy?: "sliding";
   maxMessages?: number;
 }

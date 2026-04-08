@@ -31,6 +31,7 @@ interface HistoryTraceMetadata {
   includedMessages: number;
   droppedMessages: number;
   droppedByKind: Record<string, number>;
+  compactionDroppedMessages: number;
   strategy: "sliding";
   maxMessages: number;
 }
@@ -269,14 +270,19 @@ export function createHistorySource<TSchema extends InputSchema<AnyInput, AnyInp
         return false;
       });
 
-      const maxMessages = config.compaction?.maxMessages ?? DEFAULT_HISTORY_MAX_MESSAGES;
-      const compacted = filtered.slice(-maxMessages);
+      const maxMessages = Math.max(
+        config.compaction?.maxMessages ?? DEFAULT_HISTORY_MAX_MESSAGES,
+        0,
+      );
+      const compacted = maxMessages === 0 ? [] : filtered.slice(-maxMessages);
+      const compactionDroppedMessages = filtered.length - compacted.length;
 
       return attachHistoryTraceMetadata(compacted, {
         totalMessages: resolved.length,
         includedMessages: compacted.length,
         droppedMessages: resolved.length - compacted.length,
         droppedByKind,
+        compactionDroppedMessages,
         strategy: config.compaction?.strategy ?? "sliding",
         maxMessages,
       });

@@ -117,6 +117,36 @@ describe("history sources", () => {
     expect(result.context.history.map((message) => message.id)).toEqual(["m3", "m4"]);
   });
 
+  test("maxMessages: 0 returns no messages", async () => {
+    const budge = createBudge();
+
+    const window = budge.window({
+      id: "history-zero-window",
+      input: z.object({
+        threadId: z.string(),
+      }),
+      sources: ({ source }) => ({
+        history: source.history(z.object({ threadId: z.string() }), {
+          async resolve() {
+            return createTextMessages(["m1", "m2"]);
+          },
+          compaction: {
+            strategy: "sliding",
+            maxMessages: 0,
+          },
+        }),
+      }),
+    });
+
+    const result = await window.resolve({
+      input: {
+        threadId: "thread_123",
+      },
+    });
+
+    expect(result.context.history).toEqual([]);
+  });
+
   test("filter strips messages matching excludeKinds before compaction", async () => {
     const budge = createBudge();
 
@@ -258,7 +288,7 @@ describe("history sources", () => {
     expect(result.traces.sources[0]?.kind).toBe("history");
   });
 
-  test("trace carries totalMessages, includedMessages, droppedMessages, droppedByKind, strategy, and maxMessages", async () => {
+  test("trace carries totalMessages, includedMessages, droppedMessages, droppedByKind, compactionDroppedMessages, strategy, and maxMessages", async () => {
     const budge = createBudge();
 
     const window = budge.window({
@@ -303,6 +333,7 @@ describe("history sources", () => {
       droppedByKind: {
         reasoning: 1,
       },
+      compactionDroppedMessages: 2,
       strategy: "sliding",
       maxMessages: 2,
     });

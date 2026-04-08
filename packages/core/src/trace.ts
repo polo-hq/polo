@@ -15,6 +15,7 @@ export interface SourceTiming {
   includedMessages?: number;
   droppedMessages?: number;
   droppedByKind?: Record<string, number>;
+  compactionDroppedMessages?: number;
   strategy?: "sliding";
   maxMessages?: number;
 }
@@ -34,6 +35,9 @@ function toSourceTrace(timing: SourceTiming): SourceTrace {
     ...(timing.includedMessages !== undefined && { includedMessages: timing.includedMessages }),
     ...(timing.droppedMessages !== undefined && { droppedMessages: timing.droppedMessages }),
     ...(timing.droppedByKind !== undefined && { droppedByKind: timing.droppedByKind }),
+    ...(timing.compactionDroppedMessages !== undefined && {
+      compactionDroppedMessages: timing.compactionDroppedMessages,
+    }),
     ...(timing.strategy !== undefined && { strategy: timing.strategy }),
     ...(timing.maxMessages !== undefined && { maxMessages: timing.maxMessages }),
   };
