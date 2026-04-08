@@ -12,6 +12,7 @@ import type {
   InferSchemaOutputObject,
   InputSource,
   InputSchema,
+  MCPClientLike,
   Message,
   MessageKind,
   RagSource,
@@ -19,6 +20,9 @@ import type {
   SourceDepValues,
   SourceResolveArgs,
   SourceConfig,
+  ToolDefinition,
+  ToolsSource,
+  ToolsSourceConfig,
   ValueSource,
 } from "./types.ts";
 
@@ -36,7 +40,19 @@ interface HistoryTraceMetadata {
   maxMessages: number;
 }
 
+interface ToolsTraceMetadata {
+  totalTools: number;
+  includedTools: number;
+  droppedTools: number;
+  toolNames: string[];
+  toolSources: {
+    static: string[];
+    mcp: string[];
+  };
+}
+
 const historyTraceMetadataSymbol = Symbol("budge.historyTraceMetadata");
+const toolsTraceMetadataSymbol = Symbol("budge.toolsTraceMetadata");
 
 function createSourceInternalId(): string {
   return `src_${nextSourceInternalId++}`;
@@ -81,6 +97,32 @@ export function readHistoryTraceMetadata(value: unknown): HistoryTraceMetadata |
   ];
 }
 
+function attachToolsTraceMetadata(
+  tools: Record<string, ToolDefinition>,
+  metadata: ToolsTraceMetadata,
+): Record<string, ToolDefinition> {
+  // Keep tool maps as plain records for developers while carrying trace-only metadata
+  // to the wave executor via a non-enumerable symbol.
+  Object.defineProperty(tools, toolsTraceMetadataSymbol, {
+    value: metadata,
+    enumerable: false,
+  });
+
+  return tools;
+}
+
+export function readToolsTraceMetadata(value: unknown): ToolsTraceMetadata | undefined {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+
+  return (
+    value as Record<string, ToolDefinition> & {
+      [toolsTraceMetadataSymbol]?: ToolsTraceMetadata;
+    }
+  )[toolsTraceMetadataSymbol];
+}
+
 function resolveMessageKind(message: Message): MessageKind {
   if (message.kind) {
     return message.kind;
@@ -121,6 +163,46 @@ async function validateSourceOutput<TOutput>(
   }
 
   return result.value as TOutput;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function defaultNormalizeTool(name: string, raw: Record<string, unknown>): ToolDefinition {
+  return {
+    name,
+    description: typeof raw.description === "string" ? raw.description : undefined,
+    // Missing inputSchema defaults to {}. In JSON Schema this means "any input",
+    // and Budge stays permissive about upstream tool definitions instead of throwing.
+    inputSchema: isRecord(raw.inputSchema) ? raw.inputSchema : {},
+  };
+}
+
+function normalizeToolDefinition(
+  name: string,
+  raw: Record<string, unknown>,
+  normalize?: ToolsSourceConfig["normalize"],
+): ToolDefinition {
+  return normalize ? normalize(name, raw) : defaultNormalizeTool(name, raw);
+}
+
+function toRawToolEntry(tool: {
+  description?: string;
+  inputSchema?: Record<string, unknown>;
+}): Record<string, unknown> {
+  return {
+    ...(tool.description !== undefined ? { description: tool.description } : {}),
+    ...(tool.inputSchema !== undefined ? { inputSchema: tool.inputSchema } : {}),
+  };
+}
+
+function normalizeMcpClients(mcp: MCPClientLike | MCPClientLike[] | undefined): MCPClientLike[] {
+  if (!mcp) {
+    return [];
+  }
+
+  return Array.isArray(mcp) ? mcp : [mcp];
 }
 
 export function createFromInputSource<TKey extends string>(
@@ -285,6 +367,64 @@ export function createHistorySource<TSchema extends InputSchema<AnyInput, AnyInp
         compactionDroppedMessages,
         strategy: config.compaction?.strategy ?? "sliding",
         maxMessages,
+      });
+    },
+  };
+}
+
+export function createToolsSource(config: ToolsSourceConfig): ToolsSource {
+  return {
+    _type: "resolver",
+    _internalId: createSourceInternalId(),
+    _sourceKind: "tools",
+    _dependencySources: {},
+    tags: config.tags ?? [],
+    async resolve(
+      _input: AnyInput,
+      _context: Record<string, unknown> = {},
+    ): Promise<Record<string, ToolDefinition>> {
+      const mergedTools = new Map<string, ToolDefinition>();
+      const toolOrigins = new Map<string, "static" | "mcp">();
+
+      const addTool = (
+        origin: "static" | "mcp",
+        rawName: string,
+        rawTool: Record<string, unknown>,
+      ) => {
+        const normalizedTool = normalizeToolDefinition(rawName, rawTool, config.normalize);
+
+        // When normalization changes names, the final record is keyed by the normalized
+        // ToolDefinition.name. If multiple tools normalize to the same name, last writer wins.
+        mergedTools.set(normalizedTool.name, normalizedTool);
+        toolOrigins.set(normalizedTool.name, origin);
+      };
+
+      for (const [name, tool] of Object.entries(config.tools ?? {})) {
+        addTool("static", name, toRawToolEntry(tool));
+      }
+
+      const mcpResults = await Promise.all(
+        normalizeMcpClients(config.mcp).map((client) => client.tools()),
+      );
+
+      for (const tools of mcpResults) {
+        for (const [name, tool] of Object.entries(tools)) {
+          addTool("mcp", name, toRawToolEntry(tool));
+        }
+      }
+
+      const toolsRecord = Object.fromEntries(mergedTools) as Record<string, ToolDefinition>;
+      const toolNames = [...mergedTools.keys()];
+
+      return attachToolsTraceMetadata(toolsRecord, {
+        totalTools: toolNames.length,
+        includedTools: toolNames.length,
+        droppedTools: 0,
+        toolNames,
+        toolSources: {
+          static: toolNames.filter((name) => toolOrigins.get(name) === "static"),
+          mcp: toolNames.filter((name) => toolOrigins.get(name) === "mcp"),
+        },
       });
     },
   };
