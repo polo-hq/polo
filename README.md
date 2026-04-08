@@ -2,10 +2,10 @@
   <picture>
     <source
       media="(prefers-color-scheme: dark)"
-      srcset="./assets/logo-dark@2x.png"
+      srcset="./assets/budge-logo-dark.png"
     />
     <img
-      src="./assets/logo@2x.png"
+      src="./assets/budge-logo.png"
       alt="Budge logo"
       width="240"
     />
