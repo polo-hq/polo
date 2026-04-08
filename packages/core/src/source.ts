@@ -418,11 +418,24 @@ export function createToolsSource(config: ToolsSourceConfig): ToolsSource {
         addTool("static", name, toRawToolEntry(tool));
       }
 
-      const mcpResults = await Promise.all(
-        normalizeMcpClients(config.mcp).map((client) => client.tools()),
+      const mcpClients = normalizeMcpClients(config.mcp);
+      const mcpResults = await Promise.allSettled(mcpClients.map((client) => client.tools()));
+      const fulfilledMcpResults = mcpResults.filter(
+        (result): result is PromiseFulfilledResult<Awaited<ReturnType<MCPClientLike["tools"]>>> =>
+          result.status === "fulfilled",
+      );
+      const rejectedMcpResults = mcpResults.filter(
+        (result): result is PromiseRejectedResult => result.status === "rejected",
       );
 
-      for (const tools of mcpResults) {
+      // Resolve MCP tools on a best-effort basis so static tools and successful MCP
+      // clients still contribute when another MCP client is flaky. Only a total MCP
+      // outage with no static tools remains fatal for the tools source.
+      if (mcpClients.length > 0 && fulfilledMcpResults.length === 0 && mergedTools.size === 0) {
+        throw rejectedMcpResults[0]?.reason;
+      }
+
+      for (const { value: tools } of fulfilledMcpResults) {
         for (const [name, tool] of Object.entries(tools)) {
           rawToolCount += 1;
           addTool("mcp", name, toRawToolEntry(tool));

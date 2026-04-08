@@ -651,6 +651,77 @@ describe("tools sources", () => {
     await expect(budge.source.tools({ mcp: client }).resolve({})).resolves.toEqual({});
   });
 
+  test("static tools survive when one MCP client rejects", async () => {
+    const budge = createBudge();
+    const failingClient: MCPClientLike = {
+      async tools() {
+        throw new Error("mcp unavailable");
+      },
+    };
+
+    await expect(
+      budge.source
+        .tools({
+          tools: {
+            searchDocs: {
+              description: "Static search",
+              inputSchema: { type: "object" },
+            },
+          },
+          mcp: failingClient,
+        })
+        .resolve({}),
+    ).resolves.toEqual({
+      searchDocs: {
+        name: "searchDocs",
+        description: "Static search",
+        inputSchema: { type: "object" },
+      },
+    });
+  });
+
+  test("one failed MCP client does not block tools from another successful MCP client", async () => {
+    const budge = createBudge();
+    const failingClient: MCPClientLike = {
+      async tools() {
+        throw new Error("mcp unavailable");
+      },
+    };
+    const healthyClient: MCPClientLike = {
+      async tools() {
+        return {
+          getWeather: {
+            description: "Weather",
+            inputSchema: { type: "object" },
+          },
+        };
+      },
+    };
+
+    await expect(
+      budge.source.tools({ mcp: [failingClient, healthyClient] }).resolve({}),
+    ).resolves.toEqual({
+      getWeather: {
+        name: "getWeather",
+        description: "Weather",
+        inputSchema: { type: "object" },
+      },
+    });
+  });
+
+  test("all MCP clients failing with no static tools still rejects", async () => {
+    const budge = createBudge();
+    const failingClient: MCPClientLike = {
+      async tools() {
+        throw new Error("mcp unavailable");
+      },
+    };
+
+    await expect(budge.source.tools({ mcp: [failingClient] }).resolve({})).rejects.toThrow(
+      "mcp unavailable",
+    );
+  });
+
   test("tool names from static and MCP are correctly attributed in trace fields using normalized names", async () => {
     const budge = createBudge();
     const client: MCPClientLike = {
