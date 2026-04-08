@@ -1,8 +1,8 @@
 # @budge/core
 
-`@budge/core` is the typed runtime for declaring context windows, resolving source graphs, and returning `context` plus `traces`.
+Typed runtime for declaring context windows, resolving source graphs, and returning `context` plus `traces`.
 
-It does not compose prompts, wrap model clients, or score model outputs.
+Does not compose prompts, wrap model clients, or score outputs.
 
 ## Install
 
@@ -12,7 +12,7 @@ pnpm add @budge/core zod
 
 `zod` is used in the examples, but any Standard Schema-compatible validator works.
 
-## Quick Start
+## Quick start
 
 ```ts
 import { createBudge } from "@budge/core";
@@ -56,42 +56,48 @@ const { context, traces } = await window.resolve({
   },
 });
 
-const prompt = {
-  system: "You are a clinical documentation assistant.",
-  prompt:
-    `Transcript:\n${context.transcript}` +
-    `\n\nPatient:\n${JSON.stringify(context.patient, null, 2)}` +
-    `\n\nPrior note:\n${context.priorNote}`,
-};
+// You own the prompt from here.
+// context is typed — context.patient, context.priorNote, context.transcript
+// traces carries per-source timing, token estimates, and assembly details
 ```
 
-## Runtime Setup
+---
 
-Create one runtime with `createBudge()`:
+## Runtime setup
 
 ```ts
 const budge = createBudge({
-  onTrace(traces) {
-    console.log(traces);
+  // Called after every resolve with the full trace.
+  onTrace(trace) {
+    console.log(trace);
+  },
+
+  // Optional. tokenx is used by default (~96% accuracy).
+  // Replace with tiktoken or any tokenizer that exposes estimate(text: string): number.
+  tokenizer: {
+    estimate: myTokenizer.countTokens,
   },
 });
 ```
 
-`createBudge()` exposes:
+`createBudge()` returns a `BudgeInstance` with:
 
 - `budge.source.value(...)`
 - `budge.source.rag(...)`
 - `budge.source.history(...)`
+- `budge.source.tools(...)`
 - `budge.source.fromInput(...)`
 - `budge.window(...)`
 
+---
+
 ## Source APIs
 
-Sources are declared once and selected into a window.
+Sources are declared once and composed into windows. They are resolved in dependency order, in parallel where possible.
 
 ### `source.value(input, config)`
 
-Use `value` for a single resolved value:
+Resolves a single typed value.
 
 ```ts
 const accountSource = budge.source.value(z.object({ accountId: z.string() }), {
@@ -103,10 +109,10 @@ const accountSource = budge.source.value(z.object({ accountId: z.string() }), {
 
 ### `source.value(input, deps, config)`
 
-Use the dependency overload when a source depends on another source handle:
+Use the dependency overload when a source needs the resolved value of another source.
 
 ```ts
-const billingNotesSource = budge.source.value(
+const billingSource = budge.source.value(
   z.object({}),
   { account: accountSource },
   {
@@ -117,11 +123,11 @@ const billingNotesSource = budge.source.value(
 );
 ```
 
-Dependencies are inferred from the handles you pass into `deps`. Budge builds the DAG from those handles and resolves sources in waves.
+Budge infers the dependency graph from the handles you pass into `deps` and resolves sources in parallel waves.
 
 ### `source.rag(input, config)`
 
-Use `rag` for ranked multi-item context:
+Resolves a ranked `Chunk[]` from a retrieval pipeline.
 
 ```ts
 const docsSource = budge.source.rag(z.object({ query: z.string() }), {
@@ -137,11 +143,13 @@ const docsSource = budge.source.rag(z.object({ query: z.string() }), {
 });
 ```
 
-RAG sources resolve to `Chunk[]`.
+`normalize` maps your retrieval result shape to `{ content: string; score?: number; metadata?: Record<string, unknown> }`. If your retrieval already returns `Chunk[]`, you can omit it.
+
+`rag` also accepts a `deps` overload identical to `source.value`.
 
 ### `source.history(input, config)`
 
-Use `history` for framework-agnostic message arrays that should be filtered and compacted before they enter `context`:
+Resolves `Message[]` with optional filtering and sliding window compaction.
 
 ```ts
 const historySource = budge.source.history(z.object({ threadId: z.string() }), {
@@ -149,180 +157,236 @@ const historySource = budge.source.history(z.object({ threadId: z.string() }), {
     return db.getMessages(input.threadId);
   },
   filter: {
+    // Strip messages by kind before compaction runs.
     excludeKinds: ["tool_call", "reasoning"],
   },
   compaction: {
     strategy: "sliding",
-    maxMessages: 12,
+    maxMessages: 12, // Keep the last 12 messages after filtering.
   },
 });
 ```
 
-History sources resolve to `Message[]`. In v0, compaction is count-based and only supports a sliding window. If you omit `compaction`, Budge still applies a default sliding window of `20` messages and reports that applied window in the trace.
+If `compaction` is omitted, a default sliding window of 20 messages is applied. The applied window is always recorded in the trace.
 
-### `source.rag(input, deps, config)`
-
-`rag` also supports dependency-aware overloads:
+**Message type:**
 
 ```ts
-const recentTicketsSource = budge.source.rag(
-  z.object({ transcript: z.string() }),
-  { account: accountSource },
-  {
-    async resolve({ input, account }) {
-      return vector.searchTickets(account.id, input.transcript);
-    },
-    normalize(item) {
-      return {
-        content: item.pageContent,
-        score: item.relevanceScore,
-      };
+interface Message {
+  id: string;
+  role: "user" | "assistant" | "system" | "tool";
+  content: string;
+  kind?: "text" | "tool_call" | "tool_result" | "reasoning";
+  createdAt?: Date;
+}
+```
+
+`kind` defaults to `"text"` for most messages. Messages with `role: "tool"` are inferred as `"tool_result"` if `kind` is absent.
+
+### `source.tools(config)`
+
+Resolves a `Record<string, ToolDefinition>` from static definitions, MCP clients, or both.
+
+```ts
+const toolsSource = budge.source.tools({
+  // Static inline tools.
+  tools: {
+    searchDocs: {
+      description: "Search the knowledge base",
+      inputSchema: {
+        type: "object",
+        properties: { query: { type: "string" } },
+      },
     },
   },
-);
+
+  // One or more MCP clients. Transport-agnostic — local stdio and remote HTTP/SSE
+  // clients both work as long as they expose a tools() method.
+  mcp: mcpClient, // or [clientA, clientB]
+});
+```
+
+MCP tools win on name collision with static tools. Last MCP client wins on collision between MCP clients. All collisions are recorded in the trace.
+
+If a tool omits `inputSchema`, it defaults to `{}` (any input). Budge is permissive about upstream tool quality.
+
+**Custom normalization:**
+
+```ts
+source.tools({
+  mcp: client,
+  normalize(name, raw) {
+    return {
+      name: name.replace(/_/g, "-"),
+      description: raw.description as string | undefined,
+      inputSchema: (raw.inputSchema ?? {}) as Record<string, unknown>,
+    };
+  },
+});
+```
+
+When `normalize` is provided, the final record is keyed by `ToolDefinition.name` as returned by the normalize function.
+
+**Context shape:**
+
+```ts
+context.tools; // Record<string, ToolDefinition>
+
+// Pass directly to your model call:
+await generateText({ model, tools: context.tools, prompt });
 ```
 
 ### `source.fromInput(key, options?)`
 
-Use `fromInput` when a validated field should flow directly into `context`:
+Passes a validated field from window input directly into context with no resolver.
 
 ```ts
-const window = budge.window({
-  id: "support-reply",
-  input: z.object({ transcript: z.string() }),
-  sources: ({ source }) => ({
-    transcript: source.fromInput("transcript", { tags: ["restricted"] }),
-  }),
+sources: ({ source }) => ({
+  transcript: source.fromInput("transcript", { tags: ["restricted"] }),
 });
 ```
+
+---
 
 ## Window API
 
-The main primitive is:
-
 ```ts
 budge.window({
-  id,
-  input,
-  sources: ({ source }) => ({
-    // ...
-  }),
+  id: string, // Stable identifier — used in traces and cloud config.
+  input: Schema, // Standard Schema (zod, valibot, etc.) for resolve() input.
+  sources: (helpers) => Record<string, AnySource>,
 });
 ```
 
-### Fields
+The `sources` builder is declarative. Budge precomputes the dependency graph when the window is created. Calling `resolve()` runs the graph.
 
-- `id` - stable logical identifier for the window
-- `input` - Standard Schema used to validate `resolve({ input })`
-- `sources` - builder that returns the source graph for the window
-
-The builder is declarative. It describes which sources can appear in `context`, and Budge precomputes the dependency graph when the window is created.
-
-## Resolution
-
-Resolve a window with:
+### `window.resolve(payload)`
 
 ```ts
-const result = await window.resolve({
-  input: {
-    patientId: "pat_123",
-    transcript: "Patient reports less pain this week.",
-  },
-});
+const { context, traces } = await window.resolve({ input });
 ```
 
-`result` contains:
+`context` is fully typed based on your source declarations. `traces` carries the full assembly record for this run.
 
-- `context`
-- `traces`
+---
 
-You own prompt assembly from there:
+## Traces
 
-```ts
-const prompt = {
-  system: "You are a helpful assistant.",
-  prompt: JSON.stringify(result.context, null, 2),
-};
-```
-
-## Return Shape
-
-At a high level:
+Every `resolve` returns a `Trace` alongside `context`.
 
 ```ts
-type ResolveResult<TContext> = {
-  context: TContext;
-  traces: Trace;
-};
-```
-
-## Errors
-
-Current public errors:
-
-- `CircularSourceDependencyError` - the window source graph contains a cycle
-- `MissingSourceDependencyError` - a selected source depends on an unselected source
-- `SourceResolutionError` - a source threw while resolving
-
-Errors can carry `traces` so you can inspect partial resolution state.
-
-## Trace Shape
-
-Every successful resolve returns a `traces` object.
-
-```ts
-type Trace = {
+interface Trace {
   version: 1;
   runId: string;
   windowId: string;
   startedAt: Date;
   completedAt: Date;
-  sources: Array<{
-    key: string;
-    sourceId: string;
-    kind: "input" | "value" | "rag" | "history";
-    tags: string[];
-    dependsOn: string[];
-    completedAt: Date;
-    durationMs: number;
-    status: "resolved" | "failed";
-    itemCount?: number;
-    totalMessages?: number;
-    includedMessages?: number;
-    droppedMessages?: number; // filtered + compaction drops
-    droppedByKind?: Record<string, number>; // filtered drops only
-    compactionDroppedMessages?: number;
-    strategy?: "sliding";
-    maxMessages?: number;
-  }>;
-};
+  sources: SourceTrace[];
+}
 ```
 
-## Current Scope
+### SourceTrace
 
-What `@budge/core` does today:
+All sources:
 
-- declarative source selection
-- dependency-graph planning
-- wave-based source resolution
-- type-safe `context`
-- source-level traces
-- history filtering and sliding compaction
+```ts
+{
+  key: string;
+  sourceId: string;
+  kind: "input" | "value" | "rag" | "history" | "tools";
+  tags: string[];
+  dependsOn: string[];
+  completedAt: Date;
+  durationMs: number;
+  status: "resolved" | "failed";
+  contentLength?: number;      // Character count of serialized content.
+  estimatedTokens?: number;    // tokenx estimate by default. Absent if serialization fails.
+}
+```
 
-What `@budge/core` does not do today:
+Additional fields for `kind: "rag"`:
 
-- prompt composition
-- model wrapping
-- output scoring
-- tools API
-- semantic or llm history compaction
-- budget management
+```ts
+{
+  itemCount?: number;          // Number of chunks returned.
+}
+```
 
-## Example
+Additional fields for `kind: "history"`:
 
-See `examples/support-reply` for a full working example of the current API.
+```ts
+{
+  totalMessages?: number;           // Messages returned by resolve().
+  includedMessages?: number;        // Messages after filter + compaction.
+  droppedMessages?: number;         // totalMessages - includedMessages.
+  droppedByKind?: Record<string, number>; // Filter drops broken down by kind.
+  compactionDroppedMessages?: number;     // Drops from sliding window only.
+  strategy?: "sliding";
+  maxMessages?: number;
+}
+```
 
-## Local Development
+Additional fields for `kind: "tools"`:
+
+```ts
+{
+  totalTools?: number;              // Raw tool count before merge.
+  includedTools?: number;           // Tools in context after merge.
+  droppedTools?: number;            // Overwrites from name collisions.
+  toolNames?: string[];             // Names of included tools.
+  toolSources?: {
+    static: string[];               // Tools from config.tools.
+    mcp: string[];                  // Tools from MCP clients.
+  };
+  toolCollisions?: Array<{
+    name: string;
+    winner: "static" | "mcp";
+    loser: "static" | "mcp";
+  }>;
+}
+```
+
+---
+
+## Errors
+
+```ts
+CircularSourceDependencyError; // Source graph contains a cycle.
+MissingSourceDependencyError; // A source depends on an unselected source.
+SourceResolutionError; // A source threw during resolution.
+```
+
+All errors carry `traces` so you can inspect the partial resolution state at the point of failure.
+
+---
+
+## Token estimation
+
+`@budge/core` ships with [tokenx](https://github.com/johannschopplich/tokenx) as the default tokenizer (~96% accuracy, 2kB, no native dependencies). `estimatedTokens` is populated on every source trace automatically.
+
+To use a more precise tokenizer:
+
+```ts
+import { encode } from "gpt-tokenizer";
+
+const budge = createBudge({
+  tokenizer: {
+    estimate: (text) => encode(text).length,
+  },
+});
+```
+
+Tokenizer failures are always silent — `estimatedTokens` will be absent but context assembly continues normally. `contentLength` (character count) is always populated when serialization succeeds, regardless of tokenizer.
+
+---
+
+## Examples
+
+See `examples/support-reply` for a full working example combining value, rag, history, and tools sources.
+
+---
+
+## Local development
 
 ```bash
 vp test

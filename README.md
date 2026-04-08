@@ -14,98 +14,33 @@
 
 # Budge
 
-> The missing observability layer for context assembly. Evals for inputs, not outputs.
+**The context assembly layer for AI agents.** Budge is a typed framework for assembling model context windows. It resolves your sources, builds the dependency graph, and returns traces alongside every result.
+
+---
 
 ## The problem
 
-Every AI eval tool measures what comes out of the model.
+Eval tools measure what comes out of the model. Nothing measures what goes in.
+Braintrust and LangSmith start at the model call. Everything before it is invisible to them: which sources you included, which history you compacted, which tools you loaded. When a score moves you see the output that changed, not the assembly decisions that caused it.
+Budge covers the input side.
 
-- Braintrust
-- LangSmith
-- Promptfoo
+---
 
-That is useful, but it leaves a blind spot before the model call.
+## Where Budge sits
 
-Developers are stuffing transcripts, retrieved chunks, documents, tool definitions, and history into a context window with no principled way to answer:
-
-- what got included
-- why it got included
-- what depended on what
-- which input changed the outcome
-
-When a score moves, they see the output. They do not see the assembly decisions that caused it.
-
-## Where Budge Lives
-
-```text
-[your data sources] -> budge -> [model call] -> [braintrust / langsmith]
-transcripts, docs,    assembly    your prompt,    output scoring
-rag, tools, history   + tracing   your model
+```
+[your data sources] → budge → [model call] → [your eval tool]
+ transcripts, docs,   assembly   your prompt,   output scoring
+ rag, tools, history  + tracing  your model
 ```
 
-Budge is not a model wrapper.
+Budge starts where your data sources are and ends where the model call begins. It does not wrap the model, touch your prompt, or score outputs. That boundary is intentional. It makes Budge composable with every framework and eval tool you already use.
 
-It does not own your prompt, your model client, or your output scoring. It starts where your data sources are and ends where the model call begins.
+---
 
-That makes it complementary to every eval tool that already exists.
+## What it does
 
-## Why Budge
-
-Output evals tell you whether something got better or worse.
-
-Budge tells you what changed in the inputs.
-
-- Which sources were present for this run?
-- Which sources depended on other sources?
-- Which retrieved chunks actually made it in?
-- Which assembly decisions changed across runs?
-
-The missing layer is not another prompt playground. It is observability for context assembly.
-
-## What Budge Owns
-
-Today in OSS:
-
-- declarative source assembly
-- typed sources as the unit of abstraction
-- dependency-graph resolution in waves
-- traces for every assembly decision
-- history filtering and sliding compaction
-
-Directionally in Budge Cloud:
-
-- budget management configured at runtime
-- runtime compaction tuning
-- semantic selection for tools and retrieved context
-- input attribution across runs
-
-The core idea stays the same: Budge owns what goes into context, not what comes out of the model.
-
-## The Causal Engine
-
-Every source inclusion is a treatment. Every eval score is a response variable.
-
-That is the wedge.
-
-Braintrust can tell you a score moved. Budge can tell you which input decisions plausibly caused it to move.
-
-- Was it the prior note?
-- The intake?
-- The fourth retrieved chunk?
-- The tool manifest?
-
-That feedback loop does not exist in the current tooling stack.
-
-## vs Existing Tools
-
-|                   | Braintrust / LangSmith / prompt evals | Budge                         |
-| ----------------- | ------------------------------------- | ----------------------------- |
-| Where it sits     | After the model call                  | Before the model call         |
-| What it measures  | Output quality                        | Input assembly                |
-| What it tells you | Prompt A beat prompt B                | Which sources changed the run |
-| What you can do   | Tweak prompts and model settings      | Change what goes into context |
-
-## Current SDK
+You declare a context window as a graph of typed sources. Budge resolves them in dependency order, assembles the context, and returns traces alongside every result.
 
 ```ts
 import { createBudge } from "@budge/core";
@@ -140,92 +75,90 @@ const noteGeneration = budge.window({
       transcript: source.fromInput("transcript"),
       patient,
       priorNote,
+      history: source.history(z.object({ patientId: z.string() }), {
+        async resolve({ input }) {
+          return getMessages(input.patientId);
+        },
+        filter: { excludeKinds: ["tool_call", "reasoning"] },
+        compaction: { strategy: "sliding", maxMessages: 12 },
+      }),
+      tools: source.tools({
+        mcp: mcpClient,
+      }),
     };
   },
 });
 
 const { context, traces } = await noteGeneration.resolve({
-  input: {
-    patientId: "pat_123",
-    transcript: "Patient reports less pain this week.",
-  },
+  input: { patientId: "pat_123", transcript: "Patient reports less pain." },
 });
 
-// Developer owns the prompt from here.
+// You own the prompt from here.
+// traces tells you exactly what was assembled and how long it took.
 ```
 
-History is also a first-class source:
+Every `resolve` returns `traces` alongside `context`:
 
 ```ts
-const supportReply = budge.window({
-  id: "support-reply",
-  input: z.object({ threadId: z.string() }),
-  sources: ({ source }) => ({
-    history: source.history(z.object({ threadId: z.string() }), {
-      async resolve({ input }) {
-        return getMessages(input.threadId);
-      },
-      filter: {
-        excludeKinds: ["tool_call", "reasoning"],
-      },
-      compaction: {
-        strategy: "sliding",
-        maxMessages: 12,
-      },
-    }),
-  }),
-});
+traces.sources; // per-source: kind, status, durationMs, estimatedTokens, contentLength
+// history: totalMessages, includedMessages, droppedMessages, droppedByKind
+// tools: totalTools, includedTools, toolNames, toolCollisions
 ```
 
-The current open-source SDK is intentionally narrow:
+---
 
-- no prompt composition
-- no model wrapping
-- no output scoring
-- no YAML or DSL
+## Source kinds
 
-## Roadmap
+| Kind                 | What it does                                                                         |
+| -------------------- | ------------------------------------------------------------------------------------ |
+| `source.value()`     | Resolves a single typed value. Supports dependencies on other sources.               |
+| `source.rag()`       | Resolves a ranked `Chunk[]` from a vector search or retrieval pipeline.              |
+| `source.history()`   | Resolves `Message[]` with filtering by kind and sliding window compaction.           |
+| `source.tools()`     | Resolves a `Record<string, ToolDefinition>` from static definitions and MCP clients. |
+| `source.fromInput()` | Passes a validated field from window input directly into context.                    |
 
-Phase 1: open-source SDK
+Sources declared outside a window are reusable across windows. Budge builds the dependency graph at window creation time and resolves sources in parallel waves.
 
-- TypeScript-first
-- framework agnostic
-- works wherever a model call happens
-- optimized for design partners with production agent loops
+---
 
-Phase 2: Budge Cloud
+## What Budge does not do
 
-- trace ingestion
-- causal attribution
-- runtime budget and compaction tuning from the dashboard
-- cross-customer signal
+- Compose prompts
+- Wrap model clients
+- Score outputs
+- Own storage or persistence
+- Require a specific framework
 
-## SDK Principles
+The boundary is the model call. Budge hands you `context` and `traces`. What you do with context is yours.
 
-1. Every primitive that could live on the window lives on the window.
-2. Budge ends where the model call begins.
-3. Sources are the unit of abstraction.
-4. Tracing is not optional.
-5. The developer owns the prompt.
-6. TypeScript-first, no YAML, no DSL.
-7. Budget belongs to runtime configuration, not prompt glue code.
-8. Compaction is an assembly policy, not a memory system.
-9. Filters run before compaction.
-10. Framework agnostic by default.
-11. Semantic selection beats manual curation.
-12. Integration burden must stay lower than the insight value.
-13. Optimizations are recommendations, not hidden defaults.
-14. Configuration should move at runtime, not only deploy time.
-15. Sources are declarative and the dependency graph is explicit.
+---
 
 ## Packages
 
-- `@budge/core` - current OSS SDK
-- `examples/support-reply` - end-to-end example
+| Package                  | Description                                                           |
+| ------------------------ | --------------------------------------------------------------------- |
+| `@budge/core`            | The core SDK — source assembly, tracing, and typed context resolution |
+| `examples/support-reply` | End-to-end example using value, rag, history, and tools sources       |
+
+---
+
+## Budge Cloud
+
+The open-source SDK is the instrumentation layer. Budge Cloud is where the data becomes useful:
+
+- **input attribution across runs** which sources drove better outcomes, not just which runs scored higher
+- **causal analysis** treat source inclusions as experiments and measure their effect on output quality
+- **runtime budget** and **compaction tuning** from the dashboard, no redeploy required
+- **semantic tool selection** load only the tools relevant to the current task
+
+The SDK works standalone. Cloud is opt-in.
+
+---
 
 ## Development
 
 ```bash
+pnpm install
 vp check
 vp test
 ```
