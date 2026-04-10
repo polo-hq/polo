@@ -12,6 +12,14 @@ const mockTokenizer = {
   },
 };
 
+async function computeContentHash(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, 16);
+}
+
 function getTrace(
   result: Awaited<ReturnType<ReturnType<typeof createBudge>["window"]>["resolve"]>,
   key: string,
@@ -47,6 +55,31 @@ describe("token estimation", () => {
     const trace = getTrace(result, "record");
 
     expect(trace.contentLength).toBe(stringify(record)?.length);
+  });
+
+  test("contentHash is populated from the serialized content", async () => {
+    const budge = createBudge({ tokenizer: mockTokenizer });
+    const record = {
+      id: "enc_123",
+      status: "ready",
+    };
+
+    const window = budge.window({
+      id: "value-content-hash-window",
+      input: z.object({}),
+      sources: ({ source }) => ({
+        record: source.value(z.object({}), {
+          async resolve() {
+            return record;
+          },
+        }),
+      }),
+    });
+
+    const result = await window.resolve({ input: {} });
+    const trace = getTrace(result, "record");
+
+    expect(trace.contentHash).toBe(await computeContentHash(stringify(record) ?? ""));
   });
 
   test("estimatedTokens is populated for a value source when tokenizer is configured", async () => {
@@ -428,6 +461,7 @@ describe("token estimation", () => {
 
     expect(result.context.record).toBeUndefined();
     expect(trace.contentLength).toBeUndefined();
+    expect(trace.contentHash).toBeUndefined();
     expect(trace.estimatedTokens).toBeUndefined();
   });
 });
