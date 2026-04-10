@@ -69,12 +69,7 @@ def safe_json(value: Any) -> Any:
 
 def to_iso(value: Any) -> str | None:
     if isinstance(value, str):
-        try:
-            if value.endswith("Z"):
-                return value
-            return value
-        except Exception:
-            return None
+        return value
     if isinstance(value, (int, float)):
         return None
     return None

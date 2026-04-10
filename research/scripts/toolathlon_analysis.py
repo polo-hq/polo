@@ -122,8 +122,6 @@ def normalize_record(record: dict[str, Any]) -> dict[str, Any] | None:
     messages = safe_json_loads(record.get("messages"))
     if not isinstance(key_stats, dict) or not isinstance(messages, list):
         return None
-    if key_stats is None or messages is None:
-        return None
 
     task_status = safe_json_loads(record.get("task_status")) or {}
     agent_cost = safe_json_loads(record.get("agent_cost")) or {}
@@ -182,11 +180,11 @@ def classify_tool_message(content: str) -> str:
     c = content.lower()
     if "[file]" in c or "[dir]" in c:
         return "file_listing"
-    if "pdf total pages" in c or "invoice" in c and "pdf" in c:
+    if "pdf total pages" in c or ("invoice" in c and "pdf" in c):
         return "pdf_read"
     if "query executed successfully" in c:
         return "db_query_result"
-    if "error executing bigquery" in c or "bigquery" in c and "error" in c:
+    if "error executing bigquery" in c or ("bigquery" in c and "error" in c):
         return "db_error"
     if "error" in c:
         return "error"
@@ -277,7 +275,7 @@ def phase1(records: list[dict[str, Any]], output_dir: Path) -> None:
         print(
             f"- {model:24s} n={len(rs):3d} turns_med={percentile(turns, 0.5):6.1f} turns_p90={percentile(turns, 0.9):6.1f} "
             f"tokens_med={percentile(tokens, 0.5):>10,.0f} tokens_p90={percentile(tokens, 0.9):>10,.0f} "
-            f"ret_mean={statistics.mean(retention):5.2f} success={success_rate:5.2%} avg_cost=${avg_cost:.3f}"
+            f"ret_mean={statistics.mean(retention) if retention else float('nan'):5.2f} success={success_rate:5.2%} avg_cost=${avg_cost:.3f}"
         )
 
     print("\nPer-run success variance check:")
