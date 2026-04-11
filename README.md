@@ -20,10 +20,6 @@
 
 ## The problem
 
-Eval tools measure what comes out of the model. Nothing measures what goes in.
-
-Braintrust and LangSmith start at the model call. Everything before it is invisible: which sources you included, which history you compacted, which tools you loaded. When a score moves you see the output that changed, not the assembly decisions that caused it.
-
 We analyzed 8,257 real agent sessions across three independent sources. The findings are consistent:
 
 - At the median turn, **99.8% of what the model sees is content it already read**
