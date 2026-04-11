@@ -14,7 +14,11 @@
 
 # Budge
 
-**The context intelligence layer for AI agents.** Budge is a typed framework for assembling model context windows. It resolves your sources, builds the dependency graph, and returns traces alongside every result — so you always know exactly what went into the model and why.
+**Budge makes context windows observable, explainable, and safely optimized.**
+
+Most agents silently re-send duplicate and stale context every turn. This increases cost, latency, and makes behavior hard to reason about.
+
+Budge instruments the context assembly layer, shows you exactly what’s in the window, and automatically removes only the safest waste — without requiring prompt access, model outputs, or manual tuning.
 
 ---
 
