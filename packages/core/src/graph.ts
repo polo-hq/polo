@@ -17,7 +17,7 @@ import type {
 } from "./types.ts";
 import type { SourceTiming } from "./trace.ts";
 
-async function computeHash(value: string): Promise<string> {
+export async function computeHash(value: string): Promise<string> {
   const bytes = new TextEncoder().encode(value);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
 

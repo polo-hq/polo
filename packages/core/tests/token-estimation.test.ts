@@ -5,20 +5,13 @@ import { z } from "zod";
 import { createBudge } from "../src/index.ts";
 import { resolveWindowSpec } from "../src/resolve.ts";
 import { createWindowSpec } from "../src/window-spec.ts";
+import { computeHash } from "../src/graph.ts";
 
 const mockTokenizer = {
   estimate(text: string): number {
     return text.length;
   },
 };
-
-async function computeContentHash(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0"))
-    .join("")
-    .slice(0, 16);
-}
 
 function getTrace(
   result: Awaited<ReturnType<ReturnType<typeof createBudge>["window"]>["resolve"]>,
@@ -79,7 +72,7 @@ describe("token estimation", () => {
     const result = await window.resolve({ input: {} });
     const trace = getTrace(result, "record");
 
-    expect(trace.contentHash).toBe(await computeContentHash(stringify(record) ?? ""));
+    expect(trace.contentHash).toBe((await computeHash(stringify(record) ?? "")).slice(0, 16));
   });
 
   test("estimatedTokens is populated for a value source when tokenizer is configured", async () => {
