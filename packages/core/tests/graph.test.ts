@@ -214,11 +214,7 @@ describe("source graph", () => {
       };
 
       expect(aggregateError.errors).toHaveLength(2);
-      expect(
-        aggregateError.errors
-          .map((failure) => (failure as Error).message)
-          .sort(),
-      ).toEqual([
+      expect(aggregateError.errors.map((failure) => (failure as Error).message).sort()).toEqual([
         'Source "first" threw during resolution in context window "aggregate-failure-window": Error: first failure',
         'Source "second" threw during resolution in context window "aggregate-failure-window": Error: second failure',
       ]);
