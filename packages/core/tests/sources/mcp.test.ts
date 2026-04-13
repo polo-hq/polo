@@ -207,6 +207,26 @@ describe("McpAdapter.list()", () => {
 
     expect(client.listTools).toHaveBeenCalledTimes(2);
   });
+
+  it("retries discovery after a transient failure", async () => {
+    const client = {
+      listTools: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("temporary outage"))
+        .mockResolvedValueOnce({ tools: TOOL_FIXTURES }),
+    } satisfies McpLikeClient;
+    const adapter = new McpAdapter(client);
+
+    await expect(adapter.list()).rejects.toThrow("temporary outage");
+    await expect(adapter.list()).resolves.toEqual([
+      "get_patient",
+      "get_sensitive_phi",
+      "list_encounters",
+      "search_medications",
+    ]);
+
+    expect(client.listTools).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("McpAdapter.read()", () => {

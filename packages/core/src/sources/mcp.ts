@@ -106,7 +106,13 @@ export class McpAdapter implements SourceAdapter {
   }
 
   private getTools(): Promise<ToolDefinition[]> {
-    this.cachedTools ??= this.loadTools().then((tools) => filterTools(tools, this.options));
+    this.cachedTools ??= this.loadTools()
+      .then((tools) => filterTools(tools, this.options))
+      .catch((error) => {
+        this.cachedTools = undefined;
+        throw error;
+      });
+
     return this.cachedTools;
   }
 }
