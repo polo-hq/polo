@@ -11,7 +11,7 @@ import { buildTools } from "./tools.ts";
  */
 export interface RunAgentOptions<S extends Record<string, SourceAdapter>> extends Pick<
   RunOptions<S>,
-  "task" | "sources" | "onToolCall" | "maxSteps"
+  "task" | "sources" | "onToolCall" | "maxSteps" | "subcallSchemas"
 > {
   model: LanguageModel;
   subModel: LanguageModel;
@@ -35,9 +35,18 @@ export interface RunAgentOptions<S extends Record<string, SourceAdapter>> extend
 export async function runAgent<S extends Record<string, SourceAdapter>>(
   opts: RunAgentOptions<S>,
 ): Promise<{ answer: string; finishReason: RunFinishReason }> {
-  const { model, subModel, task, sources, onToolCall, maxSteps = 100, trace } = opts;
+  const {
+    model,
+    subModel,
+    task,
+    sources,
+    onToolCall,
+    maxSteps = 100,
+    subcallSchemas,
+    trace,
+  } = opts;
 
-  const tools = buildTools({ sources, subModel, trace, onToolCall });
+  const tools = buildTools({ sources, subModel, trace, onToolCall, subcallSchemas });
 
   const sourceDescriptions = buildSourceDescriptions(sources);
 

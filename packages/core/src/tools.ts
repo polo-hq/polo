@@ -1,6 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import type { LanguageModel } from "ai";
+import type { ZodTypeAny } from "zod";
 import type { SourceAdapter } from "./sources/interface.ts";
 import type { TraceBuilder } from "./trace.ts";
 import type { ToolCallEvent } from "./types.ts";
@@ -15,6 +16,7 @@ export interface BuildToolsOptions<S extends Record<string, SourceAdapter>> {
   subModel: LanguageModel;
   trace: TraceBuilder<S>;
   onToolCall?: (event: ToolCallEvent) => void;
+  subcallSchemas?: Record<string, ZodTypeAny>;
 }
 
 /**
@@ -29,7 +31,7 @@ export interface BuildToolsOptions<S extends Record<string, SourceAdapter>> {
  * @internal
  */
 export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildToolsOptions<S>) {
-  const { sources, subModel, trace, onToolCall } = opts;
+  const { sources, subModel, trace, onToolCall, subcallSchemas } = opts;
 
   return {
     read_source: tool({
@@ -127,11 +129,19 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
             "A specific, self-contained task for the sub-call to accomplish. " +
               "Be precise — the sub-call only sees the content at this readable path.",
           ),
+        schemaName: z
+          .string()
+          .optional()
+          .describe("Optional structured output schema name registered on runtime.run()"),
       }),
-      execute: async ({ source, path, task }) => {
+      execute: async ({ source, path, task, schemaName }) => {
         const adapter = resolveSource(sources, source);
+        const schema = schemaName ? resolveSubcallSchema(subcallSchemas, schemaName) : undefined;
+        const subcallArgs = schemaName
+          ? { source, path, task, schemaName }
+          : { source, path, task };
 
-        onToolCall?.({ tool: "run_subcall", args: { source, path, task } });
+        onToolCall?.({ tool: "run_subcall", args: subcallArgs });
 
         const subcallNode = await runSubcall({
           subModel,
@@ -139,12 +149,14 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
           sourceName: source,
           path,
           task,
+          schema,
+          schemaName,
         });
 
         trace.recordSubcall(subcallNode);
         trace.recordToolCall({
           tool: "run_subcall",
-          args: { source, path, task },
+          args: subcallArgs,
           result: subcallNode.answer,
           durationMs: subcallNode.durationMs,
         });
@@ -180,6 +192,18 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
       },
     }),
   } as const;
+}
+
+function resolveSubcallSchema(
+  schemas: Record<string, ZodTypeAny> | undefined,
+  name: string,
+): ZodTypeAny {
+  const schema = schemas?.[name];
+  if (!schema) {
+    const available = Object.keys(schemas ?? {}).join(", ");
+    throw new Error(`Unknown subcall schema: "${name}". Available schemas: ${available}`);
+  }
+  return schema;
 }
 
 // ---------------------------------------------------------------------------

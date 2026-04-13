@@ -1,5 +1,7 @@
-import { generateText } from "ai";
+import { generateText, Output } from "ai";
 import type { LanguageModel } from "ai";
+import type { ZodTypeAny } from "zod";
+import safeStableStringify from "safe-stable-stringify";
 import type { SourceAdapter } from "./sources/interface.ts";
 import type { SubcallTraceNode, TokenUsage } from "./types.ts";
 import { makeSubcallNode } from "./trace.ts";
@@ -19,6 +21,10 @@ export interface SubcallOptions {
   path: string;
   /** The specific sub-task to accomplish. */
   task: string;
+  /** Optional schema for structured output. */
+  schema?: ZodTypeAny;
+  /** Optional schema name for trace labeling. */
+  schemaName?: string;
 }
 
 /**
@@ -37,7 +43,7 @@ export interface SubcallOptions {
  * @internal
  */
 export async function runSubcall(opts: SubcallOptions): Promise<SubcallTraceNode> {
-  const { subModel, adapter, sourceName, path, task } = opts;
+  const { subModel, adapter, sourceName, path, task, schema, schemaName } = opts;
 
   const startMs = Date.now();
 
@@ -58,7 +64,7 @@ export async function runSubcall(opts: SubcallOptions): Promise<SubcallTraceNode
   const content = contentParts.join("\n\n");
 
   // Step 3: Focused model call
-  const result = await generateText({
+  const basePrompt = {
     model: subModel,
     system: [
       "You are a focused analysis assistant.",
@@ -68,7 +74,7 @@ export async function runSubcall(opts: SubcallOptions): Promise<SubcallTraceNode
     ].join(" "),
     messages: [
       {
-        role: "user",
+        role: "user" as const,
         content: [
           `Source: ${sourceName} (path: ${path || "root"})`,
           ``,
@@ -79,7 +85,33 @@ export async function runSubcall(opts: SubcallOptions): Promise<SubcallTraceNode
         ].join("\n"),
       },
     ],
-  });
+  };
+
+  if (schema) {
+    const result = await generateText({
+      ...basePrompt,
+      output: Output.object({ schema, name: schemaName }),
+    });
+
+    const usage: TokenUsage = {
+      inputTokens: result.usage.inputTokens ?? 0,
+      outputTokens: result.usage.outputTokens ?? 0,
+      totalTokens: (result.usage.inputTokens ?? 0) + (result.usage.outputTokens ?? 0),
+    };
+
+    return makeSubcallNode({
+      source: sourceName,
+      path,
+      task,
+      answer: safeStableStringify(result.output) ?? "",
+      structured: result.output,
+      schemaName,
+      usage,
+      startMs,
+    });
+  }
+
+  const result = await generateText(basePrompt);
 
   const usage: TokenUsage = {
     inputTokens: result.usage.inputTokens ?? 0,

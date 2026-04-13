@@ -97,6 +97,8 @@ export function makeSubcallNode(opts: {
   path: string;
   task: string;
   answer: string;
+  structured?: unknown;
+  schemaName?: string;
   usage: TokenUsage;
   startMs: number;
 }): SubcallTraceNode {
@@ -106,6 +108,8 @@ export function makeSubcallNode(opts: {
     path: opts.path,
     task: opts.task,
     answer: opts.answer,
+    structured: opts.structured,
+    schemaName: opts.schemaName,
     usage: opts.usage,
     durationMs: Date.now() - opts.startMs,
   };

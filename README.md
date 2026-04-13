@@ -55,7 +55,8 @@ The root agent receives your task and descriptions of what's
 available — not the data itself. It navigates sources via tool
 calls, reading only what it needs. When a sub-task requires deeper
 focus, it spawns a scoped sub-call against a slice of context using
-the cheaper subModel. The trace captures every decision.
+the cheaper subModel. Sub-calls can also target registered schemas
+for typed structured output. The trace captures every decision.
 
 ## Sources
 
