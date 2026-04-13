@@ -88,15 +88,14 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
 
         onToolCall?.({ tool: "list_source", args: { source, path } });
 
-        let items: string[];
+        let result: string;
         try {
-          items = await adapter.list(path);
+          const items = await adapter.list(path);
+          result = items.length === 0 ? "(empty)" : items.join("\n");
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return `[Error listing ${source}/${path ?? ""}: ${message}]`;
+          result = `[Error listing ${source}/${path ?? ""}: ${message}]`;
         }
-
-        const result = items.length === 0 ? "(empty)" : items.join("\n");
 
         trace.recordToolCall({
           tool: "list_source",
