@@ -18,6 +18,7 @@
  *     codebase: source.fs("./src"),
  *     docs: source.files(["./docs/auth.md"]),
  *     history: source.conversation(messages),
+ *     notes: source.text("Deployment notes"),
  *   },
  * })
  *
@@ -33,8 +34,20 @@ export type { Runtime } from "./runtime.ts";
 // Source adapters
 export { source } from "./sources/index.ts";
 export type { SourceAdapter } from "./sources/index.ts";
-export { FsAdapter, FilesAdapter, ConversationAdapter } from "./sources/index.ts";
-export type { FsAdapterOptions, ConversationMessage } from "./sources/index.ts";
+export {
+  FsAdapter,
+  FilesAdapter,
+  ConversationAdapter,
+  TextAdapter,
+  McpAdapter,
+} from "./sources/index.ts";
+export type {
+  FsAdapterOptions,
+  ConversationMessage,
+  McpLikeClient,
+  McpSourceOptions,
+  ToolDefinition,
+} from "./sources/index.ts";
 
 // Types
 export type {
