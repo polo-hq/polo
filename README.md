@@ -14,151 +14,63 @@
 
 # Budge
 
-**The context assembly layer for AI agents.** Budge is a typed framework for assembling model context windows. It resolves your sources, builds the dependency graph, and returns traces alongside every result.
+The orchestration runtime for agents.
 
----
+Agents fail on long tasks because they're given everything at once.
+Budge inverts this — your agent navigates context like a librarian,
+not a reader. The model decides what to read and when. You never
+touch a context window.
 
-## The problem
+## Install
 
-Eval tools measure what comes out of the model. Nothing measures what goes in.
-Braintrust and LangSmith start at the model call. Everything before it is invisible to them: which sources you included, which history you compacted, which tools you loaded. When a score moves you see the output that changed, not the assembly decisions that caused it.
-Budge covers the input side.
+pnpm add @budge/core @ai-sdk/anthropic
 
----
+## Usage
 
-## Where Budge sits
+import { createRuntime, source } from "@budge/core"
+import { anthropic } from "@ai-sdk/anthropic"
 
-```
-[your data sources] → budge → [model call] → [your eval tool]
- transcripts, docs,   assembly   your prompt,   output scoring
- rag, tools, history  + tracing  your model
-```
+const runtime = createRuntime({
+model: anthropic("claude-sonnet-4-6"),
+subModel: anthropic("claude-haiku-4-5"),
+})
 
-Budge starts where your data sources are and ends where the model call begins. It does not wrap the model, touch your prompt, or score outputs. That boundary is intentional. It makes Budge composable with every framework and eval tool you already use.
+const result = await runtime.run({
+task: "what does the auth module do and how could it be improved",
+sources: {
+codebase: source.fs("./src"),
+docs: source.files(["./README.md"]),
+}
+})
 
----
+console.log(result.answer)
+console.log(result.trace)
 
-## What it does
+## How it works
 
-You declare a context window as a graph of typed sources. Budge resolves them in dependency order, assembles the context, and returns traces alongside every result.
+The root agent receives your task and descriptions of what's
+available — not the data itself. It navigates sources via tool
+calls, reading only what it needs. When a sub-task requires deeper
+focus, it spawns a scoped sub-call against a slice of context using
+the cheaper subModel. The trace captures every decision.
 
-```ts
-import { createBudge } from "@budge/core";
-import { z } from "zod";
+## Sources
 
-const budge = createBudge();
+source.fs(rootPath) — local filesystem
+source.files(paths[]) — explicit file list  
+source.conversation(msgs[]) — message history
 
-const noteGeneration = budge.window({
-  id: "note-generation",
-  input: z.object({
-    patientId: z.string(),
-    transcript: z.string(),
-  }),
-  sources: ({ source }) => {
-    const patient = source.value(z.object({ patientId: z.string() }), {
-      async resolve({ input }) {
-        return getPatient(input.patientId);
-      },
-    });
+The source adapter interface is public. Build your own.
 
-    const priorNote = source.value(
-      z.object({}),
-      { patient },
-      {
-        async resolve({ patient }) {
-          return getPriorNote(patient.id);
-        },
-      },
-    );
+## Trace
 
-    return {
-      transcript: source.fromInput("transcript"),
-      patient,
-      priorNote,
-      history: source.history(z.object({ patientId: z.string() }), {
-        async resolve({ input }) {
-          return getMessages(input.patientId);
-        },
-        filter: { excludeKinds: ["tool_call", "reasoning"] },
-        compaction: { strategy: "sliding", maxMessages: 12 },
-      }),
-      tools: source.tools({
-        mcp: mcpClient,
-      }),
-    };
-  },
-});
+result.trace gives you the full decomposition tree — which sources
+were read, tokens per call, sub-calls spawned, wall time.
 
-const { context, traces } = await noteGeneration.resolve({
-  input: { patientId: "pat_123", transcript: "Patient reports less pain." },
-});
+## Status
 
-// You own the prompt from here.
-// traces tells you exactly what was assembled and how long it took.
-```
+Early. API will change. Build with it anyway.
 
-Every `resolve` returns `traces` alongside `context`:
+## License
 
-```ts
-traces.sources; // per-source: kind, status, durationMs, estimatedTokens, contentLength
-// history: totalMessages, includedMessages, droppedMessages, droppedByKind
-// tools: totalTools, includedTools, toolNames, toolCollisions
-```
-
----
-
-## Source kinds
-
-| Kind                 | What it does                                                                         |
-| -------------------- | ------------------------------------------------------------------------------------ |
-| `source.value()`     | Resolves a single typed value. Supports dependencies on other sources.               |
-| `source.rag()`       | Resolves a ranked `Chunk[]` from a vector search or retrieval pipeline.              |
-| `source.history()`   | Resolves `Message[]` with filtering by kind and sliding window compaction.           |
-| `source.tools()`     | Resolves a `Record<string, ToolDefinition>` from static definitions and MCP clients. |
-| `source.fromInput()` | Passes a validated field from window input directly into context.                    |
-
-Sources declared outside a window are reusable across windows. Budge builds the dependency graph at window creation time and resolves sources in parallel waves.
-
----
-
-## What Budge does not do
-
-- Compose prompts
-- Wrap model clients
-- Score outputs
-- Own storage or persistence
-- Require a specific framework
-
-The boundary is the model call. Budge hands you `context` and `traces`. What you do with context is yours.
-
----
-
-## Packages
-
-| Package                  | Description                                                           |
-| ------------------------ | --------------------------------------------------------------------- |
-| `@budge/core`            | The core SDK — source assembly, tracing, and typed context resolution |
-| `examples/support-reply` | End-to-end example using value, rag, history, and tools sources       |
-
----
-
-## Budge Cloud
-
-The open-source SDK is the instrumentation layer. Budge Cloud is where the data becomes useful:
-
-- **input attribution across runs** which sources drove better outcomes, not just which runs scored higher
-- **causal analysis** treat source inclusions as experiments and measure their effect on output quality
-- **runtime budget** and **compaction tuning** from the dashboard, no redeploy required
-- **semantic tool selection** load only the tools relevant to the current task
-
-The SDK works standalone. Cloud is opt-in.
-
----
-
-## Development
-
-```bash
-pnpm install
-pnpm check
-pnpm test
-```
+MIT
