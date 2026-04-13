@@ -4,8 +4,8 @@
  * Runs the @budge/core runtime against this monorepo (or any directory).
  *
  * Usage:
- *   OPENAI_API_KEY=sk-... npx tsx examples/local/index.ts "what does the auth module do"
- *   OPENAI_API_KEY=sk-... npx tsx examples/local/index.ts --verbose
+ *   ANTHROPIC_API_KEY=sk-... npx tsx examples/local/index.ts "what does the auth module do"
+ *   ANTHROPIC_API_KEY=sk-... npx tsx examples/local/index.ts --verbose
  *
  * Flags:
  *   --verbose   Stream each tool call to stdout as it happens
@@ -64,7 +64,7 @@ if (verbose) {
 const result = await runtime.run({
   task,
   sources: {
-    codebase: source.fs("/tmp/nextjs/packages/next/src", {
+    codebase: source.fs("./", {
       // Scope to source files — skip build artifacts and lockfiles
       exclude: ["node_modules", ".git", "dist", ".next", ".turbo", "coverage", ".cache"],
     }),
