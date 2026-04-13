@@ -1,3 +1,4 @@
+import safeStableStringify from "safe-stable-stringify";
 import type { SourceAdapter } from "./interface.ts";
 
 /**
@@ -59,15 +60,17 @@ export class ConversationAdapter implements SourceAdapter {
       throw new Error(`No messages at address "${address}" (total: ${this.messages.length})`);
     }
 
-    return JSON.stringify(
-      selected.map((m, i) => ({
-        index: slice.start + i,
-        role: m.role,
-        content: m.content,
-        ...(m.createdAt ? { createdAt: m.createdAt.toISOString() } : {}),
-      })),
-      null,
-      2,
+    return (
+      safeStableStringify(
+        selected.map((m, i) => ({
+          index: slice.start + i,
+          role: m.role,
+          content: m.content,
+          ...(m.createdAt ? { createdAt: m.createdAt.toISOString() } : {}),
+        })),
+        null,
+        2,
+      ) ?? "[]"
     );
   }
 }

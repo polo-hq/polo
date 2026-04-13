@@ -12,7 +12,7 @@
  */
 
 import { anthropic } from "@ai-sdk/anthropic";
-import { createRuntime, source, type ToolCallEvent } from "../../packages/core/src/index.ts";
+import { createBudge, source, type ToolCallEvent } from "../../packages/core/src/index.ts";
 
 declare const process: { argv: string[] };
 
@@ -29,10 +29,10 @@ const task =
   "Summarize the main entry point and what this codebase does";
 
 // ---------------------------------------------------------------------------
-// Runtime
+// Budge
 // ---------------------------------------------------------------------------
 
-const runtime = createRuntime({
+const budge = createBudge({
   orchestrator: anthropic("claude-sonnet-4-6"),
   worker: anthropic("claude-haiku-4-5"),
 });
@@ -65,7 +65,7 @@ if (verbose) {
   console.log("─".repeat(60));
 }
 
-const result = await runtime.run({
+const context = await budge.prepare({
   task,
   sources: {
     codebase: source.fs("./", {
@@ -85,7 +85,10 @@ const result = await runtime.run({
 // ---------------------------------------------------------------------------
 
 console.log("\n─── answer " + "─".repeat(49));
-console.log(result.answer);
+console.log(context.answer);
+
+console.log("\n─── handoff " + "─".repeat(48));
+console.log(context.handoff);
 
 console.log("\n─── trace " + "─".repeat(50));
-console.log(JSON.stringify(result.trace, null, 2));
+console.log(JSON.stringify(context.trace, null, 2));

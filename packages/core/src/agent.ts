@@ -1,7 +1,7 @@
 import { generateText, hasToolCall, stepCountIs } from "ai";
 import type { LanguageModel } from "ai";
 import type { SourceAdapter } from "./sources/interface.ts";
-import type { RunOptions, RunFinishReason, TokenUsage } from "./types.ts";
+import type { PrepareOptions, RunFinishReason, TokenUsage } from "./types.ts";
 import { TraceBuilder } from "./trace.ts";
 import { buildTools } from "./tools.ts";
 
@@ -10,7 +10,7 @@ import { buildTools } from "./tools.ts";
  * @internal
  */
 export interface RunAgentOptions<S extends Record<string, SourceAdapter>> extends Pick<
-  RunOptions<S>,
+  PrepareOptions<S>,
   "task" | "sources" | "onToolCall" | "maxSteps" | "subcallSchemas"
 > {
   model: LanguageModel;

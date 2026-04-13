@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { z } from "zod";
 import { runAgent } from "../src/agent.ts";
 import * as agentModule from "../src/agent.ts";
-import { createRuntime } from "../src/runtime.ts";
+import { createBudge } from "../src/budge.ts";
+import * as handoffModule from "../src/handoff.ts";
 import { runSubcall } from "../src/subcall.ts";
 import { TraceBuilder } from "../src/trace.ts";
 import { buildTools } from "../src/tools.ts";
@@ -449,17 +450,19 @@ describe("schema propagation", () => {
     );
   });
 
-  it("forwards worker and concurrency from runtime.run into runAgent", async () => {
+  it("forwards worker and concurrency from budge.prepare into runAgent", async () => {
     const runAgentSpy = vi.spyOn(agentModule, "runAgent").mockResolvedValue({
       answer: "done",
       finishReason: "finish",
     });
-    const runtime = createRuntime({ orchestrator: model, worker: subModel, concurrency: 7 });
+    vi.spyOn(handoffModule, "buildHandoff").mockResolvedValue("briefing");
+
+    const budge = createBudge({ orchestrator: model, worker: subModel, concurrency: 7 });
     const subcallSchemas = {
       audit: z.object({ verdict: z.enum(["missing", "present"]) }),
     };
 
-    await runtime.run({
+    await budge.prepare({
       task: "audit fetch handling",
       sources: { codebase: makeAdapter() },
       subcallSchemas,

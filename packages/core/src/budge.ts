@@ -1,26 +1,27 @@
 import type { SourceAdapter } from "./sources/interface.ts";
-import type { RuntimeOptions, RunOptions, RuntimeResult } from "./types.ts";
+import type { BudgeOptions, PrepareOptions, PreparedContext } from "./types.ts";
+import { buildHandoff } from "./handoff.ts";
 import { TraceBuilder } from "./trace.ts";
 import { runAgent } from "./agent.ts";
 
 /**
- * A runtime instance. Create one with `createRuntime()` and reuse it
- * across multiple `run()` calls.
+ * A Budge instance. Create one with `createBudge()` and reuse it
+ * across multiple `prepare()` calls.
  */
-export interface Runtime {
+export interface Budge {
   /**
-   * Runs the agent on a task with access to the provided sources.
+   * Prepares context for a task with access to the provided sources.
    *
    * The agent navigates sources lazily — it calls `describe()`, `list()`,
    * and `read()` on your adapters as needed, and can spawn focused sub-calls
    * via `run_subcall` and `run_subcalls`. You never manage context windows.
    *
    * Type inference is automatic: the `sources` keys flow through to
-   * `result.trace.sourcesAccessed`, giving you typed keys without casting.
+   * `context.trace.sourcesAccessed`, giving you typed keys without casting.
    *
    * @example
    * ```ts
-   * const result = await runtime.run({
+   * const context = await budge.prepare({
    *   task: "summarize the auth module",
    *   sources: {
    *     codebase: source.fs("./src"),
@@ -28,31 +29,34 @@ export interface Runtime {
    *   },
    * })
    *
-   * result.answer                       // string
-   * result.trace.sourcesAccessed        // { codebase?: string[], docs?: string[] }
-   * result.trace.tree                   // RootTraceNode
+   * context.answer                      // string
+   * context.handoff                     // string
+   * context.trace.sourcesAccessed       // { codebase?: string[], docs?: string[] }
+   * context.trace.tree                  // RootTraceNode
    * ```
    */
-  run<S extends Record<string, SourceAdapter>>(options: RunOptions<S>): Promise<RuntimeResult<S>>;
+  prepare<S extends Record<string, SourceAdapter>>(
+    options: PrepareOptions<S>,
+  ): Promise<PreparedContext<S>>;
 }
 
 /**
- * Creates a `@budge/core` runtime.
+ * Creates a `@budge/core` Budge instance.
  *
  * Pass a primary model for the root agent and a sub-model for focused
  * sub-calls. Both accept any AI SDK-compatible `LanguageModel`.
  *
  * @example
  * ```ts
- * import { createRuntime, source } from "@budge/core"
+ * import { createBudge, source } from "@budge/core"
  * import { openai } from "@ai-sdk/openai"
  *
- * const runtime = createRuntime({
+ * const budge = createBudge({
  *   orchestrator: openai("gpt-5.4"),
  *   worker: openai("gpt-5.4-mini"),
  * })
  *
- * const result = await runtime.run({
+ * const context = await budge.prepare({
  *   task: "refactor the auth module to use JWT",
  *   sources: {
  *     codebase: source.fs("./src"),
@@ -60,19 +64,20 @@ export interface Runtime {
  *   },
  * })
  *
- * console.log(result.answer)
- * console.log(result.trace)
+ * console.log(context.answer)
+ * console.log(context.handoff)
+ * console.log(context.trace)
  * ```
  */
-export function createRuntime(options: RuntimeOptions): Runtime {
+export function createBudge(options: BudgeOptions): Budge {
   const { orchestrator, worker, concurrency = 5 } = options;
   const normalizedConcurrency = Math.max(1, Math.floor(concurrency));
 
   return {
-    async run<S extends Record<string, SourceAdapter>>(
-      runOptions: RunOptions<S>,
-    ): Promise<RuntimeResult<S>> {
-      const { task, sources, onToolCall, maxSteps, subcallSchemas } = runOptions;
+    async prepare<S extends Record<string, SourceAdapter>>(
+      prepareOptions: PrepareOptions<S>,
+    ): Promise<PreparedContext<S>> {
+      const { task, sources, onToolCall, maxSteps, subcallSchemas } = prepareOptions;
 
       const trace = new TraceBuilder<S>(task);
 
@@ -88,10 +93,21 @@ export function createRuntime(options: RuntimeOptions): Runtime {
         trace,
       });
 
-      return {
+      const builtTrace = trace.build();
+
+      const handoff = await buildHandoff({
+        task,
         answer,
+        trace: builtTrace,
+        worker,
+      });
+
+      return {
+        task,
+        answer,
+        handoff,
         finishReason,
-        trace: trace.build(),
+        trace: builtTrace,
       };
     },
   };

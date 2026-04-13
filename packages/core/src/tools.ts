@@ -136,7 +136,7 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
         schemaName: z
           .string()
           .optional()
-          .describe("Optional structured output schema name registered on runtime.run()"),
+          .describe("Optional structured output schema name registered on budge.prepare()"),
       }),
       execute: async ({ source, path, task, schemaName }) => {
         const adapter = resolveSource(sources, source);
@@ -191,7 +191,7 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
               schemaName: z
                 .string()
                 .optional()
-                .describe("Optional structured output schema name registered on runtime.run()"),
+                .describe("Optional structured output schema name registered on budge.prepare()"),
             }),
           )
           .min(1)

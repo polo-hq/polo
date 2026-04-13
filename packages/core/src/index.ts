@@ -4,15 +4,15 @@
  * ## Quick start
  *
  * ```ts
- * import { createRuntime, source } from "@budge/core"
+ * import { createBudge, source } from "@budge/core"
  * import { openai } from "@ai-sdk/openai"
  *
- * const runtime = createRuntime({
+ * const budge = createBudge({
  *   orchestrator: openai("gpt-5.4"),
  *   worker: openai("gpt-5.4-mini"),
  * })
  *
- * const result = await runtime.run({
+ * const context = await budge.prepare({
  *   task: "summarize the auth module and identify security concerns",
  *   sources: {
  *     codebase: source.fs("./src"),
@@ -22,14 +22,15 @@
  *   },
  * })
  *
- * console.log(result.answer)
- * console.log(result.trace)
+ * console.log(context.answer)
+ * console.log(context.handoff)
+ * console.log(context.trace)
  * ```
  */
 
-// Runtime
-export { createRuntime } from "./runtime.ts";
-export type { Runtime } from "./runtime.ts";
+// Budge
+export { createBudge } from "./budge.ts";
+export type { Budge } from "./budge.ts";
 
 // Source adapters
 export { source } from "./sources/index.ts";
@@ -51,10 +52,10 @@ export type {
 
 // Types
 export type {
-  RuntimeOptions,
-  RunOptions,
+  BudgeOptions,
+  PrepareOptions,
   RunFinishReason,
-  RuntimeResult,
+  PreparedContext,
   RuntimeTrace,
   TraceNode,
   RootTraceNode,

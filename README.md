@@ -1,23 +1,10 @@
-<p align="center">
-  <picture>
-    <source
-      media="(prefers-color-scheme: dark)"
-      srcset="./assets/wordmark-light.png"
-    />
-    <img
-      src="./assets/wordmark-dark.png"
-      alt="Budge logo"
-      width="240"
-    />
-  </picture>
-</p>
-
 # Budge
 
-The agent runtime that navigates your data.
+**Budge prepares context. Your agents act on it.**
 
-Most agent frameworks make you manage the context window. Budge gives that job to the model.
-Your agent navigates context like a librarian, not a reader. The model decides what to read and when. You never touch a context window.
+Most agent pipelines spend half their time figuring out what to read. Budge handles that so your agents don't have to.
+
+Give Budge a task and your data sources. It navigates, reads, and distills everything relevant into a prepared context your agent can act on immediately — no context window management, no prompt engineering, no re-reading the same files on every turn.
 
 ## Install
 
@@ -28,36 +15,52 @@ pnpm add @budge/core @ai-sdk/anthropic
 ## Usage
 
 ```ts
-import { createRuntime, source } from "@budge/core";
+import { createBudge, source } from "@budge/core";
 import { anthropic } from "@ai-sdk/anthropic";
 
-const runtime = createRuntime({
+const budge = createBudge({
   orchestrator: anthropic("claude-sonnet-4-6"),
   worker: anthropic("claude-haiku-4-5"),
 });
 
-const result = await runtime.run({
-  task: "what does the auth module do and how could it be improved",
+const context = await budge.prepare({
+  task: "find all fetch calls missing error handling",
   sources: {
     codebase: source.fs("./src"),
-    docs: source.files(["./README.md"]),
-    notes: source.text("Prioritize authentication flows and deployment risks."),
+    history: source.conversation(messages),
   },
 });
 
-console.log(result.answer);
-console.log(result.trace);
+context.answer; // narrative synthesis for humans
+context.handoff; // compressed briefing for action agents
+context.trace; // full provenance of every decision
+```
+
+## Drop it into your stack
+
+```ts
+// AI SDK chat route
+const context = await budge.prepare({
+  task: userMessage,
+  sources: {
+    codebase: source.fs("./src"),
+    history: source.conversation(messages),
+  },
+});
+
+return streamText({
+  model: anthropic("claude-sonnet-4-6"),
+  system: context.handoff,
+  messages: pruneMessages({
+    messages: await convertToModelMessages(messages),
+    toolCalls: "before-last-2-messages",
+  }),
+}).toDataStreamResponse();
 ```
 
 ## How it works
 
-The root agent receives your task and descriptions of what's
-available — not the data itself. It navigates sources via tool
-calls, reading only what it needs. When a sub-task requires deeper
-focus, it spawns a scoped sub-call against a slice of context using
-the cheaper worker model. Independent sub-tasks can be batched with
-`run_subcalls` and a bounded concurrency limit. Sub-calls can also target registered schemas
-for typed structured output. The trace captures every decision.
+The orchestrator receives your task and descriptions of what's available — not the data itself. It navigates sources via tool calls, reading only what it needs. When a sub-task requires deeper focus, it spawns a scoped worker call against a slice of context. The trace captures every decision. When the run completes, Budge distills everything into a handoff — a compressed briefing your action agent can consume directly.
 
 ## Sources
 
@@ -71,8 +74,7 @@ The source adapter interface is public. Build your own.
 
 ## Trace
 
-result.trace gives you the full decomposition tree — which sources
-were read, tokens per call, sub-calls spawned, wall time.
+`context.trace` gives you the full decomposition tree — which sources were read, tokens per call, worker calls spawned, wall time. `context.handoff` gives the action agent exactly what it needs to act without re-reading anything.
 
 ## Status
 

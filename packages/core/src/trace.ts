@@ -12,7 +12,7 @@ import type {
 // ---------------------------------------------------------------------------
 
 /**
- * Mutable trace accumulator used during a `runtime.run()` call.
+ * Mutable trace accumulator used during a `budge.prepare()` call.
  * Sealed into an immutable `RuntimeTrace` by `buildTrace()`.
  *
  * @internal
