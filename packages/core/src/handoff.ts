@@ -49,7 +49,7 @@ export async function buildHandoff(opts: {
   return result.text.trim() || buildFallbackHandoff({ task, answer, trace });
 }
 
-function buildHandoffInput(opts: {
+export function buildHandoffInput(opts: {
   task: string;
   answer: string;
   trace: RuntimeTrace<any>;
@@ -95,7 +95,7 @@ function buildHandoffInput(opts: {
   ].join("\n");
 }
 
-function buildFallbackHandoff(opts: {
+export function buildFallbackHandoff(opts: {
   task: string;
   answer: string;
   trace: RuntimeTrace<any>;

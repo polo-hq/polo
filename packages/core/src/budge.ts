@@ -1,6 +1,6 @@
 import type { SourceAdapter } from "./sources/interface.ts";
 import type { BudgeOptions, PrepareOptions, PreparedContext } from "./types.ts";
-import { buildHandoff } from "./handoff.ts";
+import { buildHandoff, buildFallbackHandoff } from "./handoff.ts";
 import { TraceBuilder } from "./trace.ts";
 import { runAgent } from "./agent.ts";
 
@@ -95,17 +95,26 @@ export function createBudge(options: BudgeOptions): Budge {
 
       const builtTrace = trace.build();
 
-      const handoff = await buildHandoff({
-        task,
-        answer,
-        trace: builtTrace,
-        worker,
-      });
+      let handoff: string;
+      let handoffFailed = false;
+
+      try {
+        handoff = await buildHandoff({
+          task,
+          answer,
+          trace: builtTrace,
+          worker,
+        });
+      } catch {
+        handoff = buildFallbackHandoff({ task, answer, trace: builtTrace });
+        handoffFailed = true;
+      }
 
       return {
         task,
         answer,
         handoff,
+        handoffFailed,
         finishReason,
         trace: builtTrace,
       };
