@@ -4,7 +4,8 @@ import safeStableStringify from "safe-stable-stringify";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import * as agentModule from "../src/agent.ts";
 import { createBudge } from "../src/budge.ts";
-import { buildHandoff } from "../src/handoff.ts";
+import * as handoffModule from "../src/handoff.ts";
+import { buildFallbackHandoff, buildHandoff } from "../src/handoff.ts";
 import type { RuntimeTrace } from "../src/types.ts";
 
 vi.mock("ai", async () => {
@@ -257,5 +258,29 @@ describe("createBudge().prepare()", () => {
     expect(context.answer).toBe("Prepared auth analysis.");
     expect(context.handoff).toContain("# Context Prepared by Budge");
     expect(typeof context.handoff).toBe("string");
+    expect(context.handoffFailed).toBe(false);
+  });
+
+  it("sets handoffFailed and returns the fallback handoff when synthesis fails", async () => {
+    vi.spyOn(agentModule, "runAgent").mockResolvedValue({
+      answer: "Prepared auth analysis.",
+      finishReason: "finish",
+    });
+    vi.spyOn(handoffModule, "buildHandoff").mockRejectedValue(new Error("worker exploded"));
+
+    const budge = createBudge({ orchestrator, worker });
+    const context = await budge.prepare({
+      task: "Review auth flows",
+      sources: { codebase: makeAdapter() },
+    });
+
+    expect(context.handoff).toBe(
+      buildFallbackHandoff({
+        task: "Review auth flows",
+        answer: "Prepared auth analysis.",
+        trace: context.trace,
+      }),
+    );
+    expect(context.handoffFailed).toBe(true);
   });
 });

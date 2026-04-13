@@ -313,6 +313,6 @@ export interface PreparedContext<
   /** Full trace of everything that happened during the run. */
   trace: RuntimeTrace<S>;
 
-  /** Whether the handoff failed (e.g. the action agent could not be found). */
+  /** Whether the LLM call inside `buildHandoff` failed and the fallback was used instead. */
   handoffFailed: boolean;
 }
