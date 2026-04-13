@@ -79,7 +79,7 @@ export class FsAdapter implements SourceAdapter {
   async list(dirPath?: string): Promise<string[]> {
     const target = dirPath ? this.resolve(dirPath) : this.root;
 
-    const entries = fs.readdirSync(target, { withFileTypes: true });
+    const entries = await fs.promises.readdir(target, { withFileTypes: true });
     const results: string[] = [];
 
     for (const entry of entries) {
@@ -100,7 +100,7 @@ export class FsAdapter implements SourceAdapter {
 
   async read(filePath: string): Promise<string> {
     const absolute = this.resolve(filePath);
-    const stat = fs.statSync(absolute);
+    const stat = await fs.promises.stat(absolute);
 
     if (!stat.isFile()) {
       throw new Error(`Not a file: ${filePath}`);
@@ -114,7 +114,7 @@ export class FsAdapter implements SourceAdapter {
       ].join("\n");
     }
 
-    return fs.readFileSync(absolute, "utf8");
+    return fs.promises.readFile(absolute, "utf8");
   }
 
   /**
