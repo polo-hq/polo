@@ -71,7 +71,7 @@ export function createRuntime(options: RuntimeOptions): Runtime {
     async run<S extends Record<string, SourceAdapter>>(
       runOptions: RunOptions<S>,
     ): Promise<RuntimeResult<S>> {
-      const { task, sources, onToolCall, maxSteps } = runOptions;
+      const { task, sources, onToolCall, maxSteps, subcallSchemas } = runOptions;
 
       const trace = new TraceBuilder<S>(task);
 
@@ -82,6 +82,7 @@ export function createRuntime(options: RuntimeOptions): Runtime {
         sources,
         onToolCall,
         maxSteps,
+        subcallSchemas,
         trace,
       });
 

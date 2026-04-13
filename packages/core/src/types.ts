@@ -1,4 +1,5 @@
 import type { LanguageModel } from "ai";
+import type { ZodTypeAny } from "zod";
 import type { SourceAdapter } from "./sources/interface.ts";
 
 // ---------------------------------------------------------------------------
@@ -87,6 +88,12 @@ export interface RunOptions<
   onToolCall?: (event: ToolCallEvent) => void;
 
   /**
+   * Named schemas that `run_subcall` can reference via `schemaName` to request
+   * structured output from a focused sub-call.
+   */
+  subcallSchemas?: Record<string, ZodTypeAny>;
+
+  /**
    * Maximum number of agent steps before the loop is forcibly stopped.
    *
    * A "step" is one round-trip to the model. Default: 100.
@@ -120,7 +127,10 @@ export interface RunOptions<
 export type ToolCallEvent =
   | { tool: "read_source"; args: { source: string; path: string } }
   | { tool: "list_source"; args: { source: string; path?: string } }
-  | { tool: "run_subcall"; args: { source: string; path: string; task: string } }
+  | {
+      tool: "run_subcall";
+      args: { source: string; path: string; task: string; schemaName?: string };
+    }
   | { tool: "finish"; args: { answer: string } };
 
 // ---------------------------------------------------------------------------
@@ -192,6 +202,10 @@ export interface SubcallTraceNode {
   path: string;
   /** The answer the sub-call returned. */
   answer: string;
+  /** Parsed structured output when the sub-call used a schema. */
+  structured?: unknown;
+  /** Name of the schema used for this sub-call, when present. */
+  schemaName?: string;
   /** Token usage for this sub-call. */
   usage: TokenUsage;
   /** Wall time for this sub-call in milliseconds. */
