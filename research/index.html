@@ -365,7 +365,6 @@
         >
           <canvas id="chart2"></canvas>
         </div>
-        </div>
       </div>
     </section>
 
@@ -800,7 +799,7 @@
 
       const chart2Data = Array.from({ length: 120 }, (_, i) => ({
         turn: i + 1,
-        tokens: Math.round(8000 + (i * 950) + (i > 17 ? 8400 : 0))
+        tokens: Math.round(8000 + i * 950 + (i > 17 ? 8400 : 0)),
       }));
 
       const chart3Data = [
@@ -2282,12 +2281,12 @@
 
       // Chart 2 Plugin for annotations
       const chart2Annotations = {
-        id: 'chart2Annotations',
+        id: "chart2Annotations",
         beforeDraw: (chart) => {
           const ctx = chart.ctx;
           const xAxis = chart.scales.x;
           const yAxis = chart.scales.y;
-          
+
           const turn18 = 18;
           const turn36 = 36;
           const turn103 = 103;
@@ -2295,25 +2294,29 @@
           const x18 = xAxis.getPixelForValue(turn18);
           const x36 = xAxis.getPixelForValue(turn36);
           const x103 = xAxis.getPixelForValue(turn103);
-          
+
           ctx.save();
-          
+
           // Draw shaded region
           if (x36 && x103) {
-            ctx.fillStyle = 'rgba(255, 68, 68, 0.12)';
+            ctx.fillStyle = "rgba(255, 68, 68, 0.12)";
             ctx.fillRect(x36, yAxis.top, x103 - x36, yAxis.bottom - yAxis.top);
-            
+
             // Region label
-            ctx.fillStyle = '#ff4444';
+            ctx.fillStyle = "#ff4444";
             ctx.font = '11px "Space Mono", monospace';
-            ctx.textAlign = 'center';
-            ctx.fillText('8,400 stale tokens carried for 67 turns', x36 + (x103 - x36)/2, yAxis.top + 20);
+            ctx.textAlign = "center";
+            ctx.fillText(
+              "8,400 stale tokens carried for 67 turns",
+              x36 + (x103 - x36) / 2,
+              yAxis.top + 20,
+            );
           }
 
           // Draw lines
           ctx.beginPath();
           ctx.lineWidth = 2;
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
           ctx.setLineDash([5, 5]);
 
           if (x36) {
@@ -2325,92 +2328,94 @@
             ctx.moveTo(x103, yAxis.top);
             ctx.lineTo(x103, yAxis.bottom);
           }
-          
+
           ctx.stroke();
-          
+
           if (x36) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-            ctx.textAlign = 'center';
+            ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+            ctx.textAlign = "center";
             ctx.font = '11px "Space Mono", monospace';
-            ctx.fillText('file rewritten', x36, yAxis.top - 10);
+            ctx.fillText("file rewritten", x36, yAxis.top - 10);
           }
 
           if (x103) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-            ctx.textAlign = 'center';
+            ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+            ctx.textAlign = "center";
             ctx.font = '11px "Space Mono", monospace';
-            ctx.fillText('compaction fires', x103, yAxis.top - 10);
+            ctx.fillText("compaction fires", x103, yAxis.top - 10);
           }
 
           // Draw dot
           if (x18) {
-            const chart2DataObj = chart2Data.find(d => d.turn === 18);
-            if(chart2DataObj) {
-                const y18 = yAxis.getPixelForValue(chart2DataObj.tokens);
-                ctx.beginPath();
-                ctx.arc(x18, y18, 5, 0, 2 * Math.PI);
-                ctx.fillStyle = '#DBF3DC';
-                ctx.fill();
-                
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                ctx.textAlign = 'left';
-                ctx.font = '11px "Space Mono", monospace';
-                ctx.fillText("read_file('src/index.ts') +8,400 tokens", x18 + 10, y18 + 4);
+            const chart2DataObj = chart2Data.find((d) => d.turn === 18);
+            if (chart2DataObj) {
+              const y18 = yAxis.getPixelForValue(chart2DataObj.tokens);
+              ctx.beginPath();
+              ctx.arc(x18, y18, 5, 0, 2 * Math.PI);
+              ctx.fillStyle = "#DBF3DC";
+              ctx.fill();
+
+              ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+              ctx.textAlign = "left";
+              ctx.font = '11px "Space Mono", monospace';
+              ctx.fillText("read_file('src/index.ts') +8,400 tokens", x18 + 10, y18 + 4);
             }
           }
 
           ctx.restore();
-        }
+        },
       };
 
       // Initialize Chart 2
-      new Chart(document.getElementById('chart2'), {
-        type: 'line',
+      new Chart(document.getElementById("chart2"), {
+        type: "line",
         data: {
-          datasets: [{
-            data: chart2Data.map(d => ({x: d.turn, y: d.tokens})),
-            borderColor: '#2D8A4F',
-            borderWidth: 2,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            fill: false,
-            tension: 0.1
-          }]
+          datasets: [
+            {
+              data: chart2Data.map((d) => ({ x: d.turn, y: d.tokens })),
+              borderColor: "#2D8A4F",
+              borderWidth: 2,
+              pointRadius: 0,
+              pointHoverRadius: 4,
+              fill: false,
+              tension: 0.1,
+            },
+          ],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           layout: {
             padding: {
-              top: 30
-            }
+              top: 30,
+            },
           },
           plugins: {
             legend: { display: false },
             tooltip: {
               callbacks: {
-                label: (ctx) => `${ctx.raw.y.toLocaleString()} tokens`
-              }
-            }
+                label: (ctx) => `${ctx.raw.y.toLocaleString()} tokens`,
+              },
+            },
           },
           scales: {
             x: {
-              type: 'linear',
-              title: { display: true, text: 'Turn Number' },
-              grid: { color: 'rgba(255, 255, 255, 0.04)' }
+              type: "linear",
+              title: { display: true, text: "Turn Number" },
+              grid: { color: "rgba(255, 255, 255, 0.04)" },
             },
             y: {
-              title: { display: true, text: 'Tokens' },
-              grid: { color: 'rgba(255, 255, 255, 0.04)' },
+              title: { display: true, text: "Tokens" },
+              grid: { color: "rgba(255, 255, 255, 0.04)" },
               ticks: {
-                callback: (value) => value / 1000 + 'k'
+                callback: (value) => value / 1000 + "k",
               },
               min: 0,
-              max: 130000
-            }
-          }
+              max: 130000,
+            },
+          },
         },
-        plugins: [chart2Annotations]
+        plugins: [chart2Annotations],
       });
 
       // Chart 3 Plugin for compaction lines

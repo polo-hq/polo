@@ -3,26 +3,27 @@ import type { ZodType } from "zod";
 import type { SourceAdapter } from "./sources/interface.ts";
 
 // ---------------------------------------------------------------------------
-// Runtime configuration
+// Budge configuration
 // ---------------------------------------------------------------------------
 
 /**
- * Options for creating a runtime instance.
+ * Options for creating a Budge instance.
  *
  * Both `orchestrator` and `worker` accept any AI SDK-compatible model provider,
  * keeping @budge/core decoupled from any specific provider.
  *
  * @example
  * ```ts
+ * import { createBudge } from "@budge/core"
  * import { openai } from "@ai-sdk/openai"
  *
- * const runtime = createRuntime({
+ * const budge = createBudge({
  *   orchestrator: openai("gpt-5.4"),
  *   worker: openai("gpt-5.4-mini"),
  * })
  * ```
  */
-export interface RuntimeOptions {
+export interface BudgeOptions {
   /**
    * The primary model used for the root agent loop.
    * Should be a capable, instruction-following model.
@@ -48,12 +49,12 @@ export interface RuntimeOptions {
 // ---------------------------------------------------------------------------
 
 /**
- * Options passed to `runtime.run()`.
+ * Options passed to `budge.prepare()`.
  *
  * @typeParam S - The sources map type. Inferred from the `sources` argument —
  *               you never need to specify this manually.
  */
-export interface RunOptions<
+export interface PrepareOptions<
   S extends Record<string, SourceAdapter> = Record<string, SourceAdapter>,
 > {
   /**
@@ -192,7 +193,7 @@ export type TraceNode = RootTraceNode | SubcallTraceNode;
  */
 export interface RootTraceNode {
   type: "root";
-  /** The task given to the runtime. */
+  /** The task given to Budge. */
   task: string;
   /** Token usage for the root agent across all steps. */
   usage: TokenUsage;
@@ -230,9 +231,9 @@ export interface SubcallTraceNode {
 }
 
 /**
- * The full trace of a `runtime.run()` call.
+ * The full trace of a `budge.prepare()` call.
  *
- * @typeParam S - The sources map type passed to `run()`. Provides typed keys
+ * @typeParam S - The sources map type passed to `prepare()`. Provides typed keys
  *               in `sourcesAccessed` so you know exactly which of your named
  *               sources were read — no string guessing.
  */
@@ -245,7 +246,7 @@ export interface RuntimeTrace<
   /** Total tokens consumed across all model calls (root + all sub-calls). */
   totalTokens: number;
 
-  /** Total wall time from `run()` invocation to result, in milliseconds. */
+  /** Total wall time from `prepare()` invocation to result, in milliseconds. */
   durationMs: number;
 
   /**
@@ -273,21 +274,27 @@ export interface RuntimeTrace<
  * - `"finish"` — the agent called the `finish` tool and returned a complete answer.
  * - `"max_steps"` — the loop was stopped after reaching `maxSteps` without a
  *   `finish` call. `answer` contains the model's last produced text, which may
- *   be a partial response or an empty string. Raise `maxSteps` on `RunOptions`
+ *   be a partial response or an empty string. Raise `maxSteps` on `PrepareOptions`
  *   if you hit this in production.
  */
 export type RunFinishReason = "finish" | "max_steps";
 
 /**
- * The result of a `runtime.run()` call.
+ * The context Budge prepared for a downstream action agent.
  *
  * @typeParam S - The sources map type. Inferred automatically.
  */
-export interface RuntimeResult<
+export interface PreparedContext<
   S extends Record<string, SourceAdapter> = Record<string, SourceAdapter>,
 > {
+  /** The original task Budge prepared context for. */
+  task: string;
+
   /** The agent's final answer to the task. */
   answer: string;
+
+  /** Action-agent-ready briefing synthesized from the answer and trace. */
+  handoff: string;
 
   /**
    * How the agent loop ended.
@@ -296,7 +303,7 @@ export interface RuntimeResult<
    * truncated one:
    *
    * ```ts
-   * if (result.finishReason === "max_steps") {
+   * if (context.finishReason === "max_steps") {
    *   console.warn("Agent hit step limit — answer may be incomplete")
    * }
    * ```
@@ -305,4 +312,7 @@ export interface RuntimeResult<
 
   /** Full trace of everything that happened during the run. */
   trace: RuntimeTrace<S>;
+
+  /** Whether the LLM call inside `buildHandoff` failed and the fallback was used instead. */
+  handoffFailed: boolean;
 }
