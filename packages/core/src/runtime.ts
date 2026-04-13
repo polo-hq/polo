@@ -48,8 +48,8 @@ export interface Runtime {
  * import { openai } from "@ai-sdk/openai"
  *
  * const runtime = createRuntime({
- *   model: openai("gpt-4.1"),
- *   subModel: openai("gpt-4.1-mini"),
+ *   model: openai("gpt-5.4"),
+ *   subModel: openai("gpt-5.4-mini"),
  * })
  *
  * const result = await runtime.run({
