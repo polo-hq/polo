@@ -63,7 +63,7 @@ export async function runSubcall(opts: SubcallOptions): Promise<SubcallTraceNode
 
   const content = contentParts.join("\n\n");
 
-  // Step 3: Focused model call
+  // Step 2: Focused model call
   const basePrompt = {
     model: subModel,
     system: [
