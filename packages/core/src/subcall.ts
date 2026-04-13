@@ -1,6 +1,6 @@
 import { generateText, Output } from "ai";
 import type { LanguageModel } from "ai";
-import type { ZodTypeAny } from "zod";
+import type { ZodType } from "zod";
 import safeStableStringify from "safe-stable-stringify";
 import type { SourceAdapter } from "./sources/interface.ts";
 import type { SubcallTraceNode, TokenUsage } from "./types.ts";
@@ -22,7 +22,7 @@ export interface SubcallOptions {
   /** The specific sub-task to accomplish. */
   task: string;
   /** Optional schema for structured output. */
-  schema?: ZodTypeAny;
+  schema?: ZodType;
   /** Optional schema name for trace labeling. */
   schemaName?: string;
 }

@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import type { LanguageModel } from "ai";
-import type { ZodTypeAny } from "zod";
+import type { ZodType } from "zod";
 import type { SourceAdapter } from "./sources/interface.ts";
 import type { TraceBuilder } from "./trace.ts";
 import type { ToolCallEvent } from "./types.ts";
@@ -16,7 +16,7 @@ export interface BuildToolsOptions<S extends Record<string, SourceAdapter>> {
   subModel: LanguageModel;
   trace: TraceBuilder<S>;
   onToolCall?: (event: ToolCallEvent) => void;
-  subcallSchemas?: Record<string, ZodTypeAny>;
+  subcallSchemas?: Record<string, ZodType>;
 }
 
 /**
@@ -194,10 +194,7 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
   } as const;
 }
 
-function resolveSubcallSchema(
-  schemas: Record<string, ZodTypeAny> | undefined,
-  name: string,
-): ZodTypeAny {
+function resolveSubcallSchema(schemas: Record<string, ZodType> | undefined, name: string): ZodType {
   const schema = schemas?.[name];
   if (!schema) {
     const available = Object.keys(schemas ?? {}).join(", ");

@@ -1,5 +1,5 @@
 import type { LanguageModel } from "ai";
-import type { ZodTypeAny } from "zod";
+import type { ZodType } from "zod";
 import type { SourceAdapter } from "./sources/interface.ts";
 
 // ---------------------------------------------------------------------------
@@ -91,7 +91,7 @@ export interface RunOptions<
    * Named schemas that `run_subcall` can reference via `schemaName` to request
    * structured output from a focused sub-call.
    */
-  subcallSchemas?: Record<string, ZodTypeAny>;
+  subcallSchemas?: Record<string, ZodType>;
 
   /**
    * Maximum number of agent steps before the loop is forcibly stopped.
