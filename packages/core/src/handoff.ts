@@ -50,7 +50,7 @@ export async function buildHandoff(opts: {
     throw new Error("Worker returned empty handoff");
   }
 
-  return [opts.system ? `# System\n${opts.system}` : "", handoff].join("\n\n");
+  return [opts.system ? `# System\n${opts.system}` : null, handoff].filter(Boolean).join("\n\n");
 }
 
 function buildHandoffInput(opts: {
