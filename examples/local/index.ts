@@ -4,15 +4,15 @@
  * Runs the @budge/core runtime against this monorepo (or any directory).
  *
  * Usage:
- *   ANTHROPIC_API_KEY=sk-... npx tsx examples/local/index.ts "what does the auth module do"
- *   ANTHROPIC_API_KEY=sk-... npx tsx examples/local/index.ts --verbose
+ *   OPENAI_API_KEY=sk-... npx tsx examples/local/index.ts "what does the auth module do"
+ *   OPENAI_API_KEY=sk-... npx tsx examples/local/index.ts --verbose
  *
  * Flags:
  *   --verbose   Stream each tool call to stdout as it happens
  */
 
 import { createRuntime, source, type ToolCallEvent } from "@budge/core"
-import { anthropic } from "@ai-sdk/anthropic"
+import { openai } from "@ai-sdk/openai"
 
 // ---------------------------------------------------------------------------
 // Args
@@ -31,8 +31,8 @@ const task =
 // ---------------------------------------------------------------------------
 
 const runtime = createRuntime({
-  model: anthropic("claude-sonnet-4-6"),
-  subModel: anthropic("claude-haiku-4-5"),
+  model: openai("gpt-4.1"),
+  subModel: openai("gpt-4.1-mini"),
 })
 
 // ---------------------------------------------------------------------------

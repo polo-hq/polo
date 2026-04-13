@@ -36,7 +36,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@ai-sdk/anthropic": "^3.0.69",
+    "@ai-sdk/openai": "^3.0.52",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "bumpp": "^11.0.1",

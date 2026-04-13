@@ -13,11 +13,11 @@ import type { SourceAdapter } from "./sources/interface.ts";
  *
  * @example
  * ```ts
- * import { anthropic } from "@ai-sdk/anthropic"
+ * import { openai } from "@ai-sdk/openai"
  *
  * const runtime = createRuntime({
- *   model: anthropic("claude-sonnet-4-6"),
- *   subModel: anthropic("claude-haiku-4-5"),
+ *   model: openai("gpt-4.1"),
+ *   subModel: openai("gpt-4.1-mini"),
  * })
  * ```
  */
