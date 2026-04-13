@@ -41,6 +41,7 @@ const result = await runtime.run({
   sources: {
     codebase: source.fs("./src"),
     docs: source.files(["./README.md"]),
+    notes: source.text("Prioritize authentication flows and deployment risks."),
   },
 });
 
@@ -58,9 +59,11 @@ the cheaper subModel. The trace captures every decision.
 
 ## Sources
 
-source.fs(rootPath) — local filesystem
-source.files(paths[]) — explicit file list  
-source.conversation(msgs[]) — message history
+- `source.fs(rootPath)` — local filesystem
+- `source.files(paths[])` — explicit file list
+- `source.conversation(msgs[])` — message history
+- `source.text(str)` — inline text blob
+- `source.mcp(client, options?)` — any MCP server: databases, APIs, GitHub, Notion, and more
 
 The source adapter interface is public. Build your own.
 
