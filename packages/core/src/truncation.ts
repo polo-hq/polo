@@ -11,6 +11,9 @@ export const DEFAULT_LIMITS = {
   SUBCALL_MAX_BYTES: 30 * 1024,
 } as const;
 
+const MIDDLE_LINE_MARKER = "[... truncated middle ...]";
+const MIDDLE_BYTE_MARKERS = ["\n[... truncated middle ...]\n", "\n[...]\n", "[...]"] as const;
+
 export interface TruncateOptions {
   maxLines?: number;
   maxBytes?: number;
@@ -75,7 +78,7 @@ export class Truncator {
       const byteLimited = truncateByBytes(preview, Math.max(0, options.maxBytes), direction);
       if (byteLimited) {
         preview = byteLimited.content;
-        removed.push({ unit: "bytes", count: previousByteCount - byteLength(preview) });
+        removed.push({ unit: "bytes", count: previousByteCount - byteLimited.keptByteCount });
       }
     }
 
@@ -164,7 +167,7 @@ function buildHint(
 ): string {
   const saved = overflowPath ? ` Full content saved to ${overflowPath}.` : "";
   const tip = hasSubcalls
-    ? " Tip: use run_subcall with this path to have a worker analyze the full content without polluting your context."
+    ? " Tip: use run_subcall on the original source path to have a worker analyze the full content without polluting your context."
     : " Tip: re-run with a narrower path or smaller offset.";
   const notices = lineClampNotice ? `\n\n${lineClampNotice}` : "";
 
@@ -233,7 +236,7 @@ function truncateByLines(
     const head = lines.slice(0, headCount);
     const tail = tailCount === 0 ? [] : lines.slice(lines.length - tailCount);
     return {
-      content: [...head, ...tail].join("\n"),
+      content: [...head, MIDDLE_LINE_MARKER, ...tail].join("\n"),
       keptLineCount: head.length + tail.length,
     };
   }
@@ -246,29 +249,46 @@ function truncateByBytes(
   text: string,
   maxBytes: number,
   direction: NonNullable<TruncateOptions["direction"]>,
-): { content: string } | undefined {
+): { content: string; keptByteCount: number } | undefined {
   if (byteLength(text) <= maxBytes) {
     return undefined;
   }
 
   if (maxBytes === 0) {
-    return { content: "" };
+    return { content: "", keptByteCount: 0 };
   }
 
   if (direction === "tail") {
-    return { content: fitSuffix(text, maxBytes) };
+    const content = fitSuffix(text, maxBytes);
+    return { content, keptByteCount: byteLength(content) };
   }
 
   if (direction === "middle") {
-    const prefixBudget = Math.ceil(maxBytes / 2);
+    const marker = pickMiddleByteMarker(maxBytes);
+    if (!marker) {
+      const content = fitPrefix(text, maxBytes);
+      return { content, keptByteCount: byteLength(content) };
+    }
+
+    const markerBytes = byteLength(marker);
+    const contentBudget = Math.max(0, maxBytes - markerBytes);
+    const prefixBudget = Math.ceil(contentBudget / 2);
+    const suffixBudget = Math.floor(contentBudget / 2);
     const prefixLength = fitPrefixLength(text, prefixBudget);
     const prefix = text.slice(0, prefixLength);
-    const remainingBudget = Math.max(0, maxBytes - byteLength(prefix));
-    const suffix = fitSuffix(text.slice(prefixLength), remainingBudget);
-    return { content: `${prefix}${suffix}` };
+    const suffix = fitSuffix(text.slice(prefixLength), suffixBudget);
+    return {
+      content: `${prefix}${marker}${suffix}`,
+      keptByteCount: byteLength(prefix) + byteLength(suffix),
+    };
   }
 
-  return { content: fitPrefix(text, maxBytes) };
+  const content = fitPrefix(text, maxBytes);
+  return { content, keptByteCount: byteLength(content) };
+}
+
+function pickMiddleByteMarker(maxBytes: number): string | undefined {
+  return MIDDLE_BYTE_MARKERS.find((marker) => byteLength(marker) <= maxBytes);
 }
 
 function fitPrefix(text: string, maxBytes: number): string {

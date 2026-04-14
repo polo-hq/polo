@@ -87,7 +87,18 @@ describe("Truncator", () => {
     const result = await truncator.apply(text, { maxLines: 4, direction: "middle" }, context());
 
     expect(result.truncated).toBe(true);
-    expect(preview(result.content)).toBe("start\nkeep\nout\nfinish");
+    expect(preview(result.content)).toBe("start\nkeep\n[... truncated middle ...]\nout\nfinish");
+  });
+
+  it("marks the cut point for middle byte truncation", async () => {
+    const truncator = new Truncator({ overflowDir: makeTempDir() });
+    const text = `start-${"x".repeat(64)}-finish`;
+
+    const result = await truncator.apply(text, { maxBytes: 24, direction: "middle" }, context());
+
+    expect(result.truncated).toBe(true);
+    expect(preview(result.content)).toContain("[...]");
+    expect(byteLength(preview(result.content))).toBeLessThanOrEqual(24);
   });
 
   it("varies the hint based on subcall availability", async () => {
@@ -101,7 +112,8 @@ describe("Truncator", () => {
       context(false, "read_source"),
     );
 
-    expect(withSubcalls.content).toContain("run_subcall");
+    expect(withSubcalls.content).toContain("run_subcall on the original source path");
+    expect(withSubcalls.content).not.toContain("with this path");
     expect(withoutSubcalls.content).not.toContain("run_subcall");
     expect(withoutSubcalls.content).toContain("smaller offset");
   });
@@ -207,7 +219,11 @@ describe("Truncator", () => {
 });
 
 function preview(content: string): string {
-  return content.split("\n\n[")[0] ?? content;
+  const lineNoticeIndex = content.indexOf("\n\n[Some lines exceeded");
+  const outputNoticeIndex = content.indexOf("\n\n[Output truncated.");
+  const indexes = [lineNoticeIndex, outputNoticeIndex].filter((index) => index >= 0);
+  const cutoff = indexes.length === 0 ? content.length : Math.min(...indexes);
+  return content.slice(0, cutoff);
 }
 
 function byteLength(text: string): number {
