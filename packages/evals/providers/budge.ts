@@ -44,23 +44,11 @@ export default class BudgeProvider {
       ? path.resolve(evalDir, config.root)
       : path.resolve(repoRoot, "packages/core");
 
-    // Import @budge/core — try built dist first, fall back to source
-    let createBudge: typeof CreateBudge;
-    let source: typeof Source;
-
-    try {
-      const mod = await import(
-        pathToFileURL(path.resolve(repoRoot, "packages/core/dist/index.mjs")).href
-      );
-      createBudge = mod.createBudge;
-      source = mod.source;
-    } catch {
-      const mod = await import(
-        pathToFileURL(path.resolve(repoRoot, "packages/core/src/index.ts")).href
-      );
-      createBudge = mod.createBudge;
-      source = mod.source;
-    }
+    const mod = await import(
+      pathToFileURL(path.resolve(repoRoot, "packages/core/src/index.ts")).href
+    );
+    const createBudge = mod.createBudge;
+    const source = mod.source;
 
     const orchestratorModel =
       config.orchestratorModel ?? process.env.BUDGE_ORCHESTRATOR ?? "claude-sonnet-4-6";
@@ -141,6 +129,7 @@ export default class BudgeProvider {
           toolCallCount,
           toolCallLog: toolCallLog,
           handoff: result.handoff,
+          handoffStructured: result.handoffStructured,
         },
       };
     } catch (err) {
