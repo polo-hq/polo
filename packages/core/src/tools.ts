@@ -65,36 +65,35 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
 
         onToolCall?.({ tool: "read_source", args: { source, path } });
 
-        let result: string;
+        let result: { content: string; truncated: boolean; overflowPath?: string };
         try {
-          result = await adapter.read(path);
+          const content = await adapter.read(path);
+          result = await truncator.apply(
+            content,
+            {
+              maxLines: DEFAULT_LIMITS.READ_MAX_LINES,
+              maxCharsPerLine: DEFAULT_LIMITS.READ_MAX_CHARS_PER_LINE,
+              maxBytes: DEFAULT_LIMITS.READ_MAX_BYTES,
+              direction: "head",
+            },
+            { toolName: "read_source", hasSubcalls },
+          );
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          result = `[Error reading ${source}/${path}: ${message}]`;
+          result = { content: `[Error reading ${source}/${path}: ${message}]`, truncated: false };
         }
-
-        const truncated = await truncator.apply(
-          result,
-          {
-            maxLines: DEFAULT_LIMITS.READ_MAX_LINES,
-            maxCharsPerLine: DEFAULT_LIMITS.READ_MAX_CHARS_PER_LINE,
-            maxBytes: DEFAULT_LIMITS.READ_MAX_BYTES,
-            direction: "head",
-          },
-          { toolName: "read_source", hasSubcalls },
-        );
 
         trace.recordRead(source, path);
         trace.recordToolCall({
           tool: "read_source",
           args: { source, path },
-          result: truncated.content,
+          result: result.content,
           durationMs: Date.now() - startMs,
-          truncated: truncated.truncated,
-          overflowPath: truncated.overflowPath,
+          truncated: result.truncated,
+          overflowPath: result.overflowPath,
         });
 
-        return truncated.content;
+        return result.content;
       },
     }),
 
@@ -129,11 +128,10 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
           );
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          result = await truncator.apply(
-            `[Error listing ${source}/${path ?? ""}: ${message}]`,
-            { direction: "head" },
-            { toolName: "list_source", hasSubcalls },
-          );
+          result = {
+            content: `[Error listing ${source}/${path ?? ""}: ${message}]`,
+            truncated: false,
+          };
         }
 
         trace.recordToolCall({
@@ -348,6 +346,20 @@ async function truncateSubcallNode(
   toolName: string,
   hasSubcalls: boolean,
 ): Promise<SubcallTraceNode> {
+  if (node.schemaName) {
+    const bytes = Buffer.byteLength(node.answer, "utf8");
+    if (bytes <= DEFAULT_LIMITS.SUBCALL_MAX_BYTES) {
+      return node;
+    }
+
+    return {
+      ...node,
+      answer: `[Structured subcall "${node.schemaName}" output exceeded ${DEFAULT_LIMITS.SUBCALL_MAX_BYTES} bytes (${bytes} bytes). Narrow the task or schema.]`,
+      truncated: true,
+      overflowPath: undefined,
+    };
+  }
+
   const truncated = await truncator.apply(
     node.answer,
     {

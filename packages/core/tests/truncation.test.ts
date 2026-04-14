@@ -216,6 +216,70 @@ describe("Truncator", () => {
       `[Some lines exceeded ${DEFAULT_LIMITS.READ_MAX_CHARS_PER_LINE} characters and were truncated.]`,
     );
   });
+
+  it("returns inline errors for read_source without truncation metadata", async () => {
+    const trace = new TraceBuilder("inspect read error");
+    const tools = buildTools({
+      sources: {
+        codebase: {
+          describe: () => "fixture source",
+          list: vi.fn(async () => []),
+          read: vi.fn(async () => {
+            throw new Error("boom");
+          }),
+        },
+      },
+      worker: {} as never,
+      trace,
+      truncator: new Truncator({ overflowDir: makeTempDir() }),
+    });
+
+    const result = await tools.read_source.execute!(
+      { source: "codebase", path: "missing.ts" },
+      {} as never,
+    );
+    const built = trace.build();
+
+    expect(result).toBe("[Error reading codebase/missing.ts: boom]");
+    expect(built.tree.toolCalls[0]).toMatchObject({
+      tool: "read_source",
+      result,
+      truncated: false,
+    });
+    expect(built.tree.toolCalls[0]?.overflowPath).toBeUndefined();
+  });
+
+  it("returns inline errors for list_source without truncation metadata", async () => {
+    const trace = new TraceBuilder("inspect list error");
+    const tools = buildTools({
+      sources: {
+        codebase: {
+          describe: () => "fixture source",
+          list: vi.fn(async () => {
+            throw new Error("boom");
+          }),
+          read: vi.fn(async () => "contents"),
+        },
+      },
+      worker: {} as never,
+      trace,
+      truncator: new Truncator({ overflowDir: makeTempDir() }),
+    });
+
+    const result = await tools.list_source.execute!(
+      { source: "codebase", path: "src" },
+      {} as never,
+    );
+    const built = trace.build();
+
+    expect(result).toBe("[Error listing codebase/src: boom]");
+    expect(built.tree.toolCalls[0]).toMatchObject({
+      tool: "list_source",
+      result,
+      truncated: false,
+    });
+    expect(built.tree.toolCalls[0]?.overflowPath).toBeUndefined();
+  });
 });
 
 function preview(content: string): string {

@@ -264,6 +264,58 @@ describe("buildTools().run_subcall", () => {
     });
   });
 
+  it("surfaces oversized structured subcall output as a diagnostic while preserving structured data", async () => {
+    const trace = new TraceBuilder("audit fetch handling");
+    const structured = {
+      verdict: "missing",
+      context: "x".repeat(DEFAULT_LIMITS.SUBCALL_MAX_BYTES + 2_048),
+    };
+
+    mockGenerateText.mockResolvedValue({
+      output: structured,
+      usage: { inputTokens: 2, outputTokens: 3 },
+    } as Awaited<ReturnType<typeof generateText>>);
+
+    const tools = buildTools({
+      sources: { codebase: makeAdapter() },
+      worker,
+      trace,
+      subcallSchemas: {
+        audit: z.object({
+          verdict: z.enum(["missing", "present"]),
+          context: z.string(),
+        }),
+      },
+    });
+
+    const result = await tools.run_subcall.execute!(
+      {
+        source: "codebase",
+        path: "src/auth.ts",
+        task: "audit fetch handling",
+        schemaName: "audit",
+      },
+      {} as never,
+    );
+    const built = trace.build();
+    const structuredNode = built.tree.children[0];
+
+    expect(result).toContain('Structured subcall "audit" output exceeded');
+    expect(result).toContain(`${JSON.stringify(structured).length} bytes`);
+    expect(structuredNode).toMatchObject({
+      schemaName: "audit",
+      structured,
+      truncated: true,
+    });
+    expect(structuredNode?.overflowPath).toBeUndefined();
+    expect(built.tree.toolCalls[0]).toMatchObject({
+      tool: "run_subcall",
+      result,
+      truncated: true,
+    });
+    expect(built.tree.toolCalls[0]?.overflowPath).toBeUndefined();
+  });
+
   it("throws a helpful error for unknown schema names", async () => {
     const tools = buildTools({
       sources: { codebase: makeAdapter() },
@@ -528,6 +580,79 @@ describe("buildTools().run_subcall", () => {
     });
     expect(truncatedChild?.overflowPath).toContain("run_subcalls[1]-");
     expect(result[1]?.answer).toContain(truncatedChild?.overflowPath ?? "");
+    expect(outerToolCall).toMatchObject({
+      tool: "run_subcalls",
+      truncated: false,
+    });
+    expect(outerToolCall?.overflowPath).toBeUndefined();
+  });
+
+  it("surfaces oversized structured batch output on the child node without truncating the outer batch", async () => {
+    const trace = new TraceBuilder("batch analysis");
+    const structured = {
+      verdict: "missing",
+      context: "x".repeat(DEFAULT_LIMITS.SUBCALL_MAX_BYTES + 2_048),
+    };
+
+    mockGenerateText.mockImplementation(async (args) => {
+      const content = args.messages?.[0]?.content;
+      const text = typeof content === "string" ? content : "";
+      const path = /path: ([^)]+)\)/.exec(text)?.[1] ?? "unknown";
+
+      return {
+        output:
+          path === "src/b.ts"
+            ? structured
+            : {
+                verdict: "present",
+                context: `analysis for ${path}`,
+              },
+        usage: { inputTokens: 1, outputTokens: 1 },
+      } as Awaited<ReturnType<typeof generateText>>;
+    });
+
+    const tools = buildTools({
+      sources: { codebase: makeAdapter() },
+      worker,
+      trace,
+      concurrency: 2,
+      subcallSchemas: {
+        audit: z.object({
+          verdict: z.enum(["missing", "present"]),
+          context: z.string(),
+        }),
+      },
+    });
+
+    const result = await tools.run_subcalls.execute!(
+      {
+        calls: [
+          { source: "codebase", path: "src/a.ts", task: "summarize a", schemaName: "audit" },
+          { source: "codebase", path: "src/b.ts", task: "summarize b", schemaName: "audit" },
+        ],
+      },
+      {} as never,
+    );
+    const built = trace.build();
+    const oversizedChild = built.tree.children.find((child) => child.path === "src/b.ts");
+    const outerToolCall = built.tree.toolCalls[0];
+
+    if (!Array.isArray(result)) {
+      throw new Error("Expected run_subcalls to return an array");
+    }
+
+    expect(JSON.parse(result[0]?.answer ?? "null")).toEqual({
+      verdict: "present",
+      context: "analysis for src/a.ts",
+    });
+    expect(result[1]?.answer).toContain('Structured subcall "audit" output exceeded');
+    expect(oversizedChild).toMatchObject({
+      path: "src/b.ts",
+      schemaName: "audit",
+      structured,
+      truncated: true,
+    });
+    expect(oversizedChild?.overflowPath).toBeUndefined();
     expect(outerToolCall).toMatchObject({
       tool: "run_subcalls",
       truncated: false,
