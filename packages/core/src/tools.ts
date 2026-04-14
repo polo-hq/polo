@@ -104,7 +104,7 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
         "Omit path to list the root of the source.",
         "Returns a list of navigable paths or identifiers.",
         "Use these paths with read_source, run_subcall, or run_subcalls.",
-        "Issue parallel calls in one response when reads are independent.",
+        "Issue parallel calls in one response when calls are independent.",
       ].join(" "),
       inputSchema: z.object({
         source: z.string().describe("The source name"),
