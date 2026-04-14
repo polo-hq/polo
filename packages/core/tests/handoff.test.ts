@@ -218,20 +218,6 @@ describe("buildHandoff()", () => {
     expect(handoff.markdown.trim().startsWith("{")).toBe(false);
   });
 
-  describe("buildFallbackHandoff()", () => {
-    it("does not start with a blank line when system is omitted", () => {
-      const handoff = buildFallbackHandoff({
-        task: "Review auth flows",
-        answer: "Prepared auth analysis.",
-        trace: makeTrace(),
-      });
-
-      expect(handoff.markdown.startsWith("\n")).toBe(false);
-      expect(handoff.markdown.startsWith("# Context")).toBe(true);
-      expect(handoff.structured.relevantSources.length).toBeGreaterThan(0);
-    });
-  });
-
   it("only includes meaningful tool calls in the worker prompt", async () => {
     mockGenerateText.mockImplementation(async (args) => {
       const prompt = promptText(args.messages?.[0]?.content);
@@ -256,11 +242,8 @@ describe("buildHandoff()", () => {
     });
   });
 
-  it("throws when worker output is malformed for the schema", async () => {
-    mockGenerateText.mockResolvedValue({
-      output: { goal: "Review auth flows" },
-      usage: { inputTokens: 3, outputTokens: 4 },
-    } as Awaited<ReturnType<typeof generateText>>);
+  it("throws when structured synthesis fails", async () => {
+    mockGenerateText.mockRejectedValueOnce(new Error("structured output validation failed"));
 
     await expect(
       buildHandoff({
@@ -282,6 +265,20 @@ describe("buildHandoff()", () => {
     expect(markdown).toContain(
       "High. Findings align with traced reads and focused subcall output.",
     );
+  });
+});
+
+describe("buildFallbackHandoff()", () => {
+  it("does not start with a blank line when system is omitted", () => {
+    const handoff = buildFallbackHandoff({
+      task: "Review auth flows",
+      answer: "Prepared auth analysis.",
+      trace: makeTrace(),
+    });
+
+    expect(handoff.markdown.startsWith("\n")).toBe(false);
+    expect(handoff.markdown.startsWith("# Context")).toBe(true);
+    expect(handoff.structured.relevantSources.length).toBeGreaterThan(0);
   });
 });
 
@@ -334,15 +331,12 @@ describe("createBudge().prepare()", () => {
     expect(context.handoffFailed).toBe(true);
   });
 
-  it("sets handoffFailed when the worker returns malformed structured output", async () => {
+  it("sets handoffFailed when structured synthesis fails", async () => {
     vi.spyOn(agentModule, "runAgent").mockResolvedValue({
       answer: "Prepared auth analysis.",
       finishReason: "finish",
     });
-    mockGenerateText.mockResolvedValue({
-      output: { goal: "Review auth flows" },
-      usage: { inputTokens: 4, outputTokens: 0 },
-    } as Awaited<ReturnType<typeof generateText>>);
+    mockGenerateText.mockRejectedValueOnce(new Error("structured output validation failed"));
 
     const budge = createBudge({ orchestrator, worker });
     const context = await budge.prepare({

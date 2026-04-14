@@ -85,7 +85,7 @@ export async function buildHandoff(opts: {
     output: Output.object({ schema: handoffStructuredSchema, name: "handoff_structured" }),
   });
 
-  const structured = handoffStructuredSchema.parse(result.output);
+  const structured = result.output;
   const markdown = opts.system
     ? `# System\n${opts.system}\n\n${renderHandoffMarkdown(structured)}`
     : renderHandoffMarkdown(structured);
