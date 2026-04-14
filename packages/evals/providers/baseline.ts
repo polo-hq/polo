@@ -130,7 +130,13 @@ export default class BaselineProvider {
 
     let llmModel: Parameters<typeof generateText>[0]["model"];
 
-    if (providerName === "anthropic") {
+    if (providerName === "openrouter") {
+      const { createOpenRouter } = await import("@openrouter/ai-sdk-provider");
+      const openrouter = createOpenRouter({
+        apiKey: process.env.OPENROUTER_API_KEY,
+      });
+      llmModel = openrouter.chat(model);
+    } else if (providerName === "anthropic") {
       const { anthropic } = await import("@ai-sdk/anthropic");
       llmModel = anthropic(model);
     } else {
@@ -149,6 +155,10 @@ export default class BaselineProvider {
 
       const wallMs = Date.now() - startMs;
       const totalTokens = (result.usage?.inputTokens ?? 0) + (result.usage?.outputTokens ?? 0);
+      const cachedTokens =
+        (result.usage as any)?.inputTokenDetails?.cacheReadTokens ??
+        (result.usage as any)?.cachedInputTokens ??
+        0;
 
       return {
         output: result.text,
@@ -157,9 +167,14 @@ export default class BaselineProvider {
           total: totalTokens,
           prompt: result.usage?.inputTokens ?? 0,
           completion: result.usage?.outputTokens ?? 0,
+          cached: cachedTokens,
+          completionDetails: {
+            cacheReadInputTokens: cachedTokens,
+          },
         },
         metadata: {
           totalTokens,
+          totalCachedTokens: cachedTokens,
           filesRead: files.length,
           totalBytes,
           durationMs: wallMs,

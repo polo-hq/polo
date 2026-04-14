@@ -71,7 +71,14 @@ export default class BudgeProvider {
     let orchestrator: Parameters<typeof CreateBudge>[0]["orchestrator"];
     let worker: Parameters<typeof CreateBudge>[0]["worker"];
 
-    if (providerName === "anthropic") {
+    if (providerName === "openrouter") {
+      const { createOpenRouter } = await import("@openrouter/ai-sdk-provider");
+      const openrouter = createOpenRouter({
+        apiKey: process.env.OPENROUTER_API_KEY,
+      });
+      orchestrator = openrouter.chat(orchestratorModel);
+      worker = openrouter.chat(workerModel);
+    } else if (providerName === "anthropic") {
       const { anthropic } = await import("@ai-sdk/anthropic");
       orchestrator = anthropic(orchestratorModel);
       worker = anthropic(workerModel);
@@ -118,9 +125,14 @@ export default class BudgeProvider {
           total: result.trace.totalTokens,
           prompt: result.trace.tree.usage.inputTokens,
           completion: result.trace.tree.usage.outputTokens,
+          cached: result.trace.totalCachedTokens,
+          completionDetails: {
+            cacheReadInputTokens: result.trace.totalCachedTokens,
+          },
         },
         metadata: {
           totalTokens: result.trace.totalTokens,
+          totalCachedTokens: result.trace.totalCachedTokens,
           totalSubcalls: result.trace.totalSubcalls,
           durationMs: wallMs,
           finishReason: result.finishReason,

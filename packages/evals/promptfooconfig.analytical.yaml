@@ -28,17 +28,17 @@ providers:
     config:
       root: "../../../packages/core"
       include: [".ts"]
-      orchestratorModel: "claude-sonnet-4-6"
-      workerModel: "claude-haiku-4-5-20251001"
-      provider: "anthropic"
+      orchestratorModel: "openai/gpt-5.4-mini"
+      workerModel: "openai/gpt-5.4-mini"
+      provider: "openrouter"
 
   - id: "file://providers/baseline.ts"
     label: "baseline (full-context-dump)"
     config:
       root: "../../../packages/core"
       include: [".ts"]
-      model: "claude-sonnet-4-6"
-      provider: "anthropic"
+      model: "openai/gpt-5.4-mini"
+      provider: "openrouter"
 
 prompts:
   - "{{task}}"
