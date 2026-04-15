@@ -142,17 +142,24 @@ export function buildSystemPrompt(
   const { hasAnyList, hasAnyRead, hasAnySearch } = capabilities;
   const hasSubcalls = hasAnyRead; // run_subcall requires read()
 
-  // "How to work" — numbered steps, only for tools that exist
+  // "How to work" — numbered steps, only for tools that exist.
+  // stepNum increments once per logical step so numbering is always contiguous
+  // regardless of which capabilities are present.
   const steps: string[] = [];
+  let stepNum = 0;
+  const n = () => `${++stepNum}.`;
+
   if (hasAnyList) {
-    steps.push("1. Use `list_source` to explore what's available in a source before reading.");
+    steps.push(
+      `${n()} Use \`list_source\` to explore what's available in a source before reading.`,
+    );
   }
   if (hasAnyRead) {
-    steps.push("2. Use `read_source` to read specific files or items.");
+    steps.push(`${n()} Use \`read_source\` to read specific files or items.`);
   }
   if (hasAnySearch) {
     steps.push(
-      "3. Use `search_source` to find relevant content by query when a source supports it.",
+      `${n()} Use \`search_source\` to find relevant content by query when a source supports it.`,
       "   Issue MULTIPLE narrow searches rather than one broad query for better results.",
       ...(hasSubcalls
         ? ["   Use chunk IDs returned by search with `run_subcall` for deeper analysis."]
@@ -161,15 +168,15 @@ export function buildSystemPrompt(
   }
   if (hasSubcalls) {
     steps.push(
-      "4. Use `run_subcall` when you need deeper analysis of a content slice —",
+      `${n()} Use \`run_subcall\` when you need deeper analysis of a content slice —`,
       "   it spawns a focused call with the content in full context.",
-      "5. Use `run_subcalls` when you need to analyze multiple independent paths simultaneously.",
+      `${n()} Use \`run_subcalls\` when you need to analyze multiple independent paths simultaneously.`,
       "   It runs focused calls in parallel and is much faster than sequential single sub-calls.",
     );
   }
   steps.push(
-    "6. Navigate lazily — only read what you need to answer the task.",
-    "7. Once you have enough information, call `finish` with your complete answer.",
+    `${n()} Navigate lazily — only read what you need to answer the task.`,
+    `${n()} Once you have enough information, call \`finish\` with your complete answer.`,
   );
 
   // Worked examples — only include examples for tools that are registered
