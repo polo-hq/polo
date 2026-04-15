@@ -32,7 +32,7 @@ export interface BuildToolsOptions<S extends Record<string, SourceAdapter>> {
 // ---------------------------------------------------------------------------
 
 const searchQuerySchema = z.object({
-  text: z.string().describe("Natural language description of what to find."),
+  text: z.string().min(1).describe("Natural language description of what to find."),
   k: z.number().int().min(1).max(50).default(5).describe("How many results to return."),
   filters: z
     .record(z.string(), z.unknown())
