@@ -36,11 +36,11 @@ describe("text() — below threshold", () => {
     expect("search" in adapter).toBe(false);
   });
 
-  it("describe() mentions token count and 'Read directly'", () => {
+  it("describe() mentions token count, read_source, and the required path", () => {
     const adapter = text("Short text.");
     const desc = adapter.describe();
     expect(desc).toMatch(/\d+ token/);
-    expect(desc).toContain("Read directly");
+    expect(desc).toContain('path "text"');
     expect(desc).toContain("read_source");
   });
 

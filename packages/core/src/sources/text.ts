@@ -110,7 +110,7 @@ export function text(content: string, options: TextSourceOptions = {}): SourceAd
     // Simple blob — expose only read()
     return {
       describe: () =>
-        `Inline text (~${tokenCount} token${tokenCount === 1 ? "" : "s"}). Read directly via read_source.`,
+        `Inline text (~${tokenCount} token${tokenCount === 1 ? "" : "s"}). Read via read_source with path "text".`,
 
       read: async (path: string) => {
         if (path !== "text") {
