@@ -37,7 +37,8 @@ const toolDescriptions = (() => {
 // ---------------------------------------------------------------------------
 
 describe("buildSystemPrompt()", () => {
-  const prompt = buildSystemPrompt("- **docs**: fixture source");
+  const fullCapabilities = { hasAnyList: true, hasAnyRead: true, hasAnySearch: true };
+  const prompt = buildSystemPrompt("- **docs**: fixture source", fullCapabilities);
 
   it("contains the word 'parallel'", () => {
     expect(prompt).toContain("parallel");
@@ -63,6 +64,62 @@ describe("buildSystemPrompt()", () => {
 
   it("includes the available sources", () => {
     expect(prompt).toContain("fixture source");
+  });
+});
+
+describe("buildSystemPrompt() — tools-only sources", () => {
+  const prompt = buildSystemPrompt("- **db**: tools-only source", {
+    hasAnyList: false,
+    hasAnyRead: false,
+    hasAnySearch: false,
+  });
+
+  it("does not mention list_source", () => {
+    expect(prompt).not.toContain("list_source");
+  });
+
+  it("does not mention read_source", () => {
+    expect(prompt).not.toContain("read_source");
+  });
+
+  it("does not mention search_source", () => {
+    expect(prompt).not.toContain("search_source");
+  });
+
+  it("does not mention run_subcall (requires read)", () => {
+    expect(prompt).not.toContain("run_subcall");
+  });
+
+  it("still includes finish instruction", () => {
+    expect(prompt).toContain("finish");
+  });
+
+  it("still includes the source description", () => {
+    expect(prompt).toContain("tools-only source");
+  });
+});
+
+describe("buildSystemPrompt() — search-only sources", () => {
+  const prompt = buildSystemPrompt("- **notes**: search-only source", {
+    hasAnyList: false,
+    hasAnyRead: false,
+    hasAnySearch: true,
+  });
+
+  it("mentions search_source", () => {
+    expect(prompt).toContain("search_source");
+  });
+
+  it("does not mention list_source", () => {
+    expect(prompt).not.toContain("list_source");
+  });
+
+  it("does not mention read_source", () => {
+    expect(prompt).not.toContain("read_source");
+  });
+
+  it("does not include the search+subcall example (no read = no subcalls)", () => {
+    expect(prompt).not.toContain("run_subcall");
   });
 });
 
