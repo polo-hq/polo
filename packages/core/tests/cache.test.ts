@@ -4,6 +4,34 @@ import { extractCachedTokens, withPromptCaching } from "../src/cache.ts";
 import type { LanguageModel } from "ai";
 
 // ---------------------------------------------------------------------------
+// Module-level mock: ToolLoopAgent (used by the integration tests at the
+// bottom of this file). Placed here so the file-wide scope is visible.
+// ---------------------------------------------------------------------------
+
+const { mockGenerate, agentInstances } = vi.hoisted(() => ({
+  mockGenerate: vi.fn(),
+  agentInstances: [] as Array<{ settings: Record<string, unknown> }>,
+}));
+
+vi.mock("ai", async () => {
+  const actual = await vi.importActual<typeof import("ai")>("ai");
+  return {
+    ...actual,
+    ToolLoopAgent: class MockToolLoopAgent {
+      constructor(public settings: Record<string, unknown>) {
+        agentInstances.push(this);
+      }
+      generate = mockGenerate;
+    },
+  };
+});
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  agentInstances.length = 0;
+});
+
+// ---------------------------------------------------------------------------
 // Helpers to invoke the middleware transform directly
 // ---------------------------------------------------------------------------
 
@@ -348,29 +376,6 @@ describe("extractCachedTokens", () => {
 // ---------------------------------------------------------------------------
 // Integration: createBudge wires withPromptCaching
 // ---------------------------------------------------------------------------
-
-const { mockGenerate, agentInstances } = vi.hoisted(() => ({
-  mockGenerate: vi.fn(),
-  agentInstances: [] as Array<{ settings: Record<string, unknown> }>,
-}));
-
-vi.mock("ai", async () => {
-  const actual = await vi.importActual<typeof import("ai")>("ai");
-  return {
-    ...actual,
-    ToolLoopAgent: class MockToolLoopAgent {
-      constructor(public settings: Record<string, unknown>) {
-        agentInstances.push(this);
-      }
-      generate = mockGenerate;
-    },
-  };
-});
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  agentInstances.length = 0;
-});
 
 describe("createBudge prompt caching integration", () => {
   function makeAdapter() {
