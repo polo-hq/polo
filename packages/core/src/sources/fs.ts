@@ -24,7 +24,7 @@ export interface FsAdapterOptions {
   exclude?: string[];
 
   /**
-   * Additional directory names to exclude, merged with the defaults
+   * Additional file or directory names to exclude, merged with the defaults
    * (or with `exclude` if provided). Unlike `exclude`, this never
    * replaces defaults — it only adds to them.
    *
@@ -173,7 +173,11 @@ export class FsAdapter implements SourceAdapter {
   }
 
   async search(query: SearchQuery): Promise<SearchMatch[]> {
-    const args: string[] = ["--json", "--max-count", "100"];
+    // --max-count limits matches *per file*. A low value (5) keeps the
+    // buffered stdout proportional to k files × 5 lines, avoiding hundreds of
+    // MB for broad queries on large repos. Five context lines per file is
+    // enough for the orchestrator to judge relevance.
+    const args: string[] = ["--json", "--max-count", "5"];
 
     if (query.filters?.fixed === true) {
       args.push("--fixed-strings");
@@ -307,6 +311,7 @@ function parseRipgrepJson(stdout: string, k: number): SearchMatch[] {
     if (parsed.type !== "match") continue;
 
     const filePath = parsed.data.path.text;
+    if (!filePath) continue; // non-UTF-8 path — skip rather than emit id: undefined
     const matchLine = parsed.data.lines.text.trimEnd();
     const lineNum = parsed.data.line_number;
 
