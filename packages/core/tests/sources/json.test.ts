@@ -1,0 +1,153 @@
+import { describe, expect, it } from "vite-plus/test";
+import { json } from "../../src/sources/text.ts";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const patient = {
+  id: 1,
+  first_name: "Alice",
+  last_name: "Smith",
+  dob: "1985-03-12",
+  medications: ["metformin", "lisinopril"],
+  allergies: ["penicillin"],
+};
+
+// ---------------------------------------------------------------------------
+// describe()
+// ---------------------------------------------------------------------------
+
+describe("source.json() — describe()", () => {
+  it("includes top-level keys", () => {
+    const adapter = json(patient);
+    const desc = adapter.describe();
+    expect(desc).toContain("id");
+    expect(desc).toContain("first_name");
+    expect(desc).toContain("medications");
+    expect(desc).toContain("allergies");
+  });
+
+  it("includes token count", () => {
+    const adapter = json(patient);
+    const desc = adapter.describe();
+    expect(desc).toMatch(/~\d+ token/);
+  });
+
+  it("includes 'JSON object' label", () => {
+    const adapter = json(patient);
+    const desc = adapter.describe();
+    expect(desc).toContain("JSON object");
+  });
+
+  it("handles arrays (no top-level keys)", () => {
+    const adapter = json([1, 2, 3]);
+    const desc = adapter.describe();
+    expect(desc).toContain("no top-level keys");
+  });
+
+  it("handles null", () => {
+    const adapter = json(null);
+    const desc = adapter.describe();
+    expect(desc).toContain("JSON object");
+  });
+
+  it("handles primitives", () => {
+    const adapter = json(42);
+    const desc = adapter.describe();
+    expect(desc).toContain("JSON object");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// read()
+// ---------------------------------------------------------------------------
+
+describe("source.json() — read()", () => {
+  it("returns pretty-printed JSON", async () => {
+    const adapter = json(patient);
+    const content = await adapter.read!("text");
+    const parsed = JSON.parse(content);
+    expect(parsed).toEqual(patient);
+    // Should be pretty-printed (has newlines)
+    expect(content).toContain("\n");
+  });
+
+  it("serializes nested structures", async () => {
+    const adapter = json({ a: { b: { c: 1 } } });
+    const content = await adapter.read!("text");
+    expect(JSON.parse(content)).toEqual({ a: { b: { c: 1 } } });
+  });
+
+  it("handles circular references without throwing", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const circular: any = { id: 1 };
+    circular.self = circular;
+    const adapter = json(circular);
+    // Should not throw — safe-stable-stringify handles circular refs
+    const content = await adapter.read!("text");
+    expect(content).toContain('"id"');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Delegation to source.text (chunking behavior)
+// ---------------------------------------------------------------------------
+
+describe("source.json() — chunking delegation", () => {
+  it("small objects: no list, no search", () => {
+    const adapter = json(patient);
+    expect("list" in adapter).toBe(false);
+    expect("search" in adapter).toBe(false);
+    expect("read" in adapter).toBe(true);
+  });
+
+  it("large objects: list, read, and search are available", () => {
+    // Build a large object that exceeds the default 4000-token threshold
+    const large: Record<string, string> = {};
+    for (let i = 0; i < 2000; i++) {
+      large[`key_${i}`] = `value_${i} `.repeat(5);
+    }
+    const adapter = json(large);
+    expect("list" in adapter).toBe(true);
+    expect("search" in adapter).toBe(true);
+    expect("read" in adapter).toBe(true);
+  });
+
+  it("describe() still includes access-pattern note when chunked", () => {
+    const large: Record<string, string> = {};
+    for (let i = 0; i < 2000; i++) {
+      large[`key_${i}`] = `value_${i} `.repeat(5);
+    }
+    const adapter = json(large, { chunkThreshold: 10 });
+    const desc = adapter.describe();
+    // Should mention both the JSON keys summary and the chunking access note
+    expect(desc).toContain("JSON object");
+    expect(desc).toContain("search_source");
+  });
+
+  it("chunk: false option forces blob mode even for large input", () => {
+    const large: Record<string, string> = {};
+    for (let i = 0; i < 2000; i++) {
+      large[`key_${i}`] = `value_${i} `.repeat(5);
+    }
+    const adapter = json(large, { chunk: false });
+    expect("list" in adapter).toBe(false);
+    expect("search" in adapter).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// source.json vs source.text equivalence
+// ---------------------------------------------------------------------------
+
+describe("source.json() — equivalence to source.text(stringify(value))", () => {
+  it("read() round-trips the value through JSON", async () => {
+    const adapter = json(patient);
+    const content = await adapter.read!("text");
+    // safe-stable-stringify sorts keys alphabetically (stable output for hashing),
+    // so we compare parsed values rather than raw strings.
+    expect(JSON.parse(content)).toEqual(patient);
+    expect(content).toContain("\n"); // pretty-printed
+  });
+});

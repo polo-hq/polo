@@ -12,7 +12,7 @@ import type { LanguageModel } from "ai";
 function makeAdapter() {
   return {
     describe: () => "fixture source",
-    list: async () => [],
+    list: async () => [] as string[],
     read: async (path: string) => `contents for ${path}`,
   };
 }
@@ -23,12 +23,12 @@ const toolDescriptions = (() => {
     worker: {} as LanguageModel,
     trace: new TraceBuilder("test"),
     truncator: new Truncator({ enabled: false }),
-  });
+  }) as Record<string, { description?: string }>;
   return {
-    read_source: tools.read_source.description ?? "",
-    list_source: tools.list_source.description ?? "",
-    run_subcall: tools.run_subcall.description ?? "",
-    run_subcalls: tools.run_subcalls.description ?? "",
+    read_source: tools.read_source?.description ?? "",
+    list_source: tools.list_source?.description ?? "",
+    run_subcall: tools.run_subcall?.description ?? "",
+    run_subcalls: tools.run_subcalls?.description ?? "",
   };
 })();
 

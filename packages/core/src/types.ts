@@ -1,6 +1,6 @@
 import type { LanguageModel } from "ai";
 import type { ZodType } from "zod";
-import type { SourceAdapter } from "./sources/interface.ts";
+import type { SearchQuery, SourceAdapter } from "./sources/interface.ts";
 
 // ---------------------------------------------------------------------------
 // Budge configuration
@@ -141,6 +141,7 @@ export interface PrepareOptions<
 export type ToolCallEvent =
   | { tool: "read_source"; args: { source: string; path: string } }
   | { tool: "list_source"; args: { source: string; path?: string } }
+  | { tool: "search_source"; args: { source: string; query: SearchQuery } }
   | {
       tool: "run_subcall";
       args: { source: string; path: string; task: string; schemaName?: string };

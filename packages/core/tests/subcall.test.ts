@@ -70,6 +70,23 @@ afterEach(() => {
 });
 
 describe("runSubcall()", () => {
+  it("throws a helpful error when adapter does not support read()", async () => {
+    const searchOnlyAdapter = {
+      describe: () => "search-only source",
+      search: async () => [],
+    };
+
+    await expect(
+      runSubcall({
+        worker,
+        adapter: searchOnlyAdapter,
+        sourceName: "precedent",
+        path: "chunk:0",
+        task: "summarize",
+      }),
+    ).rejects.toThrow(/does not support read/i);
+  });
+
   it("keeps the untyped path unchanged", async () => {
     mockGenerate.mockResolvedValue({
       text: "summary",
