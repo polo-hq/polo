@@ -302,6 +302,8 @@ function mergeSegments(segments: string[], maxTokens: number): string[] {
 interface Bm25Index {
   documents: string[];
   tokenizedDocs: string[][];
+  /** Maps document content → its index in `chunks`. First occurrence wins for duplicates. */
+  docIndexMap: Map<string, number>;
 }
 
 function tokenizeForBm25(text: string): string[] {
@@ -315,7 +317,13 @@ function tokenizeForBm25(text: string): string[] {
 function buildBm25Index(chunks: Chunk[]): Bm25Index {
   const documents = chunks.map((c) => c.content);
   const tokenizedDocs = documents.map(tokenizeForBm25);
-  return { documents, tokenizedDocs };
+  // First occurrence wins for duplicate content (e.g. identical overlap chunks):
+  // iterate in reverse so earlier indices overwrite later ones in the Map.
+  const docIndexMap = new Map<string, number>();
+  for (let i = documents.length - 1; i >= 0; i--) {
+    docIndexMap.set(documents[i]!, i);
+  }
+  return { documents, tokenizedDocs, docIndexMap };
 }
 
 async function bm25Search(
@@ -339,16 +347,14 @@ async function bm25Search(
     (a: BMDocument, b: BMDocument) => b.score - a.score,
   ) as BMDocument[];
 
-  return results
-    .filter((r) => r.score > 0)
-    .slice(0, query.k)
-    .map((r) => {
-      const idx = index.documents.indexOf(r.document);
-      const chunk = chunks[idx] ?? chunks[0]!;
-      return {
-        id: chunk.id,
-        content: chunk.content,
-        score: r.score,
-      };
-    });
+  const matches: SearchMatch[] = [];
+  for (const r of results) {
+    if (r.score <= 0) continue;
+    if (matches.length >= query.k) break;
+    const idx = index.docIndexMap.get(r.document) ?? -1;
+    if (idx === -1) continue; // library returned an unrecognised document — skip rather than misroute
+    const chunk = chunks[idx]!;
+    matches.push({ id: chunk.id, content: chunk.content, score: r.score });
+  }
+  return matches;
 }
