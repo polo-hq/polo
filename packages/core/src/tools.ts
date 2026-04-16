@@ -4,13 +4,13 @@ import { z } from "zod";
 import type { InferToolInput, InferToolOutput, LanguageModel, Tool } from "ai";
 import type { ZodType } from "zod";
 import type { SearchQuery, SourceAdapter } from "./sources/interface.ts";
-import type { TraceBuilder } from "./trace.ts";
 import type { SubcallTraceNode, ToolCallEvent } from "./types.ts";
-import { makeSubcallNode } from "./trace.ts";
+import { makeSubcallNode, traceAddRead, traceAddToolCall, traceAddSubcall } from "./trace.ts";
 import { runConcurrent, runSubcall } from "./subcall.ts";
 import { DEFAULT_LIMITS, Truncator } from "./truncation.ts";
+import type { Trace } from "./trace.ts";
+import { Effect, Ref } from "effect";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyTool = Tool<any, any>;
 
 /**
@@ -20,7 +20,7 @@ type AnyTool = Tool<any, any>;
 export interface BuildToolsOptions<S extends Record<string, SourceAdapter>> {
   sources: S;
   worker: LanguageModel;
-  trace: TraceBuilder<S>;
+  traceRef: Ref.Ref<Trace>;
   onToolCall?: (event: ToolCallEvent<S>) => void;
   subcallSchemas?: Record<string, ZodType>;
   concurrency?: number;
@@ -60,7 +60,7 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
   const {
     sources,
     worker,
-    trace,
+    traceRef,
     onToolCall,
     subcallSchemas,
     concurrency = 5,
@@ -73,6 +73,10 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
   const hasAnyList = sourceEntries.some(([, s]) => s.list != null);
   const hasAnyRead = sourceEntries.some(([, s]) => s.read != null);
   const hasAnySearch = sourceEntries.some(([, s]) => s.search != null);
+
+  // helper — atomically apply a pure update to the trace ref
+  const updateTrace = (fn: (t: Trace) => Trace): Promise<void> =>
+    Effect.runPromise(Ref.update(traceRef, fn));
 
   // ---------------------------------------------------------------------------
   // Dynamic descriptions — embed per-source capability notes
@@ -202,14 +206,16 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
           };
         }
 
-        trace.recordToolCall({
-          tool: "list_source",
-          args: { source, path },
-          result: result.content,
-          durationMs: Date.now() - startMs,
-          truncated: result.truncated,
-          overflowPath: result.overflowPath,
-        });
+        await updateTrace((t) =>
+          traceAddToolCall(t, {
+            tool: "list_source",
+            args: { source, path },
+            result: result.content,
+            durationMs: Date.now() - startMs,
+            truncated: result.truncated,
+            overflowPath: result.overflowPath,
+          }),
+        );
 
         return result.content;
       },
@@ -246,15 +252,16 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
           const message = err instanceof Error ? err.message : String(err);
           result = { content: `[Error reading ${source}/${path}: ${message}]`, truncated: false };
         }
-
-        trace.recordRead(source, path);
-        trace.recordToolCall({
-          tool: "read_source",
-          args: { source, path },
-          result: result.content,
-          durationMs: Date.now() - startMs,
-          truncated: result.truncated,
-          overflowPath: result.overflowPath,
+        await updateTrace((t) => {
+          const withRead = traceAddRead(t, source, path);
+          return traceAddToolCall(withRead, {
+            tool: "read_source",
+            args: { source, path },
+            result: result.content,
+            durationMs: Date.now() - startMs,
+            truncated: result.truncated,
+            overflowPath: result.overflowPath,
+          });
         });
 
         return result.content;
@@ -294,14 +301,16 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
           result = { content: `[Error searching ${source}: ${message}]`, truncated: false };
         }
 
-        trace.recordToolCall({
-          tool: "search_source",
-          args: { source, query: searchQuery },
-          result: result.content,
-          durationMs: Date.now() - startMs,
-          truncated: result.truncated,
-          overflowPath: result.overflowPath,
-        });
+        await updateTrace((t) =>
+          traceAddToolCall(t, {
+            tool: "search_source",
+            args: { source, query: searchQuery },
+            result: result.content,
+            durationMs: Date.now() - startMs,
+            truncated: result.truncated,
+            overflowPath: result.overflowPath,
+          }),
+        );
 
         return result.content;
       },
@@ -329,15 +338,16 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
             const startMs = Date.now();
             // Cast: qualifiedName is a string literal at runtime but the type system
             // can't statically verify it matches a specific ContributedToolEvents variant.
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             onToolCall?.({ tool: qualifiedName, args: args as Record<string, unknown> } as any);
             const result: InferToolOutput<typeof original> = await original.execute?.(args, ctx);
-            trace.recordToolCall({
-              tool: qualifiedName,
-              args: args as Record<string, unknown>,
-              result: typeof result === "string" ? result : (safeStableStringify(result) ?? ""),
-              durationMs: Date.now() - startMs,
-            });
+            await updateTrace((t) =>
+              traceAddToolCall(t, {
+                tool: qualifiedName,
+                args: args as Record<string, unknown>,
+                result: typeof result === "string" ? result : (safeStableStringify(result) ?? ""),
+                durationMs: Date.now() - startMs,
+              }),
+            );
             return result;
           },
         }) as AnyTool;
@@ -408,14 +418,16 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
           hasSubcalls,
         );
 
-        trace.recordSubcall(tracedSubcallNode);
-        trace.recordToolCall({
-          tool: "run_subcall",
-          args: subcallArgs,
-          result: tracedSubcallNode.answer,
-          durationMs: Date.now() - startMs,
-          truncated: tracedSubcallNode.truncated,
-          overflowPath: tracedSubcallNode.overflowPath,
+        await updateTrace((t) => {
+          const withSubcall = traceAddSubcall(t, tracedSubcallNode);
+          return traceAddToolCall(withSubcall, {
+            tool: "run_subcall",
+            args: subcallArgs,
+            result: tracedSubcallNode.answer,
+            durationMs: Date.now() - startMs,
+            truncated: tracedSubcallNode.truncated,
+            overflowPath: tracedSubcallNode.overflowPath,
+          });
         });
 
         return tracedSubcallNode.answer;
@@ -498,26 +510,35 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
           concurrency,
         );
 
-        for (const node of subcallNodes) {
-          trace.recordSubcall(node);
-        }
+        // record all subcalls atomically in one update
+        await updateTrace((t) => {
+          let next = t;
+          for (const node of subcallNodes) {
+            next = traceAddSubcall(next, node);
+          }
+          return traceAddToolCall(next, {
+            tool: "run_subcalls",
+            args: { calls },
+            result:
+              safeStableStringify(
+                subcallNodes.map((n) => ({
+                  source: n.source,
+                  path: n.path,
+                  task: n.task,
+                  answer: n.answer,
+                })),
+              ) ?? "[]",
+            durationMs: Date.now() - startMs,
+            truncated: false,
+          });
+        });
 
-        const result = subcallNodes.map((node) => ({
+        return subcallNodes.map((node) => ({
           source: node.source,
           path: node.path,
           task: node.task,
           answer: node.answer,
         }));
-
-        trace.recordToolCall({
-          tool: "run_subcalls",
-          args: { calls },
-          result: safeStableStringify(result) ?? "[]",
-          durationMs: Date.now() - startMs,
-          truncated: false,
-        });
-
-        return result;
       },
     }),
 
@@ -538,12 +559,15 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
       execute: async ({ answer }) => {
         const startMs = Date.now();
         onToolCall?.({ tool: "finish", args: { answer } });
-        trace.recordToolCall({
-          tool: "finish",
-          args: { answer },
-          result: answer,
-          durationMs: Date.now() - startMs,
-        });
+
+        await updateTrace((t) =>
+          traceAddToolCall(t, {
+            tool: "finish",
+            args: { answer },
+            result: answer,
+            durationMs: Date.now() - startMs,
+          }),
+        );
         return answer;
       },
     }),

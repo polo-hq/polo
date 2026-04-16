@@ -97,43 +97,6 @@ export function buildTrace<S extends Record<string, SourceAdapter>>(trace: Trace
 }
 
 // ---------------------------------------------------------------------------
-// TraceBuilder — thin shim over pure functions
-// Keeps agent.ts and tools.ts unchanged for now.
-// Replaced by Ref<Trace> when pipeline.ts is introduced.
-// ---------------------------------------------------------------------------
-
-/**
- * @internal
- */
-export class TraceBuilder<S extends Record<string, SourceAdapter>> {
-  private trace: Trace;
-
-  constructor(task: string) {
-    this.trace = emptyTrace(task);
-  }
-
-  recordToolCall(record: ToolCallRecord): void {
-    this.trace = traceAddToolCall(this.trace, record);
-  }
-
-  recordRead(source: string, path: string): void {
-    this.trace = traceAddRead(this.trace, source, path);
-  }
-
-  recordSubcall(node: SubcallTraceNode): void {
-    this.trace = traceAddSubcall(this.trace, node);
-  }
-
-  addRootUsage(usage: TokenUsage): void {
-    this.trace = traceAddRootUsage(this.trace, usage);
-  }
-
-  build(): RuntimeTrace<S> {
-    return buildTrace<S>(this.trace);
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Subcall node constructor (unchanged)
 // ---------------------------------------------------------------------------
 

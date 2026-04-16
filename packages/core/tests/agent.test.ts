@@ -1,7 +1,7 @@
 import type { LanguageModel } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { runAgent } from "../src/agent.ts";
-import { TraceBuilder } from "../src/trace.ts";
+import { makeTraceRef } from "./helpers.ts";
 import { Truncator } from "../src/truncation.ts";
 
 const { mockGenerate } = vi.hoisted(() => ({
@@ -52,7 +52,7 @@ describe("runAgent() finish reason classification", () => {
       task: "Summarize auth module",
       sources: { codebase: makeAdapter() },
       maxSteps: 60,
-      trace: new TraceBuilder("Summarize auth module"),
+      traceRef: await makeTraceRef("Summarize auth module"),
       concurrency: 5,
       truncator: new Truncator({ enabled: false }),
     });
@@ -74,7 +74,7 @@ describe("runAgent() finish reason classification", () => {
       task: "Summarize auth module",
       sources: { codebase: makeAdapter() },
       maxSteps: 2,
-      trace: new TraceBuilder("Summarize auth module"),
+      traceRef: await makeTraceRef("Summarize auth module"),
       concurrency: 5,
       truncator: new Truncator({ enabled: false }),
     });
@@ -96,7 +96,7 @@ describe("runAgent() finish reason classification", () => {
       task: "Summarize auth module",
       sources: { codebase: makeAdapter() },
       maxSteps: 60,
-      trace: new TraceBuilder("Summarize auth module"),
+      traceRef: await makeTraceRef("Summarize auth module"),
       concurrency: 5,
       truncator: new Truncator({ enabled: false }),
     });

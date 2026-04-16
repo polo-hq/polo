@@ -138,10 +138,8 @@ export interface PrepareOptions<
  * const db: SourceAdapter = { describe: () => "...", tools: () => ({ ... }) };
  * ```
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ContributedToolEvents<S extends Record<string, SourceAdapter>> = {
   [SourceName in keyof S & string]: S[SourceName] extends {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tools(): infer T extends Record<string, Tool<any, any>>;
   }
     ? {

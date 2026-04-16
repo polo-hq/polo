@@ -1,11 +1,11 @@
-import { Effect } from "effect";
+import { Effect, Ref } from "effect";
 import type { LanguageModel } from "ai";
 import { buildHandoff, buildFallbackHandoff } from "./handoff.ts";
 import { runAgent } from "./agent.ts";
-import type { TraceBuilder } from "./trace.ts";
 import type { SourceAdapter } from "./sources/interface.ts";
 import type { HandoffStructured, PrepareOptions, RunFinishReason, RuntimeTrace } from "./types.ts";
 import type { Truncator } from "./truncation.ts";
+import type { Trace } from "./trace.ts";
 
 // ---------------------------------------------------------------------------
 // Stage 1: classify
@@ -30,7 +30,7 @@ export function stageResearch<S extends Record<string, SourceAdapter>>(opts: {
   maxSteps: number | undefined;
   onToolCall: PrepareOptions<S>["onToolCall"];
   subcallSchemas: PrepareOptions<S>["subcallSchemas"];
-  trace: TraceBuilder<S>;
+  traceRef: Ref.Ref<Trace>;
   truncator: Truncator;
 }): Effect.Effect<{ answer: string; finishReason: RunFinishReason }, Error> {
   return Effect.tryPromise({
@@ -44,7 +44,7 @@ export function stageResearch<S extends Record<string, SourceAdapter>>(opts: {
         maxSteps: opts.maxSteps,
         subcallSchemas: opts.subcallSchemas,
         concurrency: opts.concurrency,
-        trace: opts.trace,
+        traceRef: opts.traceRef,
         truncator: opts.truncator,
       }),
     catch: (e) => (e instanceof Error ? e : new Error(String(e))),

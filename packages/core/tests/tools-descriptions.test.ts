@@ -1,9 +1,9 @@
+import type { LanguageModel } from "ai";
 import { describe, expect, it } from "vite-plus/test";
 import { buildSystemPrompt } from "../src/agent.ts";
 import { buildTools } from "../src/tools.ts";
-import { TraceBuilder } from "../src/trace.ts";
 import { Truncator } from "../src/truncation.ts";
-import type { LanguageModel } from "ai";
+import { makeTraceRef } from "./helpers.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -17,11 +17,11 @@ function makeAdapter() {
   };
 }
 
-const toolDescriptions = (() => {
+const toolDescriptions = (async () => {
   const tools = buildTools({
     sources: { docs: makeAdapter() },
     worker: {} as LanguageModel,
-    trace: new TraceBuilder("test"),
+    traceRef: await makeTraceRef("test"),
     truncator: new Truncator({ enabled: false }),
   }) as Record<string, { description?: string }>;
   return {
@@ -128,25 +128,25 @@ describe("buildSystemPrompt() — search-only sources", () => {
 // ---------------------------------------------------------------------------
 
 describe("read_source tool description", () => {
-  it("encourages parallel calls", () => {
-    const { read_source } = toolDescriptions;
+  it("encourages parallel calls", async () => {
+    const { read_source } = await toolDescriptions;
     expect(read_source).toContain("parallel");
   });
 
-  it("mentions independent reads", () => {
-    const { read_source } = toolDescriptions;
+  it("mentions independent reads", async () => {
+    const { read_source } = await toolDescriptions;
     expect(read_source).toContain("independent");
   });
 });
 
 describe("list_source tool description", () => {
-  it("encourages parallel calls", () => {
-    const { list_source } = toolDescriptions;
+  it("encourages parallel calls", async () => {
+    const { list_source } = await toolDescriptions;
     expect(list_source).toContain("parallel");
   });
 
-  it("mentions independent reads", () => {
-    const { list_source } = toolDescriptions;
+  it("mentions independent reads", async () => {
+    const { list_source } = await toolDescriptions;
     expect(list_source).toContain("independent");
   });
 });

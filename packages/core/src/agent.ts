@@ -3,7 +3,8 @@ import type { LanguageModel } from "ai";
 import type { SourceAdapter } from "./sources/interface.ts";
 import type { Truncator } from "./truncation.ts";
 import type { PrepareOptions, RunFinishReason, TokenUsage } from "./types.ts";
-import { TraceBuilder } from "./trace.ts";
+import { Ref, Effect } from "effect";
+import { type Trace, traceAddRootUsage } from "./trace.ts";
 import { buildTools } from "./tools.ts";
 import { extractCachedTokens } from "./cache.ts";
 
@@ -18,7 +19,7 @@ export interface RunAgentOptions<S extends Record<string, SourceAdapter>> extend
   orchestrator: LanguageModel;
   worker: LanguageModel;
   concurrency: number;
-  trace: TraceBuilder<S>;
+  traceRef: Ref.Ref<Trace>;
   truncator: Truncator;
 }
 
@@ -48,14 +49,14 @@ export async function runAgent<S extends Record<string, SourceAdapter>>(
     maxSteps = 100,
     subcallSchemas,
     concurrency,
-    trace,
+    traceRef,
     truncator,
   } = opts;
 
   const tools = buildTools({
     sources,
     worker,
-    trace,
+    traceRef,
     onToolCall,
     subcallSchemas,
     concurrency,
@@ -84,7 +85,9 @@ export async function runAgent<S extends Record<string, SourceAdapter>>(
         totalTokens: (step.usage.inputTokens ?? 0) + (step.usage.outputTokens ?? 0),
         cachedInputTokens,
       };
-      trace.addRootUsage(usage);
+
+      // fire-and-forget — completes before agent.generate() resolves
+      void Effect.runPromise(Ref.update(traceRef, (t) => traceAddRootUsage(t, usage)));
     },
   });
 

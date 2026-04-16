@@ -2,9 +2,11 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import { TraceBuilder } from "../src/trace.ts";
+import { makeTraceRef } from "./helpers.ts";
 import { buildTools } from "../src/tools.ts";
 import { DEFAULT_LIMITS, Truncator } from "../src/truncation.ts";
+import { Effect, Ref } from "effect";
+import { buildTrace } from "../src/trace.ts";
 
 const writeFileControl = vi.hoisted(() => ({ error: null as Error | null }));
 
@@ -202,7 +204,7 @@ describe("Truncator", () => {
         },
       },
       worker: {} as never,
-      trace: new TraceBuilder("inspect minified file"),
+      traceRef: await makeTraceRef("inspect minified file"),
       truncator: new Truncator({ overflowDir: makeTempDir() }),
     });
 
@@ -218,7 +220,7 @@ describe("Truncator", () => {
   });
 
   it("returns inline errors for read_source without truncation metadata", async () => {
-    const trace = new TraceBuilder("inspect read error");
+    const traceRef = await makeTraceRef("inspect read error");
     const tools = buildTools({
       sources: {
         codebase: {
@@ -230,7 +232,7 @@ describe("Truncator", () => {
         },
       },
       worker: {} as never,
-      trace,
+      traceRef,
       truncator: new Truncator({ overflowDir: makeTempDir() }),
     });
 
@@ -238,7 +240,7 @@ describe("Truncator", () => {
       { source: "codebase", path: "missing.ts" },
       {} as never,
     );
-    const built = trace.build();
+    const built = buildTrace(await Effect.runPromise(Ref.get(traceRef)));
 
     expect(result).toBe("[Error reading codebase/missing.ts: boom]");
     expect(built.tree.toolCalls[0]).toMatchObject({
@@ -250,7 +252,7 @@ describe("Truncator", () => {
   });
 
   it("returns inline errors for list_source without truncation metadata", async () => {
-    const trace = new TraceBuilder("inspect list error");
+    const traceRef = await makeTraceRef("inspect list error");
     const tools = buildTools({
       sources: {
         codebase: {
@@ -262,7 +264,7 @@ describe("Truncator", () => {
         },
       },
       worker: {} as never,
-      trace,
+      traceRef,
       truncator: new Truncator({ overflowDir: makeTempDir() }),
     });
 
@@ -270,7 +272,7 @@ describe("Truncator", () => {
       { source: "codebase", path: "src" },
       {} as never,
     );
-    const built = trace.build();
+    const built = buildTrace(await Effect.runPromise(Ref.get(traceRef)));
 
     expect(result).toBe("[Error listing codebase/src: boom]");
     expect(built.tree.toolCalls[0]).toMatchObject({

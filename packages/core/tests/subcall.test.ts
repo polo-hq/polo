@@ -1,18 +1,20 @@
+import type { LanguageModel } from "ai";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { LanguageModel } from "ai";
-import { beforeEach, afterEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { z } from "zod";
-import { runAgent } from "../src/agent.ts";
 import * as agentModule from "../src/agent.ts";
+import { runAgent } from "../src/agent.ts";
 import { createBudge } from "../src/budge.ts";
 import * as handoffModule from "../src/handoff.ts";
 import { runSubcall } from "../src/subcall.ts";
-import { TraceBuilder } from "../src/trace.ts";
-import { buildTools } from "../src/tools.ts";
 import * as toolsModule from "../src/tools.ts";
+import { buildTools } from "../src/tools.ts";
 import { DEFAULT_LIMITS, Truncator } from "../src/truncation.ts";
+import { Effect, Ref } from "effect";
+import { buildTrace } from "../src/trace.ts";
+import { makeTraceRef } from "./helpers.ts";
 
 const { mockGenerate, agentInstances } = vi.hoisted(() => ({
   mockGenerate: vi.fn(),
@@ -178,7 +180,7 @@ describe("buildTools().run_subcall", () => {
       context: "fetch('/api')",
     } as const;
     const events: Array<unknown> = [];
-    const trace = new TraceBuilder("audit fetch handling");
+    const traceRef = await makeTraceRef("audit fetch handling");
 
     mockGenerate.mockResolvedValue({
       output: structured,
@@ -188,7 +190,7 @@ describe("buildTools().run_subcall", () => {
     const tools = buildTools({
       sources: { codebase: makeAdapter() },
       worker,
-      trace,
+      traceRef,
       onToolCall: (event) => events.push(event),
       subcallSchemas: {
         audit: z.object({
@@ -208,7 +210,7 @@ describe("buildTools().run_subcall", () => {
       {} as never,
     );
 
-    const built = trace.build();
+    const built = buildTrace(await Effect.runPromise(Ref.get(traceRef)));
 
     expect(typeof result).toBe("string");
     if (typeof result !== "string") {
@@ -242,7 +244,7 @@ describe("buildTools().run_subcall", () => {
   });
 
   it("tail-truncates oversized subcall answers and records overflow metadata", async () => {
-    const trace = new TraceBuilder("audit fetch handling");
+    const traceRef = await makeTraceRef("audit fetch handling");
     const overflowDir = makeTempDir();
     const longAnswer = `${"prefix-"}${"x".repeat(DEFAULT_LIMITS.SUBCALL_MAX_BYTES + 1_024)}conclusion`;
 
@@ -254,7 +256,7 @@ describe("buildTools().run_subcall", () => {
     const tools = buildTools({
       sources: { codebase: makeAdapter() },
       worker,
-      trace,
+      traceRef,
       truncator: new Truncator({ overflowDir }),
     });
 
@@ -267,7 +269,7 @@ describe("buildTools().run_subcall", () => {
       {} as never,
     );
 
-    const built = trace.build();
+    const built = buildTrace(await Effect.runPromise(Ref.get(traceRef)));
 
     expect(typeof result).toBe("string");
     if (typeof result !== "string") {
@@ -291,7 +293,7 @@ describe("buildTools().run_subcall", () => {
   });
 
   it("surfaces oversized structured subcall output as a diagnostic while preserving structured data", async () => {
-    const trace = new TraceBuilder("audit fetch handling");
+    const traceRef = await makeTraceRef("audit fetch handling");
     const structured = {
       verdict: "missing",
       context: "x".repeat(DEFAULT_LIMITS.SUBCALL_MAX_BYTES + 2_048),
@@ -305,7 +307,7 @@ describe("buildTools().run_subcall", () => {
     const tools = buildTools({
       sources: { codebase: makeAdapter() },
       worker,
-      trace,
+      traceRef,
       subcallSchemas: {
         audit: z.object({
           verdict: z.enum(["missing", "present"]),
@@ -323,7 +325,7 @@ describe("buildTools().run_subcall", () => {
       },
       {} as never,
     );
-    const built = trace.build();
+    const built = buildTrace(await Effect.runPromise(Ref.get(traceRef)));
     const structuredNode = built.tree.children[0];
 
     expect(result).toContain('Structured subcall "audit" output exceeded');
@@ -346,7 +348,7 @@ describe("buildTools().run_subcall", () => {
     const tools = buildTools({
       sources: { codebase: makeAdapter() },
       worker,
-      trace: new TraceBuilder("audit fetch handling"),
+      traceRef: await makeTraceRef("audit fetch handling"),
       subcallSchemas: {
         audit: z.string(),
         summary: z.object({ title: z.string() }),
@@ -376,7 +378,7 @@ describe("buildTools().run_subcall", () => {
     const tools = buildTools({
       sources: { codebase: makeAdapter() },
       worker,
-      trace: new TraceBuilder("bad source"),
+      traceRef: await makeTraceRef("bad source"),
     });
 
     const result = await tools.run_subcall.execute!(
@@ -393,7 +395,7 @@ describe("buildTools().run_subcall", () => {
     let activeReads = 0;
     let maxActiveReads = 0;
     let activeReadsAtBatchStart = -1;
-    const trace = new TraceBuilder("batch analysis");
+    const traceRef = await makeTraceRef("batch analysis");
     const adapter = {
       describe: () => "fixture source",
       list: vi.fn(async () => []),
@@ -421,7 +423,7 @@ describe("buildTools().run_subcall", () => {
     const tools = buildTools({
       sources: { codebase: adapter },
       worker,
-      trace,
+      traceRef,
       concurrency: 2,
       onToolCall: (event) => {
         if (event.tool === "run_subcalls") {
@@ -456,7 +458,7 @@ describe("buildTools().run_subcall", () => {
     readGates[0]!.resolve();
 
     const result = await resultPromise;
-    const built = trace.build();
+    const built = buildTrace(await Effect.runPromise(Ref.get(traceRef)));
 
     expect(result).toEqual([
       {
@@ -492,7 +494,7 @@ describe("buildTools().run_subcall", () => {
     const tools = buildTools({
       sources: { codebase: adapter },
       worker,
-      trace: new TraceBuilder("audit fetch handling"),
+      traceRef: await makeTraceRef("audit fetch handling"),
       onToolCall: (event) => events.push(event),
       subcallSchemas: {
         audit: z.string(),
@@ -532,7 +534,7 @@ describe("buildTools().run_subcall", () => {
     const tools = buildTools({
       sources: { codebase: makeAdapter() },
       worker,
-      trace: new TraceBuilder("batch with bad source"),
+      traceRef: await makeTraceRef("batch with bad source"),
       concurrency: 2,
     });
 
@@ -556,7 +558,7 @@ describe("buildTools().run_subcall", () => {
   });
 
   it("degrades execution failures into per-result answers", async () => {
-    const trace = new TraceBuilder("batch analysis");
+    const traceRef = await makeTraceRef("batch analysis");
 
     mockGenerate.mockImplementation(async (args: { prompt?: unknown }) => {
       const messages = args.prompt;
@@ -575,7 +577,7 @@ describe("buildTools().run_subcall", () => {
     const tools = buildTools({
       sources: { codebase: makeAdapter() },
       worker,
-      trace,
+      traceRef,
       concurrency: 2,
     });
 
@@ -589,7 +591,7 @@ describe("buildTools().run_subcall", () => {
       {} as never,
     );
 
-    const built = trace.build();
+    const built = buildTrace(await Effect.runPromise(Ref.get(traceRef)));
 
     expect(result).toEqual([
       {
@@ -614,7 +616,7 @@ describe("buildTools().run_subcall", () => {
   });
 
   it("truncates oversized batch answers per subcall while keeping the outer batch intact", async () => {
-    const trace = new TraceBuilder("batch analysis");
+    const traceRef = await makeTraceRef("batch analysis");
     const overflowDir = makeTempDir();
     const longAnswer = `${"prefix-"}${"x".repeat(DEFAULT_LIMITS.SUBCALL_MAX_BYTES + 2_048)}conclusion-b`;
 
@@ -632,7 +634,7 @@ describe("buildTools().run_subcall", () => {
     const tools = buildTools({
       sources: { codebase: makeAdapter() },
       worker,
-      trace,
+      traceRef,
       concurrency: 2,
       truncator: new Truncator({ overflowDir }),
     });
@@ -647,7 +649,7 @@ describe("buildTools().run_subcall", () => {
       {} as never,
     );
 
-    const built = trace.build();
+    const built = buildTrace(await Effect.runPromise(Ref.get(traceRef)));
     const truncatedChild = built.tree.children.find((child) => child.path === "src/b.ts");
     const outerToolCall = built.tree.toolCalls[0];
 
@@ -673,7 +675,7 @@ describe("buildTools().run_subcall", () => {
   });
 
   it("surfaces oversized structured batch output on the child node without truncating the outer batch", async () => {
-    const trace = new TraceBuilder("batch analysis");
+    const traceRef = await makeTraceRef("batch analysis");
     const structured = {
       verdict: "missing",
       context: "x".repeat(DEFAULT_LIMITS.SUBCALL_MAX_BYTES + 2_048),
@@ -700,7 +702,7 @@ describe("buildTools().run_subcall", () => {
     const tools = buildTools({
       sources: { codebase: makeAdapter() },
       worker,
-      trace,
+      traceRef,
       concurrency: 2,
       subcallSchemas: {
         audit: z.object({
@@ -719,7 +721,7 @@ describe("buildTools().run_subcall", () => {
       },
       {} as never,
     );
-    const built = trace.build();
+    const built = buildTrace(await Effect.runPromise(Ref.get(traceRef)));
     const oversizedChild = built.tree.children.find((child) => child.path === "src/b.ts");
     const outerToolCall = built.tree.toolCalls[0];
 
@@ -750,7 +752,7 @@ describe("buildTools().run_subcall", () => {
 describe("schema propagation", () => {
   it("forwards subcallSchemas from runAgent into buildTools", async () => {
     const buildToolsSpy = vi.spyOn(toolsModule, "buildTools").mockReturnValue({} as never);
-    const trace = new TraceBuilder("audit fetch handling");
+    const traceRef = await makeTraceRef("audit fetch handling");
     const subcallSchemas = {
       audit: z.object({ verdict: z.enum(["missing", "present"]) }),
     };
@@ -768,7 +770,7 @@ describe("schema propagation", () => {
       task: "audit fetch handling",
       sources: { codebase: makeAdapter() },
       subcallSchemas,
-      trace,
+      traceRef,
       truncator: new Truncator({ enabled: false }),
     });
 

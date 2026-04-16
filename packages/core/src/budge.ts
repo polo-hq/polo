@@ -1,10 +1,10 @@
-import { Effect } from "effect";
+import { Effect, Ref, SubscriptionRef } from "effect";
 import type { SourceAdapter } from "./sources/interface.ts";
 import type { BudgeOptions, PrepareOptions, PreparedContext } from "./types.ts";
-import { TraceBuilder } from "./trace.ts";
 import { Truncator } from "./truncation.ts";
 import { withPromptCaching } from "./cache.ts";
 import { stageClassify, stageResearch, stageSynthesize, stageHandoff } from "./pipeline.ts";
+import { buildTrace, emptyTrace } from "./trace.ts";
 
 export interface Budge {
   prepare<S extends Record<string, SourceAdapter>>(
@@ -26,7 +26,8 @@ function runPipeline<S extends Record<string, SourceAdapter>>(
 
     void deps.truncator.cleanup().catch(() => {});
 
-    const trace = new TraceBuilder<S>(task);
+    // fresh SubscriptionRef per prepare() call — .changes available for future streaming
+    const traceRef = yield* SubscriptionRef.make(emptyTrace(task));
 
     yield* stageClassify();
 
@@ -39,11 +40,11 @@ function runPipeline<S extends Record<string, SourceAdapter>>(
       maxSteps,
       onToolCall,
       subcallSchemas,
-      trace,
+      traceRef,
       truncator: deps.truncator,
     });
 
-    const builtTrace = trace.build();
+    const builtTrace = buildTrace<S>(yield* Ref.get(traceRef));
 
     yield* stageSynthesize();
 
