@@ -1,25 +1,13 @@
 # yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
-# evals/promptfooconfig.yaml
-#
-# Budge vs. baseline (full-context-dump) evaluation suite.
-# Targets: packages/core (budge codebase to start)
-#
-# Run:
-#   cd evals
-#   npx promptfoo eval
-#   npx promptfoo view
 
 description: "Budge vs. full-context-dump baseline — packages/core"
 
-# ---------------------------------------------------------------------------
-# Providers
-# ---------------------------------------------------------------------------
 providers:
   - id: "file://providers/budge.ts"
     label: "budge"
     config:
       root: "../../../packages/core"
-      include: [".ts"]
+      include: ["**/*.ts"]
       orchestratorModel: "openai/gpt-5.4-mini"
       workerModel: "openai/gpt-5.4-nano"
       provider: "openrouter"
@@ -28,39 +16,24 @@ providers:
     label: "baseline (full-context-dump)"
     config:
       root: "../../../packages/core"
-      include: [".ts"]
+      include: ["**/*.ts"]
       model: "openai/gpt-5.4-mini"
       provider: "openrouter"
 
-# ---------------------------------------------------------------------------
-# Prompt
-# The providers receive this as the `prompt` argument.
-# {{task}} is substituted from each test case's vars.
-# ---------------------------------------------------------------------------
 prompts:
   - "{{task}}"
 
-# ---------------------------------------------------------------------------
-# Test cases
-#
-# Scoring strategy:
-#   - `contains` / `icontains`: deterministic ground truth you know is correct
-#   - `javascript`: custom logic (e.g. check token ratio)
-#   - `llm-rubric`: use sparingly, only where ground truth is fuzzy
-#
-# Each test has a `threshold` — fraction of assertions that must pass.
-# ---------------------------------------------------------------------------
 tests:
-  # --- Structural / navigational questions (high confidence ground truth) ---
-
-  - description: "Identify the five tools the agent has access to"
+  - description: "Identify the six root tools"
     vars:
-      task: "What are the five tools available to the root agent, and what does each one do?"
+      task: "What are the six built-in tools available to the root agent when a source supports list, read, and search, and what does each one do?"
     assert:
       - type: icontains
         value: "read_source"
       - type: icontains
         value: "list_source"
+      - type: icontains
+        value: "search_source"
       - type: icontains
         value: "run_subcall"
       - type: icontains
@@ -83,7 +56,7 @@ tests:
 
   - description: "Explain the two-phase handoff architecture"
     vars:
-      task: "Explain the two-phase architecture — what happens in the agent phase vs the handoff phase, and which files own each phase?"
+      task: "Explain the two-phase architecture: what happens in the agent phase vs the handoff phase, and which files own each phase?"
     assert:
       - type: icontains
         value: "agent.ts"
@@ -117,9 +90,8 @@ tests:
         value: "realpath"
       - type: icontains
         value: "traversal"
-      # Should mention both string check AND symlink/realpath check
       - type: llm-rubric
-        value: "The answer describes two distinct traversal checks: (1) a string-based check on the resolved path, and (2) a realpath/symlink dereference check"
+        value: "The answer describes two distinct traversal checks: (1) a string-based check on the resolved path, and (2) a realpath/symlink dereference check."
     threshold: 0.8
 
   - description: "Identify the concurrency mechanism in run_subcalls"
@@ -134,71 +106,49 @@ tests:
         value: "5"
     threshold: 0.9
 
-  # --- Synthesis / reasoning questions (fuzzier, use rubric) ---
-
-  - description: "Identify all SourceAdapter implementations"
+  - description: "Compare the built-in source factories"
     vars:
-      task: "List every concrete implementation of SourceAdapter in the codebase. For each, describe what it wraps and any notable constraints."
+      task: "Compare the three built-in source factories: source.fs, source.text, and source.json. For each one, explain what it wraps and which access patterns it exposes."
     assert:
       - type: icontains
-        value: "FsAdapter"
+        value: "source.fs"
       - type: icontains
-        value: "FilesAdapter"
+        value: "source.text"
       - type: icontains
-        value: "ConversationAdapter"
-      - type: icontains
-        value: "TextAdapter"
-      - type: icontains
-        value: "McpAdapter"
-    threshold: 1.0
-
-  - description: "Explain structured subcall output flow"
-    vars:
-      task: "Walk me through what happens when run_subcall is called with a schemaName. Trace the full execution path from the tool call to what gets stored in the trace."
-    assert:
-      - type: icontains
-        value: "Output.object"
-      - type: icontains
-        value: "structured"
-      - type: icontains
-        value: "schemaName"
+        value: "source.json"
       - type: llm-rubric
-        value: "The answer traces the path from the tool call through runSubcall, through generateText with Output.object, and explains that both the structured output and serialized answer are stored in the SubcallTraceNode"
+        value: "The answer distinguishes filesystem navigation from inline text/json sources, and notes that text/json can expose list/read/search only when chunking is enabled."
     threshold: 0.75
 
-  - description: "Explain fallback handoff behavior"
+  - description: "Explain how source.text decides between blob and chunked modes"
     vars:
-      task: "What happens if the handoff synthesis step fails? How does the system recover and what does the caller receive?"
+      task: "How does source.text decide whether to expose only read() versus list/read/search? Explain the threshold behavior and what tools become available in each mode."
     assert:
       - type: icontains
-        value: "buildFallbackHandoff"
+        value: "chunkThreshold"
       - type: icontains
-        value: "handoffFailed"
+        value: "read_source"
+      - type: icontains
+        value: "search_source"
       - type: llm-rubric
-        value: "The answer explains that buildHandoff failure is caught, buildFallbackHandoff is called instead, and handoffFailed is set to true on the returned PreparedContext"
+        value: "The answer explains that short text stays as a single blob with read only, while longer text is chunked and exposes list/read/search over chunk IDs."
     threshold: 0.8
 
-  - description: "Explain MCP readonly filtering defaults"
+  - description: "Explain FsAdapter include and exclude globs"
     vars:
-      task: "What is the default filtering behavior of McpAdapter when no options are provided? Which tools get exposed and why?"
+      task: "How do include and exclude globs work in FsAdapter now? Explain which operations they affect and whether they are hard boundaries or soft hints."
     assert:
       - type: icontains
-        value: "readonly"
+        value: "include"
+      - type: icontains
+        value: "exclude"
       - type: llm-rubric
-        value: "The answer correctly identifies that readonly defaults to true, and explains the READONLY_PREFIXES list (get_, list_, search_, read_, fetch_, query_, describe_) as the filter mechanism"
+        value: "The answer states that include and exclude are glob filters over relative paths and that they apply consistently to listing, reading, search, and file counts rather than just search or listing."
     threshold: 0.8
 
-# ---------------------------------------------------------------------------
-# Output configuration
-# ---------------------------------------------------------------------------
 outputPath: "./results/latest.json"
-
-# How many test cases to run in parallel
 sharing: false
 
-# How many test cases to run in parallel (each test fans out into many subcalls
-# internally, so keeping this low prevents queue saturation and the
-# "timed out after 300000ms in queue" errors from promptfoo's SlotQueue).
 evaluateOptions:
   maxConcurrency: 2
   timeoutMs: 600000

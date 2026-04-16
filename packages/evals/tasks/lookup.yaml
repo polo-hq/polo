@@ -1,0 +1,28 @@
+category: targeted-lookup
+tasks:
+  - task: "What is the maximum number of dynamic route parameters Next.js supports in a single route segment, and where is this limit enforced in the source?"
+    assert:
+      - type: llm-rubric
+        value: "Answer identifies the specific limit if one exists, or correctly states there is no hard limit, and points to the relevant source file."
+
+  - task: "Find the default configuration for the Next.js image optimization loader. What formats does it support and what are the default quality and size breakpoints?"
+    assert:
+      - type: llm-rubric
+        value: "Answer lists concrete default values for quality, device sizes, image sizes, and supported formats, with file references."
+
+  - task: "Where in the Next.js source is the 'use server' directive parsed and what transformation does it trigger during compilation?"
+    assert:
+      - type: icontains
+        value: "use server"
+      - type: llm-rubric
+        value: "Answer identifies the specific file or files that parse the directive and describes the resulting transformation such as server action proxy generation or action ID assignment."
+
+  - task: "What HTTP headers does Next.js set by default on static assets served from the public directory, and where is this configured in the source?"
+    assert:
+      - type: llm-rubric
+        value: "Answer identifies concrete headers such as cache-control and points to where they are set in the source."
+
+  - task: "How does Next.js detect whether a page component is async (Server Component) versus sync (Client Component) at build time? What is the detection mechanism?"
+    assert:
+      - type: llm-rubric
+        value: "Answer explains the detection mechanism with reference to specific source code, not just the conceptual distinction."

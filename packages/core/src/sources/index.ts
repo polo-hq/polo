@@ -31,7 +31,7 @@ export const source = {
    * file contents using ripgrep (WASM — no binary install required).
    *
    * @param rootPath - Path to the directory root.
-   * @param options  - Optional configuration (include, exclude, excludePatterns).
+   * @param options  - Optional glob filters (`include`, `exclude`).
    */
   fs: (rootPath: string, options?: FsAdapterOptions): FsAdapter => new FsAdapter(rootPath, options),
 

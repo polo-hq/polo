@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import picomatch from "picomatch";
 import { ripgrep } from "ripgrep";
 import type { SearchMatch, SearchQuery, SourceAdapter } from "./interface.ts";
 
@@ -8,32 +9,31 @@ import type { SearchMatch, SearchQuery, SourceAdapter } from "./interface.ts";
  */
 export interface FsAdapterOptions {
   /**
-   * File extensions to include when listing. If omitted, all files
-   * are included. Use this to scope the agent to relevant files only.
+   * Glob patterns for files to include. If omitted, all non-excluded
+   * files are included.
    *
-   * @example [".ts", ".tsx", ".md"]
+   * Directory entries remain visible for navigation even when they do not
+   * match `include` directly. The allowlist is enforced for file reads,
+   * search, and file counts.
+   *
+   * @example ["*.{ts,tsx}", "docs/**"]
    */
   include?: string[];
 
   /**
-   * File or directory names to exclude. When provided, this list
-   * *replaces* the default exclusions entirely.
+   * Glob patterns to exclude, merged with the default denylist.
    *
-   * @default DEFAULT_EXCLUDE (for example: node_modules, .git, dist, coverage, .cache, lockfiles, OS artifacts)
+   * These globs apply consistently to listing, reading, search, and file
+   * counts. Use this to carve out generated files, tests, or other areas the
+   * agent should not see.
+   *
+   * @default DEFAULT_EXCLUDE (dependency directories, build outputs, VCS/tooling dirs, lockfiles, OS artifacts)
+   * @example ["*.test.*", "tests/**"]
    */
   exclude?: string[];
-
-  /**
-   * Additional file or directory names to exclude, merged with the defaults
-   * (or with `exclude` if provided). Unlike `exclude`, this never
-   * replaces defaults — it only adds to them.
-   *
-   * @example ["build", ".venv"]
-   */
-  excludePatterns?: string[];
 }
 
-const DEFAULT_EXCLUDE = [
+const DEFAULT_EXCLUDED_DIRECTORIES = [
   // Dependency directories
   "node_modules",
   "bower_components",
@@ -56,6 +56,9 @@ const DEFAULT_EXCLUDE = [
   ".git",
   ".cache",
   ".budge",
+];
+
+const DEFAULT_EXCLUDED_FILES = [
   // Lock files (filenames, not directories)
   "package-lock.json",
   "yarn.lock",
@@ -70,6 +73,16 @@ const DEFAULT_EXCLUDE = [
   "Thumbs.db",
 ];
 
+const DEFAULT_EXCLUDE = [
+  ...DEFAULT_EXCLUDED_DIRECTORIES.flatMap((name) => [
+    name,
+    `${name}/**`,
+    `**/${name}`,
+    `**/${name}/**`,
+  ]),
+  ...DEFAULT_EXCLUDED_FILES.flatMap((name) => [name, `**/${name}`]),
+];
+
 const FS_READ_HARD_LIMIT = 10 * 1024 * 1024; // 10 MiB
 
 /**
@@ -80,14 +93,16 @@ const FS_READ_HARD_LIMIT = 10 * 1024 * 1024; // 10 MiB
  * @example
  * ```ts
  * const codebase = source.fs("./src")
- * const codebase = source.fs("./src", { include: [".ts", ".tsx"] })
+ * const codebase = source.fs("./src", { include: ["*.{ts,tsx}"] })
  * ```
  */
 export class FsAdapter implements SourceAdapter {
   private readonly root: string;
   private readonly realRoot: string;
-  private readonly include: string[] | undefined;
-  private readonly exclude: string[];
+  private readonly includeGlobs: string[];
+  private readonly excludeGlobs: string[];
+  private readonly matchesInclude: ((input: string) => boolean) | undefined;
+  private readonly matchesExclude: (input: string) => boolean;
 
   constructor(rootPath: string, options: FsAdapterOptions = {}) {
     this.root = path.resolve(rootPath);
@@ -99,9 +114,11 @@ export class FsAdapter implements SourceAdapter {
     } catch {
       this.realRoot = this.root;
     }
-    this.include = options.include;
-    const base = options.exclude ?? DEFAULT_EXCLUDE;
-    this.exclude = options.excludePatterns ? [...base, ...options.excludePatterns] : base;
+    this.includeGlobs = normalizeGlobPatterns(options.include);
+    this.excludeGlobs = [...DEFAULT_EXCLUDE, ...normalizeGlobPatterns(options.exclude)];
+    this.matchesInclude =
+      this.includeGlobs.length > 0 ? picomatch(this.includeGlobs, { dot: true }) : undefined;
+    this.matchesExclude = picomatch(this.excludeGlobs, { dot: true });
   }
 
   describe(): string {
@@ -112,7 +129,8 @@ export class FsAdapter implements SourceAdapter {
     try {
       topLevel = fs
         .readdirSync(this.root, { withFileTypes: true })
-        .filter((e) => !this.exclude.includes(e.name))
+        .filter((entry) => !this.isPathExcluded(entry.name, entry.isDirectory()))
+        .filter((entry) => entry.isDirectory() || this.isPathIncluded(entry.name))
         .map((e) => (e.isDirectory() ? `${e.name}/` : e.name))
         .sort();
 
@@ -127,25 +145,28 @@ export class FsAdapter implements SourceAdapter {
     return (
       `Local filesystem at ${this.root} — ${countStr} file${fileCount === 1 ? "" : "s"}. ` +
       `Top-level: ${topStr}${more}. ` +
-      `Searchable via search_source (regex or literal). Use filters: { fixed: true } for literal string search.`
+      `Searchable via search_source (regex or literal). Use filters: { fixed: true } for literal string search. ` +
+      `Include/exclude globs apply consistently to list, read, and search.`
     );
   }
 
   async list(dirPath?: string): Promise<string[]> {
     const target = dirPath ? await this.resolve(dirPath) : this.root;
+    if (dirPath && this.isPathExcluded(dirPath, true)) {
+      throw new Error(`Path excluded by source configuration: ${dirPath}`);
+    }
 
     const entries = await fs.promises.readdir(target, { withFileTypes: true });
     const results: string[] = [];
 
     for (const entry of entries) {
-      if (this.exclude.includes(entry.name)) continue;
-
       const rel = dirPath ? `${dirPath}/${entry.name}` : entry.name;
+      if (this.isPathExcluded(rel, entry.isDirectory())) continue;
 
       if (entry.isDirectory()) {
         results.push(`${rel}/`);
       } else if (entry.isFile()) {
-        if (this.include && !this.include.some((ext) => entry.name.endsWith(ext))) continue;
+        if (!this.isPathIncluded(rel)) continue;
         results.push(rel);
       }
     }
@@ -159,6 +180,14 @@ export class FsAdapter implements SourceAdapter {
 
     if (!stat.isFile()) {
       throw new Error(`Not a file: ${filePath}`);
+    }
+
+    if (this.isPathExcluded(filePath)) {
+      throw new Error(`Path excluded by source configuration: ${filePath}`);
+    }
+
+    if (!this.isPathIncluded(filePath)) {
+      throw new Error(`Path not included by source configuration: ${filePath}`);
     }
 
     // Prevent loading arbitrarily large files into memory. Display truncation
@@ -183,17 +212,14 @@ export class FsAdapter implements SourceAdapter {
       args.push("--fixed-strings");
     }
 
-    if (this.include && this.include.length > 0) {
-      for (const ext of this.include) {
-        args.push("--glob", `*${ext}`);
+    if (this.includeGlobs.length > 0) {
+      for (const pattern of this.includeGlobs) {
+        args.push("--glob", pattern);
       }
     }
 
-    for (const name of new Set(this.exclude)) {
-      args.push("--glob", `!${name}`);
-      args.push("--glob", `!**/${name}`);
-      args.push("--glob", `!${name}/**`);
-      args.push("--glob", `!**/${name}/**`);
+    for (const pattern of new Set(this.excludeGlobs)) {
+      args.push("--glob", `!${pattern}`);
     }
 
     // ripgrep WASM works relative to its preopens. We pass "." as the search
@@ -255,13 +281,15 @@ export class FsAdapter implements SourceAdapter {
     try {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       for (const entry of entries) {
-        if (this.exclude.includes(entry.name)) continue;
+        const entryPath = path.join(dir, entry.name);
+        const rel = normalizeRelativePath(path.relative(this.root, entryPath));
+        if (this.isPathExcluded(rel, entry.isDirectory())) continue;
         if (entry.isDirectory()) {
-          const child = this.countFiles(path.join(dir, entry.name), depth + 1);
+          const child = this.countFiles(entryPath, depth + 1);
           count += child.count;
           if (child.capped) capped = true;
         } else if (entry.isFile()) {
-          if (this.include && !this.include.some((ext) => entry.name.endsWith(ext))) continue;
+          if (!this.isPathIncluded(rel)) continue;
           count++;
         }
       }
@@ -269,6 +297,15 @@ export class FsAdapter implements SourceAdapter {
       // ignore unreadable directories
     }
     return { count, capped };
+  }
+
+  private isPathExcluded(relPath: string, isDirectory = false): boolean {
+    return matchesPath(this.matchesExclude, relPath, isDirectory);
+  }
+
+  private isPathIncluded(relPath: string): boolean {
+    if (!this.matchesInclude) return true;
+    return matchesPath(this.matchesInclude, relPath, false);
   }
 }
 
@@ -329,14 +366,17 @@ function parseRipgrepJson(stdout: string, k: number): SearchMatch[] {
 
     if (!filePath || matchLine === undefined || lineNum === null) continue;
 
+    const normalizedFilePath = normalizeRelativePath(filePath);
+    if (!normalizedFilePath) continue;
+
     const trimmedMatchLine = matchLine.trimEnd();
 
-    const existing = byFile.get(filePath);
+    const existing = byFile.get(normalizedFilePath);
     if (existing) {
       existing.lines.push(trimmedMatchLine);
       existing.lineNumbers.push(lineNum);
     } else {
-      byFile.set(filePath, { lines: [trimmedMatchLine], lineNumbers: [lineNum] });
+      byFile.set(normalizedFilePath, { lines: [trimmedMatchLine], lineNumbers: [lineNum] });
     }
   }
 
@@ -368,4 +408,29 @@ function formatBytes(bytes: number): string {
   }
 
   return `${bytes} B`;
+}
+
+function normalizeGlobPatterns(patterns?: string[]): string[] {
+  if (!patterns || patterns.length === 0) return [];
+  return patterns
+    .map((pattern) => pattern.trim())
+    .filter((pattern) => pattern.length > 0)
+    .map((pattern) => pattern.replace(/\\/g, "/").replace(/^\.\//, ""));
+}
+
+function normalizeRelativePath(relPath: string): string {
+  const normalized = path.posix.normalize(relPath.replace(/\\/g, "/")).replace(/^\.\//, "");
+  if (normalized === ".") return "";
+  return normalized.replace(/^\/+/, "").replace(/\/+$/, "");
+}
+
+function matchesPath(
+  matcher: (input: string) => boolean,
+  relPath: string,
+  isDirectory: boolean,
+): boolean {
+  const normalized = normalizeRelativePath(relPath);
+  if (!normalized) return false;
+  if (matcher(normalized)) return true;
+  return isDirectory ? matcher(`${normalized}/__dir__`) : false;
 }

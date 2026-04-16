@@ -9,6 +9,7 @@
 
 import path from "node:path";
 import fs from "node:fs";
+import picomatch from "picomatch";
 import type { CallApiContextParams, ProviderOptions, ProviderResponse } from "promptfoo";
 
 interface BaselineProviderConfig {
@@ -24,18 +25,33 @@ interface FsOptions {
   exclude?: string[];
 }
 
+const DEFAULT_EXCLUDE = [
+  "node_modules/**",
+  "**/node_modules/**",
+  ".git/**",
+  "**/.git/**",
+  "dist/**",
+  "**/dist/**",
+  ".next/**",
+  "**/.next/**",
+  ".turbo/**",
+  "**/.turbo/**",
+  "coverage/**",
+  "**/coverage/**",
+  ".cache/**",
+  "**/.cache/**",
+];
+
 function collectFiles(dir: string, options: FsOptions = {}): string[] {
-  const exclude = options.exclude ?? [
-    "node_modules",
-    ".git",
-    "dist",
-    ".next",
-    ".turbo",
-    "coverage",
-    ".cache",
-  ];
-  const include = options.include ?? null;
+  const exclude = normalizeGlobPatterns(options.exclude ?? DEFAULT_EXCLUDE);
+  const include = normalizeGlobPatterns(options.include);
+  return walkFiles(dir, dir, include, exclude);
+}
+
+function walkFiles(root: string, dir: string, include: string[], exclude: string[]): string[] {
   const results: string[] = [];
+  const matchesInclude = include.length > 0 ? picomatch(include, { dot: true }) : undefined;
+  const matchesExclude = picomatch(exclude, { dot: true });
 
   let entries: fs.Dirent[];
   try {
@@ -45,17 +61,36 @@ function collectFiles(dir: string, options: FsOptions = {}): string[] {
   }
 
   for (const entry of entries) {
-    if (exclude.includes(entry.name)) continue;
     const fullPath = path.join(dir, entry.name);
+    const rel = normalizeRelativePath(path.relative(root, fullPath));
     if (entry.isDirectory()) {
-      results.push(...collectFiles(fullPath, options));
+      if (matchesDirectory(rel, matchesExclude)) continue;
+      results.push(...walkFiles(root, fullPath, include, exclude));
     } else if (entry.isFile()) {
-      if (include && !include.some((ext) => entry.name.endsWith(ext))) continue;
+      if (matchesExclude(rel)) continue;
+      if (matchesInclude && !matchesInclude(rel)) continue;
       results.push(fullPath);
     }
   }
 
   return results;
+}
+
+function normalizeGlobPatterns(patterns?: string[]): string[] {
+  if (!patterns || patterns.length === 0) return [];
+  return patterns
+    .map((pattern) => pattern.trim())
+    .filter((pattern) => pattern.length > 0)
+    .map((pattern) => pattern.replace(/\\/g, "/").replace(/^\.\//, ""));
+}
+
+function normalizeRelativePath(relPath: string): string {
+  return relPath.replace(/\\/g, "/").replace(/^\.\//, "");
+}
+
+function matchesDirectory(relPath: string, matcher: (input: string) => boolean): boolean {
+  const normalized = normalizeRelativePath(relPath);
+  return matcher(normalized) || matcher(`${normalized}/__dir__`);
 }
 
 function buildFullContext(
