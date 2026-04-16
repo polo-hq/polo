@@ -1,0 +1,30 @@
+category: cross-source-synthesis
+tasks:
+  - task: "How does Next.js's App Router handle the transition from a Server Component to a Client Component at the module boundary? Walk through the compilation, bundling, and runtime steps."
+    assert:
+      - type: llm-rubric
+        value: "Answer traces the full path: RSC compilation marks client boundaries, bundler splits server/client chunks, flight protocol serializes the boundary, client runtime hydrates. Must reference specific source files or modules, not just describe the concept abstractly. An answer that only describes the concepts without naming implementation files or functions should score below 0.7."
+      - type: icontains
+        value: "flight"
+      - type: icontains
+        value: "use client"
+
+  - task: "Explain how Next.js middleware, edge runtime, and the router interact during a request to a dynamic route with ISR enabled. What are the caching layers involved?"
+    assert:
+      - type: llm-rubric
+        value: "Answer covers middleware execution at the edge, router resolution for dynamic params, ISR cache lookup, revalidation flow, and how these layers compose. Must identify at least three distinct caching mechanisms AND reference specific source files where each mechanism is implemented. Conceptual-only answers without file references should score below 0.7."
+
+  - task: "How does Next.js implement partial prerendering? Trace from the build step through the Suspense boundary handling to what gets served on first request vs subsequent requests."
+    assert:
+      - type: llm-rubric
+        value: "Answer explains static shell generation at build, dynamic holes marked by Suspense, streaming of dynamic content on first request, and caching behavior for subsequent requests. Must distinguish between the static and dynamic parts of the response AND name specific source files involved in each phase. Answers that describe the concept correctly but without file-level evidence should score below 0.7."
+
+  - task: "Compare how errors propagate in the App Router (error.tsx, global-error.tsx, not-found.tsx) versus the Pages Router (pages/_error.tsx, pages/404.tsx). What are the structural differences in how errors are caught and rendered?"
+    assert:
+      - type: llm-rubric
+        value: "Answer identifies the nested error boundary model in App Router versus the flatter Pages Router model, explains how error.tsx creates per-segment boundaries, and notes concrete differences in recovery behavior. Must reference specific source files that implement each error handling path. Conceptual comparisons without code-level evidence should score below 0.7."
+
+  - task: "How does the Next.js image optimization pipeline work end-to-end? Trace from the <Image> component in source through the image loader, the optimization API route, and the caching or serving layer."
+    assert:
+      - type: llm-rubric
+        value: "Answer covers the Image component's props and loader selection, the /_next/image handler, the optimization step, content-type negotiation, and multiple cache layers. Must reference at least three specific implementation files across different layers of the pipeline. Answers citing fewer than three files or only conceptual descriptions should score below 0.7."

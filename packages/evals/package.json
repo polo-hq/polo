@@ -9,17 +9,30 @@
   "main": "index.js",
   "scripts": {
     "eval": "promptfoo eval -c promptfooconfig.yaml",
-    "eval:analytical": "promptfoo eval -c promptfooconfig.analytical.yaml"
+    "eval:analytical": "promptfoo eval -c promptfooconfig.analytical.yaml",
+    "generate:v2-config": "tsx scripts/generate-v2-config.ts",
+    "generate:longbench-config": "tsx scripts/generate-longbench-config.ts",
+    "results:v2": "tsx scripts/render-v2-results.ts",
+    "results:longbench": "tsx scripts/render-longbench-results.ts",
+    "eval:v2": "tsx scripts/generate-v2-config.ts && promptfoo eval -c promptfooconfig.v2.yaml && tsx scripts/render-v2-results.ts",
+    "eval:longbench": "tsx scripts/generate-longbench-config.ts && promptfoo eval -c promptfooconfig.longbench.yaml && tsx scripts/render-longbench-results.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.69",
     "@ai-sdk/openai": "^3.0.52",
     "@openrouter/ai-sdk-provider": "^2.5.1",
     "ai": "^6.0.161",
-    "promptfoo": "^0.121.5"
+    "okapibm25": "^1.4.1",
+    "picomatch": "^4.0.4",
+    "promptfoo": "^0.121.5",
+    "ripgrep": "^0.3.1",
+    "tokenx": "^1.3.0",
+    "yaml": "^2.8.3",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@budge/core": "workspace:*",
+    "@types/picomatch": "^4.0.3",
     "tsx": "^4.19.3",
     "typescript": "catalog:"
   }

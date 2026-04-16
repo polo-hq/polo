@@ -27,7 +27,7 @@ providers:
     delay: 2000
     config:
       root: "../../../packages/core"
-      include: [".ts"]
+      include: ["**/*.ts"]
       orchestratorModel: "openai/gpt-5.4-mini"
       workerModel: "openai/gpt-5.4-mini"
       provider: "openrouter"
@@ -36,7 +36,7 @@ providers:
     label: "baseline (full-context-dump)"
     config:
       root: "../../../packages/core"
-      include: [".ts"]
+      include: ["**/*.ts"]
       model: "openai/gpt-5.4-mini"
       provider: "openrouter"
 
@@ -120,10 +120,10 @@ tests:
           (1) Identify at least 4 specific untested scenarios with enough detail to write the test.
           (2) Prioritize by risk — not all gaps are equal, and a good answer explains why each matters.
           (3) Reference specific test files and what they do/don't cover.
-          Strong answers will identify things like: no test for what happens when the orchestrator
-          calls finish before reading any sources, no test for McpAdapter cache invalidation after
-          a partial failure mid-pagination, no integration test for the full prepare() → handoff pipeline
-          with a real filesystem, or no test for ConversationAdapter with messages missing content fields.
+          Strong answers will identify things like: no integration test for the full prepare() → handoff pipeline
+          with a real filesystem, missing parity tests that prove list/read/search enforce the same source
+          boundaries, missing tests around search result path normalization, or missing regressions around
+          fallback handoff quality and truncation.
           Penalize answers that list obvious or low-risk gaps, or that don't explain the failure scenario.
       - type: javascript
         value: "!output.metadata || output.metadata.totalTokens < 50000"
@@ -209,15 +209,13 @@ tests:
         value: >
           A high-quality answer must:
           (1) Identify at least 3 specific design issues, not just general observations.
-          (2) Point to inconsistencies between implementations — how FilesAdapter, FsAdapter,
-          ConversationAdapter, and McpAdapter each interpret list() and read() differently.
+          (2) Point to inconsistencies between the documented interface and the built-in implementations,
+          especially how FsAdapter differs from the lightweight adapters returned by source.text/source.json.
           (3) Identify at least one non-obvious trap for a custom adapter implementor.
-          Strong answers will identify: list() has no consistent contract for what path means
-          across adapters (FsAdapter uses relative paths, FilesAdapter ignores path entirely,
-          ConversationAdapter ignores path, McpAdapter ignores path), read() error behavior
-          is inconsistent (some throw, some return error strings), there's no way for an adapter
-          to signal "this path is a directory not a file" without throwing, or that describe()
-          is synchronous but may need async data in real implementations (e.g. an API-backed adapter).
+          Strong answers will identify: list() and read() still rely on source-specific path semantics,
+          read() has to signal both "not found" and "not a file" through thrown errors, search()
+          returns loosely typed metadata, or that describe() is synchronous even though real remote
+          adapters may need async discovery.
           Penalize surface-level answers that only observe the interface has three methods.
       - type: javascript
         value: "!output.metadata || output.metadata.totalTokens < 50000"

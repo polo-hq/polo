@@ -1,0 +1,34 @@
+category: chat-amortization
+chat_scenarios:
+  - name: "Exploring the routing system"
+    turns:
+      - "How does Next.js resolve which layout.tsx applies to a given route segment?"
+      - "You mentioned segment-level layouts. How does the metadata generateMetadata merge across nested layouts?"
+      - "What happens if two nested layouts both define the same title in their metadata?"
+      - "How does this metadata merging interact with streaming? Is metadata available before the page component resolves?"
+      - "Can middleware modify the metadata that a layout would produce? What is the execution order?"
+      - "How does Next.js handle route groups (parenthesized folders) and do they affect the layout tree?"
+      - "If I have parallel routes (slots with @) alongside a route group, how does the router resolve which layout wraps which slot?"
+      - "Looking at all of this together, what are the main files in the source that implement the route resolution algorithm?"
+
+  - name: "Understanding the build pipeline"
+    turns:
+      - "What compiler does Next.js use by default and how is it configured?"
+      - "How does the compiler handle CSS modules? What transformation steps are involved?"
+      - "Where does tree-shaking happen in the build pipeline, and does it work differently for server versus client bundles?"
+      - "How does Next.js handle dynamic imports via next/dynamic during the build, and what gets split into separate chunks?"
+      - "What is the relationship between the turbopack and webpack code paths in the source? Are they separate implementations or shared?"
+      - "How does Next.js handle server actions during the build? What compilation steps are specific to 'use server' functions?"
+      - "What happens to middleware during the build - is it compiled differently from page routes?"
+      - "Summarize the key architectural differences between the webpack and turbopack build paths based on everything we've discussed."
+
+  - name: "Debugging data fetching"
+    turns:
+      - "How does the fetch() patching in Next.js work for Server Components? What does it intercept?"
+      - "How does the data cache via next.revalidate interact with the patched fetch?"
+      - "If I set revalidate: 60 on a fetch call, walk me through exactly what happens at T=0, T=30, and T=61."
+      - "How does on-demand revalidation through revalidateTag or revalidatePath interact with the time-based revalidation I just asked about?"
+      - "Where in the source is the cache key computed for a patched fetch call, and what inputs go into that key?"
+      - "How does Next.js handle fetch deduplication within a single render pass? Can two components fetching the same URL share a result?"
+      - "What happens to the fetch cache when a page uses both static and dynamic rendering in the same route via partial prerendering?"
+      - "Based on everything we've discussed, what are the three most important source files to read if I want to understand the full fetch lifecycle?"

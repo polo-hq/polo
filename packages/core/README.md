@@ -120,9 +120,14 @@ interface PreparedContext<S> {
 
 **`source.fs(rootPath, options?)`** — local filesystem directory. Supports list, read, and ripgrep-powered search (WASM, no install required).
 
+`include` and `exclude` are glob patterns over relative paths. They apply consistently to listing, reading, search, and file counts, so the adapter is a real corpus boundary instead of a soft hint.
+
 ```ts
 source.fs("./src");
-source.fs("./src", { include: [".ts", ".tsx"], excludePatterns: ["generated"] });
+source.fs("./src", {
+  include: ["**/*.{ts,tsx}"],
+  exclude: ["**/*.test.*", "**/__tests__/**", "**/generated/**"],
+});
 ```
 
 **`source.text(content, options?)`** — inline string. Auto-chunks above ~4000 tokens, enabling list, read, and BM25 search. Below the threshold, exposes read only.

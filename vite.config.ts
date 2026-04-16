@@ -1,17 +1,17 @@
 import { defineConfig } from "vite-plus";
 
-const hiddenAgentPaths = [".agents/**", ".claude/**"];
+const hiddenPaths = [".agents/**", ".claude/**", "packages/evals/corpus"];
 
 export default defineConfig({
   staged: {
     "*": "vp check --fix",
   },
   fmt: {
-    ignorePatterns: hiddenAgentPaths,
+    ignorePatterns: hiddenPaths,
   },
   lint: {
     options: { typeAware: true, typeCheck: true },
-    ignorePatterns: hiddenAgentPaths,
+    ignorePatterns: hiddenPaths,
   },
   test: {
     exclude: ["**/node_modules/**", "**/.git/**", "**/.agents/**", "**/.claude/**"],

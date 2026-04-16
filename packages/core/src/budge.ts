@@ -27,7 +27,7 @@ export interface Budge {
    *   task: "summarize the auth module",
    *   sources: {
    *     codebase: source.fs("./src"),
-   *     docs: source.files(["./docs/auth.md"]),
+   *     docs: source.text("Auth uses JWT with 24h expiry."),
    *   },
    * })
    *
@@ -62,7 +62,7 @@ export interface Budge {
  *   task: "refactor the auth module to use JWT",
  *   sources: {
  *     codebase: source.fs("./src"),
- *     docs: source.files(["./docs/auth.md"]),
+ *     docs: source.text("Auth uses JWT with 24h expiry."),
  *   },
  * })
  *
