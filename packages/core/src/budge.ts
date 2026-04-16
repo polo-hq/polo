@@ -1,10 +1,11 @@
-import type { SourceAdapter } from "./sources/interface.ts";
-import type { BudgeOptions, PrepareOptions, PreparedContext } from "./types.ts";
-import { buildHandoff, buildFallbackHandoff } from "./handoff.ts";
-import { TraceBuilder } from "./trace.ts";
+import { Effect } from "effect";
 import { runAgent } from "./agent.ts";
-import { Truncator } from "./truncation.ts";
 import { withPromptCaching } from "./cache.ts";
+import { buildFallbackHandoff, buildHandoff } from "./handoff.ts";
+import type { SourceAdapter } from "./sources/interface.ts";
+import { TraceBuilder } from "./trace.ts";
+import { Truncator } from "./truncation.ts";
+import type { BudgeOptions, PrepareOptions, PreparedContext } from "./types.ts";
 
 /**
  * A Budge instance. Create one with `createBudge()` and reuse it
@@ -15,7 +16,7 @@ export interface Budge {
    * Prepares context for a task with access to the provided sources.
    *
    * The agent navigates sources lazily — it calls `describe()`, `list()`,
-   * and `read()` on your adapters as needed, and can spawn focused sub-calls
+   * and `read()` and `search()`on your adapters as needed, and can spawn focused sub-calls
    * via `run_subcall` and `run_subcalls`. You never manage context windows.
    *
    * Type inference is automatic: the `sources` keys flow through to
@@ -40,6 +41,75 @@ export interface Budge {
   prepare<S extends Record<string, SourceAdapter>>(
     options: PrepareOptions<S>,
   ): Promise<PreparedContext<S>>;
+}
+
+function runPipeline<S extends Record<string, SourceAdapter>>(
+  prepareOptions: PrepareOptions<S>,
+  deps: {
+    orchestrator: ReturnType<typeof withPromptCaching>;
+    worker: ReturnType<typeof withPromptCaching>;
+    concurrency: number;
+    truncator: Truncator;
+  },
+): Effect.Effect<PreparedContext<S>, Error> {
+  return Effect.tryPromise({
+    try: async () => {
+      const { task, sources, onToolCall, maxSteps, subcallSchemas } = prepareOptions;
+      void deps.truncator.cleanup().catch(() => {});
+
+      const trace = new TraceBuilder<S>(task);
+
+      const { answer, finishReason } = await runAgent({
+        orchestrator: deps.orchestrator,
+        worker: deps.worker,
+        task,
+        sources,
+        onToolCall,
+        maxSteps,
+        subcallSchemas,
+        concurrency: deps.concurrency,
+        trace,
+        truncator: deps.truncator,
+      });
+
+      const builtTrace = trace.build();
+
+      let handoffResult: {
+        structured: PreparedContext<S>["handoffStructured"];
+        markdown: string;
+      };
+      let handoffFailed = false;
+
+      try {
+        handoffResult = await buildHandoff({
+          task,
+          answer,
+          trace: builtTrace,
+          worker: deps.worker,
+          system: prepareOptions.system,
+        });
+      } catch {
+        handoffResult = buildFallbackHandoff({
+          task,
+          answer,
+          trace: builtTrace,
+          system: prepareOptions.system,
+        });
+        handoffFailed = true;
+      }
+
+      return {
+        task,
+        answer,
+        handoff: handoffResult.markdown,
+        handoffStructured: handoffResult.structured,
+        handoffFailed,
+        finishReason,
+        trace: builtTrace,
+      } satisfies PreparedContext<S>;
+    },
+    catch: (e) => (e instanceof Error ? e : new Error(String(e))),
+  });
 }
 
 /**
@@ -78,60 +148,18 @@ export function createBudge(options: BudgeOptions): Budge {
   const cachedOrchestrator = withPromptCaching(orchestrator);
   const cachedWorker = withPromptCaching(worker);
 
+  const deps = {
+    orchestrator: cachedOrchestrator,
+    worker: cachedWorker,
+    concurrency: normalizedConcurrency,
+    truncator,
+  };
+
   return {
-    async prepare<S extends Record<string, SourceAdapter>>(
+    prepare<S extends Record<string, SourceAdapter>>(
       prepareOptions: PrepareOptions<S>,
     ): Promise<PreparedContext<S>> {
-      const { task, sources, onToolCall, maxSteps, subcallSchemas } = prepareOptions;
-      void truncator.cleanup().catch(() => {});
-
-      const trace = new TraceBuilder<S>(task);
-
-      const { answer, finishReason } = await runAgent({
-        orchestrator: cachedOrchestrator,
-        worker: cachedWorker,
-        task,
-        sources,
-        onToolCall,
-        maxSteps,
-        subcallSchemas,
-        concurrency: normalizedConcurrency,
-        trace,
-        truncator,
-      });
-
-      const builtTrace = trace.build();
-
-      let handoffResult: { structured: PreparedContext<S>["handoffStructured"]; markdown: string };
-      let handoffFailed = false;
-
-      try {
-        handoffResult = await buildHandoff({
-          task,
-          answer,
-          trace: builtTrace,
-          worker: cachedWorker,
-          system: prepareOptions.system,
-        });
-      } catch {
-        handoffResult = buildFallbackHandoff({
-          task,
-          answer,
-          trace: builtTrace,
-          system: prepareOptions.system,
-        });
-        handoffFailed = true;
-      }
-
-      return {
-        task,
-        answer,
-        handoff: handoffResult.markdown,
-        handoffStructured: handoffResult.structured,
-        handoffFailed,
-        finishReason,
-        trace: builtTrace,
-      };
+      return Effect.runPromise(runPipeline(prepareOptions, deps));
     },
   };
 }

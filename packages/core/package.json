@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "ai": "^6.0.161",
+    "effect": "^3.21.0",
     "okapibm25": "^1.4.1",
     "picomatch": "^4.0.4",
     "ripgrep": "^0.3.1",
