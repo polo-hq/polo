@@ -1,5 +1,6 @@
 import type { InferToolInput, LanguageModel, Tool } from "ai";
 import type { ZodType } from "zod";
+import type { RoutingDecision } from "./router.ts";
 import type { SearchQuery, SourceAdapter } from "./sources/interface.ts";
 
 // ---------------------------------------------------------------------------
@@ -325,6 +326,12 @@ export interface RuntimeTrace<
   sourcesAccessed: Partial<Record<keyof S & string, string[]>>;
 
   /**
+   * Routing decision for this run. Observability only — the shape of this
+   * object is NOT a public contract and may change between minor versions.
+   */
+  routing: RoutingDecision;
+
+  /**
    * The full decomposition tree. The root node contains all tool call records
    * and the list of sub-call children.
    */
@@ -398,6 +405,12 @@ export interface PreparedContext<
 
   /** Full trace of everything that happened during the run. */
   trace: RuntimeTrace<S>;
+
+  /**
+   * Routing decision for this run. Same reference as `trace.routing`.
+   * Observability only — shape is not a public contract.
+   */
+  routing: RoutingDecision;
 
   /** Whether the LLM call inside `buildHandoff` failed and the fallback was used instead. */
   handoffFailed: boolean;

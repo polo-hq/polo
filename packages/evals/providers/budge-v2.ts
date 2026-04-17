@@ -14,6 +14,9 @@ import {
   summarizeWarnings,
   toPromptfooResponse,
 } from "./shared.ts";
+import { homedir } from "node:os";
+import { mkdirSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 
 interface BudgeV2ProviderConfig {
   corpusRoot?: string;
@@ -25,6 +28,28 @@ interface BudgeV2ProviderConfig {
   actionModel?: string;
   provider?: string;
   maxSteps?: number;
+}
+
+const traceDir = path.join(homedir(), ".budge", "traces", "nextjs");
+mkdirSync(traceDir, { recursive: true });
+
+function sanitizeForFilename(name: string): string {
+  return name.replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0, 60);
+}
+
+async function writeTrace(opts: {
+  subdir: string;
+  scenarioName: string | undefined;
+  task: string;
+  payload: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    const label = opts.scenarioName ?? opts.task;
+    const file = path.join(traceDir, `${sanitizeForFilename(label)}-${Date.now()}.json`);
+    await writeFile(file, JSON.stringify(opts.payload, null, 2));
+  } catch {
+    // best-effort; don't fail the eval on trace-write errors
+  }
 }
 
 export default class BudgeV2Provider {
@@ -103,6 +128,7 @@ export default class BudgeV2Provider {
             totalSubcalls: context.trace.totalSubcalls,
             handoffFailed: context.handoffFailed,
           };
+
           return {
             system: context.handoff,
             prepTokens: context.trace.totalTokens,
@@ -124,6 +150,23 @@ export default class BudgeV2Provider {
               warnings: summarizeWarnings(result.warnings),
             },
           };
+        },
+      });
+
+      await writeTrace({
+        subdir: "nextjs",
+        scenarioName: parsed.scenarioName,
+        task: parsed.task,
+        payload: {
+          task: parsed.task,
+          scenarioName: parsed.scenarioName,
+          output: scenario.output,
+          turns: scenario.turns,
+          finishReason: (prepMetadata as { finishReason?: string }).finishReason,
+          handoff: (prepMetadata as { handoff?: string }).handoff,
+          handoffStructured: (prepMetadata as { handoffStructured?: unknown }).handoffStructured,
+          handoffFailed: (prepMetadata as { handoffFailed?: boolean }).handoffFailed,
+          toolCallLog,
         },
       });
 
@@ -162,6 +205,22 @@ export default class BudgeV2Provider {
       messages: [{ role: "user", content: parsed.task }],
     });
     const actionMs = Date.now() - actionStart;
+
+    await writeTrace({
+      subdir: "nextjs",
+      scenarioName: undefined,
+      task: parsed.task,
+      payload: {
+        task: parsed.task,
+        answer: result.text,
+        trace: context.trace,
+        finishReason: context.finishReason,
+        handoff: context.handoff,
+        handoffStructured: context.handoffStructured,
+        handoffFailed: context.handoffFailed,
+        toolCallLog,
+      },
+    });
 
     return toPromptfooResponse({
       output: result.text,

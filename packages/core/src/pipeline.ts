@@ -2,18 +2,34 @@ import { Effect, Ref } from "effect";
 import type { LanguageModel } from "ai";
 import { buildHandoff, buildFallbackHandoff } from "./handoff.ts";
 import { runAgent } from "./agent.ts";
+import { route, type Pattern, type RoutingDecision } from "./router.ts";
 import type { SourceAdapter } from "./sources/interface.ts";
 import type { HandoffStructured, PrepareOptions, RunFinishReason, RuntimeTrace } from "./types.ts";
 import type { Truncator } from "./truncation.ts";
-import type { Trace } from "./trace.ts";
+import { traceSetRouting, type Trace } from "./trace.ts";
 
 // ---------------------------------------------------------------------------
 // Stage 1: classify
-// Stub — will dispatch strategy (research / chain / auto) once eval suite exists
+// Classifies the task, selects an orchestration pattern, records it on the
+// trace. Never fails — classifier errors produce a fallback decision inside
+// route().
 // ---------------------------------------------------------------------------
 
-export function stageClassify(): Effect.Effect<void> {
-  return Effect.void;
+export function stageClassify<S extends Record<string, SourceAdapter>>(opts: {
+  task: string;
+  sources: S;
+  worker: LanguageModel;
+  traceRef: Ref.Ref<Trace>;
+}): Effect.Effect<RoutingDecision, never> {
+  return Effect.gen(function* () {
+    const decision = yield* route({
+      task: opts.task,
+      sources: opts.sources,
+      worker: opts.worker,
+    });
+    yield* Ref.update(opts.traceRef, (t) => traceSetRouting(t, decision));
+    return decision;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -32,6 +48,7 @@ export function stageResearch<S extends Record<string, SourceAdapter>>(opts: {
   subcallSchemas: PrepareOptions<S>["subcallSchemas"];
   traceRef: Ref.Ref<Trace>;
   truncator: Truncator;
+  pattern: Pattern;
 }): Effect.Effect<{ answer: string; finishReason: RunFinishReason }, Error> {
   return Effect.tryPromise({
     try: () =>
@@ -46,6 +63,7 @@ export function stageResearch<S extends Record<string, SourceAdapter>>(opts: {
         concurrency: opts.concurrency,
         traceRef: opts.traceRef,
         truncator: opts.truncator,
+        pattern: opts.pattern,
       }),
     catch: (e) => (e instanceof Error ? e : new Error(String(e))),
   });

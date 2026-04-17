@@ -159,10 +159,9 @@ describe("buildTools() — conditional standard tool registration", () => {
     expect(tools.search_source).toBeDefined();
   });
 
-  it("always registers run_subcall, run_subcalls, and finish", async () => {
-    // Even with a search-only source
+  it("registers run_subcall, run_subcalls, and finish when a source supports read (default pattern)", async () => {
     const tools = buildTools({
-      sources: { notes: makeSearchSource() },
+      sources: { docs: makeListReadSource() },
       worker: makeWorker(),
       traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
@@ -171,6 +170,57 @@ describe("buildTools() — conditional standard tool registration", () => {
     expect(tools.run_subcall).toBeDefined();
     expect(tools.run_subcalls).toBeDefined();
     expect(tools.finish).toBeDefined();
+  });
+
+  it("always registers finish regardless of pattern or capabilities", async () => {
+    const tools = buildTools({
+      sources: { notes: makeSearchSource() },
+      worker: makeWorker(),
+      traceRef: await makeTraceRef("test"),
+      truncator: makeTruncator(),
+    }) as Record<string, unknown>;
+
+    expect(tools.finish).toBeDefined();
+  });
+
+  it("omits both subcall tools for pattern 'direct'", async () => {
+    const tools = buildTools({
+      sources: { docs: makeListReadSource() },
+      worker: makeWorker(),
+      traceRef: await makeTraceRef("test"),
+      truncator: makeTruncator(),
+      pattern: "direct",
+    }) as Record<string, unknown>;
+
+    expect(tools.run_subcall).toBeUndefined();
+    expect(tools.run_subcalls).toBeUndefined();
+    expect(tools.finish).toBeDefined();
+  });
+
+  it("registers only run_subcalls for pattern 'fan-out'", async () => {
+    const tools = buildTools({
+      sources: { docs: makeListReadSource() },
+      worker: makeWorker(),
+      traceRef: await makeTraceRef("test"),
+      truncator: makeTruncator(),
+      pattern: "fan-out",
+    }) as Record<string, unknown>;
+
+    expect(tools.run_subcall).toBeUndefined();
+    expect(tools.run_subcalls).toBeDefined();
+  });
+
+  it("registers only run_subcall for pattern 'chain'", async () => {
+    const tools = buildTools({
+      sources: { docs: makeListReadSource() },
+      worker: makeWorker(),
+      traceRef: await makeTraceRef("test"),
+      truncator: makeTruncator(),
+      pattern: "chain",
+    }) as Record<string, unknown>;
+
+    expect(tools.run_subcall).toBeDefined();
+    expect(tools.run_subcalls).toBeUndefined();
   });
 });
 

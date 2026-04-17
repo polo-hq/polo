@@ -1,5 +1,7 @@
 import { ToolLoopAgent, hasToolCall, stepCountIs } from "ai";
 import type { LanguageModel } from "ai";
+import type { Pattern } from "./router.ts";
+import { MAX_STEPS_BY_PATTERN } from "./router.ts";
 import type { SourceAdapter } from "./sources/interface.ts";
 import type { Truncator } from "./truncation.ts";
 import type { PrepareOptions, RunFinishReason, TokenUsage } from "./types.ts";
@@ -21,6 +23,7 @@ export interface RunAgentOptions<S extends Record<string, SourceAdapter>> extend
   concurrency: number;
   traceRef: Ref.Ref<Trace>;
   truncator: Truncator;
+  pattern?: Pattern;
 }
 
 /**
@@ -46,12 +49,13 @@ export async function runAgent<S extends Record<string, SourceAdapter>>(
     task,
     sources,
     onToolCall,
-    maxSteps = 100,
     subcallSchemas,
     concurrency,
     traceRef,
     truncator,
   } = opts;
+  const pattern: Pattern = opts.pattern ?? "recursive";
+  const maxSteps = opts.maxSteps ?? MAX_STEPS_BY_PATTERN[pattern];
 
   const tools = buildTools({
     sources,
@@ -61,6 +65,7 @@ export async function runAgent<S extends Record<string, SourceAdapter>>(
     subcallSchemas,
     concurrency,
     truncator,
+    pattern,
   });
 
   const sourceDescriptions = buildSourceDescriptions(sources);
@@ -74,7 +79,7 @@ export async function runAgent<S extends Record<string, SourceAdapter>>(
 
   const agent = new ToolLoopAgent({
     model: orchestrator,
-    instructions: buildSystemPrompt(sourceDescriptions, capabilities),
+    instructions: buildSystemPrompt(sourceDescriptions, capabilities, pattern),
     tools,
     stopWhen: [hasToolCall("finish"), stepCountIs(maxSteps)],
     onStepFinish(step) {
@@ -138,12 +143,54 @@ export interface SourceCapabilities {
   hasAnySearch: boolean;
 }
 
+function buildPatternPreamble(pattern: Pattern): string {
+  switch (pattern) {
+    case "direct":
+      return [
+        "## Strategy: Direct lookup",
+        "",
+        "The task requires a single targeted retrieval.",
+        "Use one or two tool calls, then call `finish` immediately.",
+        "Do NOT explore broadly. Do NOT search for confirmation.",
+        "",
+      ].join("\n");
+
+    case "fan-out":
+      return [
+        "## Strategy: Parallel fan-out",
+        "",
+        "The task requires N independent retrievals whose results are combined.",
+        "Plan all sub-tasks first, then dispatch them in parallel:",
+        "- If a `run_subcalls` tool is available, issue ONE batched call with all sub-tasks.",
+        "- Otherwise, invoke multiple source-contributed tools in parallel within a single turn.",
+        "Do NOT sequence independent work. Sequential single sub-calls for independent tasks are a hard antipattern.",
+        "",
+      ].join("\n");
+
+    case "chain":
+      return [
+        "## Strategy: Sequential chain",
+        "",
+        "The task requires sequential reasoning — each step depends on the previous answer.",
+        "Use `run_subcall` (or a single tool call) one at a time.",
+        "Order matters; do not parallelize.",
+        "",
+      ].join("\n");
+
+    case "recursive":
+      return "";
+  }
+}
+
 export function buildSystemPrompt(
   sourceDescriptions: string,
   capabilities: SourceCapabilities,
+  pattern: Pattern = "recursive",
 ): string {
   const { hasAnyList, hasAnyRead, hasAnySearch } = capabilities;
-  const hasSubcalls = hasAnyRead; // run_subcall requires read()
+  // Subcall gating must match tools.ts.
+  const includeRunSubcall = pattern !== "direct" && pattern !== "fan-out" && hasAnyRead;
+  const includeRunSubcalls = pattern !== "direct" && pattern !== "chain" && hasAnyRead;
 
   // "How to work" — numbered steps, only for tools that exist.
   // stepNum increments once per logical step so numbering is always contiguous
@@ -164,15 +211,19 @@ export function buildSystemPrompt(
     steps.push(
       `${n()} Use \`search_source\` to find relevant content by query when a source supports it.`,
       "   Issue MULTIPLE narrow searches rather than one broad query for better results.",
-      ...(hasSubcalls
+      ...(includeRunSubcall
         ? ["   Use chunk IDs returned by search with `run_subcall` for deeper analysis."]
         : []),
     );
   }
-  if (hasSubcalls) {
+  if (includeRunSubcall) {
     steps.push(
       `${n()} Use \`run_subcall\` when you need deeper analysis of a content slice —`,
       "   it spawns a focused call with the content in full context.",
+    );
+  }
+  if (includeRunSubcalls) {
+    steps.push(
       `${n()} Use \`run_subcalls\` when you need to analyze multiple independent paths simultaneously.`,
       "   It runs focused calls in parallel and is much faster than sequential single sub-calls.",
     );
@@ -184,7 +235,7 @@ export function buildSystemPrompt(
 
   // Worked examples — only include examples for tools that are registered
   const examples: string[] = [];
-  if (hasAnySearch && hasSubcalls) {
+  if (hasAnySearch && includeRunSubcalls) {
     examples.push(
       "Example — search then focused analysis:",
       '  Step 1: search_source({source: "notes", query: {text: "insulin dosage", k: 3}})',
@@ -208,10 +259,14 @@ export function buildSystemPrompt(
   // "## Important" bullets — only mention tools that exist
   const importantBullets = [
     "- Be selective. Don't read everything — read what's relevant.",
-    ...(hasSubcalls
+    ...(includeRunSubcall
       ? [
           "- `run_subcall` is ideal for summarization, analysis, and comparison tasks",
           "  on a specific file or directory.",
+        ]
+      : []),
+    ...(includeRunSubcall && includeRunSubcalls
+      ? [
           "- Prefer `run_subcalls` over repeated sequential `run_subcall` calls when the sub-tasks are independent.",
           "  Sequential single sub-calls for independent work are an antipattern.",
         ]
@@ -244,7 +299,10 @@ export function buildSystemPrompt(
       : []),
   ];
 
+  const preamble = buildPatternPreamble(pattern);
+
   return [
+    ...(preamble ? [preamble] : []),
     "You are an expert research agent. Your job is to answer a task by intelligently",
     "navigating the available sources.",
     "",

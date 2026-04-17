@@ -1,4 +1,5 @@
 import type { SourceAdapter } from "./sources/interface.ts";
+import type { RoutingDecision } from "./router.ts";
 import type {
   RootTraceNode,
   RuntimeTrace,
@@ -15,7 +16,7 @@ import type {
 /**
  * Immutable accumulator for a single prepare() call.
  * All mutation returns a new Trace value.
- * Will be held in a Ref<Trace> when pipeline.ts is introduced.
+ * Held in a Ref<Trace> throughout the pipeline.
  * @internal
  */
 export interface Trace {
@@ -25,6 +26,7 @@ export interface Trace {
   readonly toolCalls: ReadonlyArray<ToolCallRecord>;
   readonly subcalls: ReadonlyArray<SubcallTraceNode>;
   readonly accessed: ReadonlyMap<string, ReadonlySet<string>>;
+  readonly routing: RoutingDecision | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -39,7 +41,12 @@ export function emptyTrace(task: string): Trace {
     toolCalls: [],
     subcalls: [],
     accessed: new Map(),
+    routing: null,
   };
+}
+
+export function traceSetRouting(trace: Trace, routing: RoutingDecision): Trace {
+  return { ...trace, routing };
 }
 
 export function traceAddToolCall(trace: Trace, record: ToolCallRecord): Trace {
@@ -65,6 +72,12 @@ export function traceAddRootUsage(trace: Trace, usage: TokenUsage): Trace {
 }
 
 export function buildTrace<S extends Record<string, SourceAdapter>>(trace: Trace): RuntimeTrace<S> {
+  if (trace.routing === null) {
+    throw new Error(
+      "buildTrace() called before routing was set; this is a bug in the Budge pipeline.",
+    );
+  }
+
   const durationMs = Date.now() - trace.startMs;
 
   const rootNode: RootTraceNode = {
@@ -92,6 +105,7 @@ export function buildTrace<S extends Record<string, SourceAdapter>>(trace: Trace
     durationMs,
     totalCachedTokens,
     sourcesAccessed,
+    routing: trace.routing,
     tree: rootNode,
   };
 }

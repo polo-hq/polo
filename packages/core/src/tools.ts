@@ -3,6 +3,7 @@ import safeStableStringify from "safe-stable-stringify";
 import { z } from "zod";
 import type { InferToolInput, InferToolOutput, LanguageModel, Tool } from "ai";
 import type { ZodType } from "zod";
+import type { Pattern } from "./router.ts";
 import type { SearchQuery, SourceAdapter } from "./sources/interface.ts";
 import type { SubcallTraceNode, ToolCallEvent } from "./types.ts";
 import { makeSubcallNode, traceAddRead, traceAddToolCall, traceAddSubcall } from "./trace.ts";
@@ -25,6 +26,7 @@ export interface BuildToolsOptions<S extends Record<string, SourceAdapter>> {
   subcallSchemas?: Record<string, ZodType>;
   concurrency?: number;
   truncator?: Truncator;
+  pattern?: Pattern;
 }
 
 // ---------------------------------------------------------------------------
@@ -56,7 +58,9 @@ const searchQuerySchema = z.object({
  *
  * @internal
  */
-export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildToolsOptions<S>) {
+export function buildTools<S extends Record<string, SourceAdapter>>(
+  opts: BuildToolsOptions<S>,
+): Record<string, AnyTool> {
   const {
     sources,
     worker,
@@ -66,13 +70,22 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
     concurrency = 5,
     truncator = new Truncator(),
   } = opts;
-  const hasSubcalls = true; // all agents currently support subcalls
+  const pattern: Pattern = opts.pattern ?? "recursive";
 
   const sourceEntries = Object.entries(sources) as Array<[string, SourceAdapter]>;
 
   const hasAnyList = sourceEntries.some(([, s]) => s.list != null);
   const hasAnyRead = sourceEntries.some(([, s]) => s.read != null);
   const hasAnySearch = sourceEntries.some(([, s]) => s.search != null);
+
+  // Pattern-based subcall gating.
+  // direct    — no subcalls at all (single targeted retrieval).
+  // fan-out   — only run_subcalls (parallel batch), no single run_subcall.
+  // chain     — only run_subcall (sequential single calls), no parallel batch.
+  // recursive — both, matching today's behavior when hasAnyRead.
+  const includeRunSubcall = pattern !== "direct" && pattern !== "fan-out" && hasAnyRead;
+  const includeRunSubcalls = pattern !== "direct" && pattern !== "chain" && hasAnyRead;
+  const hasSubcalls = includeRunSubcall || includeRunSubcalls;
 
   // helper — atomically apply a pure update to the trace ref
   const updateTrace = (fn: (t: Trace) => Trace): Promise<void> =>
@@ -356,236 +369,234 @@ export function buildTools<S extends Record<string, SourceAdapter>>(opts: BuildT
   }
 
   // ---------------------------------------------------------------------------
-  // Built-in tools (always present)
+  // Built-in tools (conditionally composed based on pattern)
   // ---------------------------------------------------------------------------
 
-  const builtinTools = {
-    run_subcall: tool({
-      description: [
-        "Spawn a focused analysis on a specific slice of a source.",
-        "This is more powerful than read_source for complex sub-tasks —",
-        "it uses a dedicated model call with the content in full context.",
-        "The path should point to a single readable item or addressable slice,",
-        "not a directory listing.",
-        "Use this when you need synthesis, comparison, or deeper analysis",
-        "of content at a particular path.",
-      ].join(" "),
-      inputSchema: z.object({
-        source: z.string().describe("The source name"),
-        path: z.string().describe("The path within the source to focus the sub-call on"),
-        task: z
-          .string()
-          .describe(
-            "A specific, self-contained task for the sub-call to accomplish. " +
-              "Be precise — the sub-call only sees the content at this readable path.",
-          ),
-        schemaName: z
-          .string()
-          .optional()
-          .describe("Optional structured output schema name registered on budge.prepare()"),
-      }),
-      execute: async ({ source, path, task, schemaName }) => {
-        const startMs = Date.now();
-        let adapter: SourceAdapter;
-        let schema: ZodType | undefined;
-        try {
-          adapter = resolveSourceForMethod(sources, source, "read");
-          schema = schemaName ? resolveSubcallSchema(subcallSchemas, schemaName) : undefined;
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          return `[Error: ${message}]`;
-        }
-        const subcallArgs = schemaName
-          ? { source, path, task, schemaName }
-          : { source, path, task };
-
-        onToolCall?.({ tool: "run_subcall", args: subcallArgs });
-
-        const subcallNode = await runSubcall({
-          worker,
-          adapter,
-          sourceName: source,
-          path,
-          task,
-          schema,
-          schemaName,
-        });
-
-        const tracedSubcallNode = await truncateSubcallNode(
-          truncator,
-          subcallNode,
-          "run_subcall",
-          hasSubcalls,
-        );
-
-        await updateTrace((t) => {
-          const withSubcall = traceAddSubcall(t, tracedSubcallNode);
-          return traceAddToolCall(withSubcall, {
-            tool: "run_subcall",
-            args: subcallArgs,
-            result: tracedSubcallNode.answer,
-            durationMs: Date.now() - startMs,
-            truncated: tracedSubcallNode.truncated,
-            overflowPath: tracedSubcallNode.overflowPath,
-          });
-        });
-
-        return tracedSubcallNode.answer;
-      },
+  const runSubcallTool = tool({
+    description: [
+      "Spawn a focused analysis on a specific slice of a source.",
+      "This is more powerful than read_source for complex sub-tasks —",
+      "it uses a dedicated model call with the content in full context.",
+      "The path should point to a single readable item or addressable slice,",
+      "not a directory listing.",
+      "Use this when you need synthesis, comparison, or deeper analysis",
+      "of content at a particular path.",
+    ].join(" "),
+    inputSchema: z.object({
+      source: z.string().describe("The source name"),
+      path: z.string().describe("The path within the source to focus the sub-call on"),
+      task: z
+        .string()
+        .describe(
+          "A specific, self-contained task for the sub-call to accomplish. " +
+            "Be precise — the sub-call only sees the content at this readable path.",
+        ),
+      schemaName: z
+        .string()
+        .optional()
+        .describe("Optional structured output schema name registered on budge.prepare()"),
     }),
+    execute: async ({ source, path, task, schemaName }) => {
+      const startMs = Date.now();
+      let adapter: SourceAdapter;
+      let schema: ZodType | undefined;
+      try {
+        adapter = resolveSourceForMethod(sources, source, "read");
+        schema = schemaName ? resolveSubcallSchema(subcallSchemas, schemaName) : undefined;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return `[Error: ${message}]`;
+      }
+      const subcallArgs = schemaName ? { source, path, task, schemaName } : { source, path, task };
 
-    run_subcalls: tool({
-      description: [
-        "Spawn focused analyses on multiple independent slices of sources.",
-        "This runs sub-calls in parallel with a bounded concurrency limit.",
-        "Use this instead of sequential run_subcall calls when the tasks do not depend on each other.",
-        "Each call should point to a single readable item or addressable slice, not a directory listing.",
-      ].join(" "),
-      inputSchema: z.object({
-        calls: z
-          .array(
-            z.object({
-              source: z.string().describe("The source name"),
-              path: z.string().describe("The path within the source to focus the sub-call on"),
-              task: z
-                .string()
-                .describe(
-                  "A specific, self-contained task for the sub-call to accomplish. " +
-                    "Use this only for independent sub-tasks that can run in parallel.",
-                ),
-              schemaName: z
-                .string()
-                .optional()
-                .describe("Optional structured output schema name registered on budge.prepare()"),
-            }),
-          )
-          .min(1)
-          .describe("Independent sub-calls to execute in parallel."),
-      }),
-      execute: async ({ calls }) => {
-        const startMs = Date.now();
+      onToolCall?.({ tool: "run_subcall", args: subcallArgs });
 
-        onToolCall?.({ tool: "run_subcalls", args: { calls } });
+      const subcallNode = await runSubcall({
+        worker,
+        adapter,
+        sourceName: source,
+        path,
+        task,
+        schema,
+        schemaName,
+      });
 
-        const subcallNodes = await Effect.runPromise(
-          Effect.forEach(
-            calls.map((call, index) => ({ call, index })),
-            ({ call, index }) =>
-              Effect.tryPromise({
-                try: async () => {
-                  const adapter = resolveSourceForMethod(sources, call.source, "read");
-                  const schema = call.schemaName
-                    ? resolveSubcallSchema(subcallSchemas, call.schemaName)
-                    : undefined;
-                  const node = await runSubcall({
-                    worker,
-                    adapter,
-                    sourceName: call.source,
+      const tracedSubcallNode = await truncateSubcallNode(
+        truncator,
+        subcallNode,
+        "run_subcall",
+        hasSubcalls,
+      );
+
+      await updateTrace((t) => {
+        const withSubcall = traceAddSubcall(t, tracedSubcallNode);
+        return traceAddToolCall(withSubcall, {
+          tool: "run_subcall",
+          args: subcallArgs,
+          result: tracedSubcallNode.answer,
+          durationMs: Date.now() - startMs,
+          truncated: tracedSubcallNode.truncated,
+          overflowPath: tracedSubcallNode.overflowPath,
+        });
+      });
+
+      return tracedSubcallNode.answer;
+    },
+  });
+
+  const runSubcallsTool = tool({
+    description: [
+      "Spawn focused analyses on multiple independent slices of sources.",
+      "This runs sub-calls in parallel with a bounded concurrency limit.",
+      "Use this instead of sequential run_subcall calls when the tasks do not depend on each other.",
+      "Each call should point to a single readable item or addressable slice, not a directory listing.",
+    ].join(" "),
+    inputSchema: z.object({
+      calls: z
+        .array(
+          z.object({
+            source: z.string().describe("The source name"),
+            path: z.string().describe("The path within the source to focus the sub-call on"),
+            task: z
+              .string()
+              .describe(
+                "A specific, self-contained task for the sub-call to accomplish. " +
+                  "Use this only for independent sub-tasks that can run in parallel.",
+              ),
+            schemaName: z
+              .string()
+              .optional()
+              .describe("Optional structured output schema name registered on budge.prepare()"),
+          }),
+        )
+        .min(1)
+        .describe("Independent sub-calls to execute in parallel."),
+    }),
+    execute: async ({ calls }) => {
+      const startMs = Date.now();
+
+      onToolCall?.({ tool: "run_subcalls", args: { calls } });
+
+      const subcallNodes = await Effect.runPromise(
+        Effect.forEach(
+          calls.map((call, index) => ({ call, index })),
+          ({ call, index }) =>
+            Effect.tryPromise({
+              try: async () => {
+                const adapter = resolveSourceForMethod(sources, call.source, "read");
+                const schema = call.schemaName
+                  ? resolveSubcallSchema(subcallSchemas, call.schemaName)
+                  : undefined;
+                const node = await runSubcall({
+                  worker,
+                  adapter,
+                  sourceName: call.source,
+                  path: call.path,
+                  task: call.task,
+                  schema,
+                  schemaName: call.schemaName,
+                });
+                return truncateSubcallNode(
+                  truncator,
+                  { ...node, parallel: true },
+                  `run_subcalls[${index}]`,
+                  hasSubcalls,
+                );
+              },
+              catch: (e) => (e instanceof Error ? e : new Error(String(e))),
+            }).pipe(
+              Effect.catchAll((err) =>
+                Effect.succeed(
+                  makeSubcallNode({
+                    source: call.source,
                     path: call.path,
                     task: call.task,
-                    schema,
+                    answer: `[Error: ${err.message}]`,
                     schemaName: call.schemaName,
-                  });
-                  return truncateSubcallNode(
-                    truncator,
-                    { ...node, parallel: true },
-                    `run_subcalls[${index}]`,
-                    hasSubcalls,
-                  );
-                },
-                catch: (e) => (e instanceof Error ? e : new Error(String(e))),
-              }).pipe(
-                Effect.catchAll((err) =>
-                  Effect.succeed(
-                    makeSubcallNode({
-                      source: call.source,
-                      path: call.path,
-                      task: call.task,
-                      answer: `[Error: ${err.message}]`,
-                      schemaName: call.schemaName,
-                      usage: {
-                        inputTokens: 0,
-                        outputTokens: 0,
-                        totalTokens: 0,
-                        cachedInputTokens: 0,
-                      },
-                      startMs: Date.now(),
-                      parallel: true,
-                    }),
-                  ),
+                    usage: {
+                      inputTokens: 0,
+                      outputTokens: 0,
+                      totalTokens: 0,
+                      cachedInputTokens: 0,
+                    },
+                    startMs: Date.now(),
+                    parallel: true,
+                  }),
                 ),
               ),
-            { concurrency },
-          ),
-        );
+            ),
+          { concurrency },
+        ),
+      );
 
-        // record all subcalls atomically in one update
-        await updateTrace((t) => {
-          let next = t;
-          for (const node of subcallNodes) {
-            next = traceAddSubcall(next, node);
-          }
-          return traceAddToolCall(next, {
-            tool: "run_subcalls",
-            args: { calls },
-            result:
-              safeStableStringify(
-                subcallNodes.map((n) => ({
-                  source: n.source,
-                  path: n.path,
-                  task: n.task,
-                  answer: n.answer,
-                })),
-              ) ?? "[]",
-            durationMs: Date.now() - startMs,
-            truncated: false,
-          });
+      // record all subcalls atomically in one update
+      await updateTrace((t) => {
+        let next = t;
+        for (const node of subcallNodes) {
+          next = traceAddSubcall(next, node);
+        }
+        return traceAddToolCall(next, {
+          tool: "run_subcalls",
+          args: { calls },
+          result:
+            safeStableStringify(
+              subcallNodes.map((n) => ({
+                source: n.source,
+                path: n.path,
+                task: n.task,
+                answer: n.answer,
+              })),
+            ) ?? "[]",
+          durationMs: Date.now() - startMs,
+          truncated: false,
         });
+      });
 
-        return subcallNodes.map((node) => ({
-          source: node.source,
-          path: node.path,
-          task: node.task,
-          answer: node.answer,
-        }));
-      },
+      return subcallNodes.map((node) => ({
+        source: node.source,
+        path: node.path,
+        task: node.task,
+        answer: node.answer,
+      }));
+    },
+  });
+
+  const finishTool = tool({
+    description: [
+      "Return your final answer to the user's task and end the session.",
+      "Call this only when you have enough information to give a complete answer.",
+      "Do not call this prematurely — explore the sources as needed first.",
+    ].join(" "),
+    inputSchema: z.object({
+      answer: z
+        .string()
+        .describe(
+          "Your complete, well-formed answer to the original task. " +
+            "Write as if speaking directly to the user.",
+        ),
     }),
+    execute: async ({ answer }) => {
+      const startMs = Date.now();
+      onToolCall?.({ tool: "finish", args: { answer } });
 
-    finish: tool({
-      description: [
-        "Return your final answer to the user's task and end the session.",
-        "Call this only when you have enough information to give a complete answer.",
-        "Do not call this prematurely — explore the sources as needed first.",
-      ].join(" "),
-      inputSchema: z.object({
-        answer: z
-          .string()
-          .describe(
-            "Your complete, well-formed answer to the original task. " +
-              "Write as if speaking directly to the user.",
-          ),
-      }),
-      execute: async ({ answer }) => {
-        const startMs = Date.now();
-        onToolCall?.({ tool: "finish", args: { answer } });
-
-        await updateTrace((t) =>
-          traceAddToolCall(t, {
-            tool: "finish",
-            args: { answer },
-            result: answer,
-            durationMs: Date.now() - startMs,
-          }),
-        );
-        return answer;
-      },
-    }),
-  } as const;
+      await updateTrace((t) =>
+        traceAddToolCall(t, {
+          tool: "finish",
+          args: { answer },
+          result: answer,
+          durationMs: Date.now() - startMs,
+        }),
+      );
+      return answer;
+    },
+  });
 
   return {
     ...contentTools,
     ...sourceTools,
-    ...builtinTools,
+    ...(includeRunSubcall ? { run_subcall: runSubcallTool } : {}),
+    ...(includeRunSubcalls ? { run_subcalls: runSubcallsTool } : {}),
+    finish: finishTool,
   };
 }
 

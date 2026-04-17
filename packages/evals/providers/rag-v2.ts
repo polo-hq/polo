@@ -12,6 +12,10 @@ import {
   summarizeWarnings,
   toPromptfooResponse,
 } from "./shared.ts";
+import path from "node:path";
+import { mkdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { writeFile } from "node:fs/promises";
 
 interface RagV2ProviderConfig {
   corpusRoot?: string;
@@ -23,6 +27,28 @@ interface RagV2ProviderConfig {
   topK?: number;
   chunkSize?: number;
   overlap?: number;
+}
+
+const traceDir = path.join(homedir(), ".budge", "traces", "nextjs");
+mkdirSync(traceDir, { recursive: true });
+
+function sanitizeForFilename(name: string): string {
+  return name.replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0, 60);
+}
+
+async function writeTrace(opts: {
+  subdir: string;
+  scenarioName: string | undefined;
+  task: string;
+  payload: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    const label = opts.scenarioName ?? opts.task;
+    const file = path.join(traceDir, `${sanitizeForFilename(label)}-${Date.now()}.json`);
+    await writeFile(file, JSON.stringify(opts.payload, null, 2));
+  } catch {
+    // best-effort; don't fail the eval on trace-write errors
+  }
 }
 
 const indexCache = new Map<string, Promise<{ chunks: CorpusChunk[]; index: CorpusBm25Index }>>();
@@ -91,6 +117,18 @@ export default class RagV2Provider {
         },
       });
 
+      await writeTrace({
+        subdir: "nextjs-rag",
+        scenarioName: parsed.scenarioName,
+        task: parsed.task,
+        payload: {
+          task: parsed.task,
+          scenarioName: parsed.scenarioName,
+          output: scenario.output,
+          topK,
+        },
+      });
+
       return toPromptfooResponse({
         output: scenario.output,
         prepTokens: 0,
@@ -117,6 +155,20 @@ export default class RagV2Provider {
       messages: [{ role: "user", content: parsed.task }],
     });
     const actionMs = Date.now() - actionStart;
+
+    await writeTrace({
+      subdir: "nextjs-rag",
+      scenarioName: parsed.scenarioName,
+      task: parsed.task,
+      payload: {
+        task: parsed.task,
+        scenarioName: parsed.scenarioName,
+        output: result.text,
+        retrievedFiles: Array.from(new Set(ranked.map((item) => item.chunk.filePath))),
+        retrievedChunkIds: ranked.map((item) => item.chunk.id),
+        topK,
+      },
+    });
 
     return toPromptfooResponse({
       output: result.text,

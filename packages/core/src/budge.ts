@@ -29,7 +29,12 @@ function runPipeline<S extends Record<string, SourceAdapter>>(
     // fresh SubscriptionRef per prepare() call — .changes available for future streaming
     const traceRef = yield* SubscriptionRef.make(emptyTrace(task));
 
-    yield* stageClassify();
+    const routing = yield* stageClassify({
+      task,
+      sources,
+      worker: deps.worker,
+      traceRef,
+    });
 
     const { answer, finishReason } = yield* stageResearch({
       task,
@@ -42,6 +47,7 @@ function runPipeline<S extends Record<string, SourceAdapter>>(
       subcallSchemas,
       traceRef,
       truncator: deps.truncator,
+      pattern: routing.pattern,
     });
 
     const builtTrace = buildTrace<S>(yield* Ref.get(traceRef));
@@ -63,6 +69,7 @@ function runPipeline<S extends Record<string, SourceAdapter>>(
       handoffStructured: structured,
       handoffFailed: failed,
       finishReason,
+      routing,
       trace: builtTrace,
     } satisfies PreparedContext<S>;
   });
