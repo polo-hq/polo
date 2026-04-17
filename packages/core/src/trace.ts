@@ -1,4 +1,5 @@
 import type { SourceAdapter } from "./sources/interface.ts";
+import type { RoutingDecision } from "./router.ts";
 import type {
   RootTraceNode,
   RuntimeTrace,
@@ -8,100 +9,109 @@ import type {
 } from "./types.ts";
 
 // ---------------------------------------------------------------------------
-// Mutable builder — internal only
+// Immutable Trace — raw accumulator state
+// @internal — not exported from index.ts
 // ---------------------------------------------------------------------------
 
 /**
- * Mutable trace accumulator used during a `budge.prepare()` call.
- * Sealed into an immutable `RuntimeTrace` by `buildTrace()`.
- *
+ * Immutable accumulator for a single prepare() call.
+ * All mutation returns a new Trace value.
+ * Held in a Ref<Trace> throughout the pipeline.
  * @internal
  */
-export class TraceBuilder<S extends Record<string, SourceAdapter>> {
-  private readonly startMs: number;
-  private readonly task: string;
-  private rootUsage: TokenUsage = {
-    inputTokens: 0,
-    outputTokens: 0,
-    totalTokens: 0,
-    cachedInputTokens: 0,
-  };
-  private readonly toolCalls: ToolCallRecord[] = [];
-  private readonly subcalls: SubcallTraceNode[] = [];
-  private readonly accessed: Map<string, Set<string>> = new Map();
-
-  constructor(task: string) {
-    this.task = task;
-    this.startMs = Date.now();
-  }
-
-  // ---------------------------------------------------------------------------
-  // Mutation methods (called by agent.ts)
-  // ---------------------------------------------------------------------------
-
-  recordToolCall(record: ToolCallRecord): void {
-    this.toolCalls.push(record);
-  }
-
-  recordRead(source: string, path: string): void {
-    if (!this.accessed.has(source)) {
-      this.accessed.set(source, new Set());
-    }
-    this.accessed.get(source)!.add(path);
-  }
-
-  recordSubcall(node: SubcallTraceNode): void {
-    this.subcalls.push(node);
-    this.recordRead(node.source, node.path);
-  }
-
-  addRootUsage(usage: TokenUsage): void {
-    this.rootUsage = addUsage(this.rootUsage, usage);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Seal
-  // ---------------------------------------------------------------------------
-
-  build(): RuntimeTrace<S> {
-    const durationMs = Date.now() - this.startMs;
-
-    const rootNode: RootTraceNode = {
-      type: "root",
-      task: this.task,
-      usage: { ...this.rootUsage },
-      durationMs,
-      toolCalls: [...this.toolCalls],
-      children: [...this.subcalls],
-    };
-
-    const totalSubcallTokens = this.subcalls.reduce((sum, s) => sum + s.usage.totalTokens, 0);
-    const totalTokens = this.rootUsage.totalTokens + totalSubcallTokens;
-
-    const totalCachedSubcallTokens = this.subcalls.reduce(
-      (sum, s) => sum + s.usage.cachedInputTokens,
-      0,
-    );
-    const totalCachedTokens = this.rootUsage.cachedInputTokens + totalCachedSubcallTokens;
-
-    const sourcesAccessed: Partial<Record<keyof S & string, string[]>> = {};
-    for (const [source, paths] of this.accessed) {
-      (sourcesAccessed as Record<string, string[]>)[source] = [...paths];
-    }
-
-    return {
-      totalSubcalls: this.subcalls.length,
-      totalTokens,
-      durationMs,
-      totalCachedTokens,
-      sourcesAccessed,
-      tree: rootNode,
-    };
-  }
+export interface Trace {
+  readonly task: string;
+  readonly startMs: number;
+  readonly rootUsage: TokenUsage;
+  readonly toolCalls: ReadonlyArray<ToolCallRecord>;
+  readonly subcalls: ReadonlyArray<SubcallTraceNode>;
+  readonly accessed: ReadonlyMap<string, ReadonlySet<string>>;
+  readonly routing: RoutingDecision | null;
 }
 
 // ---------------------------------------------------------------------------
-// Helper for building subcall trace nodes
+// Pure constructors and reducers
+// ---------------------------------------------------------------------------
+
+export function emptyTrace(task: string): Trace {
+  return {
+    task,
+    startMs: Date.now(),
+    rootUsage: { inputTokens: 0, outputTokens: 0, totalTokens: 0, cachedInputTokens: 0 },
+    toolCalls: [],
+    subcalls: [],
+    accessed: new Map(),
+    routing: null,
+  };
+}
+
+export function traceSetRouting(trace: Trace, routing: RoutingDecision): Trace {
+  return { ...trace, routing };
+}
+
+export function traceAddToolCall(trace: Trace, record: ToolCallRecord): Trace {
+  return { ...trace, toolCalls: [...trace.toolCalls, record] };
+}
+
+export function traceAddRead(trace: Trace, source: string, path: string): Trace {
+  const existing = trace.accessed.get(source);
+  const newSet = new Set(existing);
+  newSet.add(path);
+  const newAccessed = new Map(trace.accessed);
+  newAccessed.set(source, newSet);
+  return { ...trace, accessed: newAccessed };
+}
+
+export function traceAddSubcall(trace: Trace, node: SubcallTraceNode): Trace {
+  const withRead = traceAddRead(trace, node.source, node.path);
+  return { ...withRead, subcalls: [...withRead.subcalls, node] };
+}
+
+export function traceAddRootUsage(trace: Trace, usage: TokenUsage): Trace {
+  return { ...trace, rootUsage: sumUsage(trace.rootUsage, usage) };
+}
+
+export function buildTrace<S extends Record<string, SourceAdapter>>(trace: Trace): RuntimeTrace<S> {
+  if (trace.routing === null) {
+    throw new Error(
+      "buildTrace() called before routing was set; this is a bug in the Budge pipeline.",
+    );
+  }
+
+  const durationMs = Date.now() - trace.startMs;
+
+  const rootNode: RootTraceNode = {
+    type: "root",
+    task: trace.task,
+    usage: { ...trace.rootUsage },
+    durationMs,
+    toolCalls: [...trace.toolCalls],
+    children: [...trace.subcalls],
+  };
+
+  const totalSubcallTokens = trace.subcalls.reduce((sum, s) => sum + s.usage.totalTokens, 0);
+  const totalCachedTokens =
+    trace.rootUsage.cachedInputTokens +
+    trace.subcalls.reduce((sum, s) => sum + s.usage.cachedInputTokens, 0);
+
+  const sourcesAccessed: Partial<Record<keyof S & string, string[]>> = {};
+  for (const [source, paths] of trace.accessed) {
+    (sourcesAccessed as Record<string, string[]>)[source] = [...paths];
+  }
+
+  return {
+    totalSubcalls: trace.subcalls.length,
+    totalTokens: trace.rootUsage.totalTokens + totalSubcallTokens,
+    durationMs,
+    totalCachedTokens,
+    sourcesAccessed,
+    routing: trace.routing,
+    tree: rootNode,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Subcall node constructor (unchanged)
 // ---------------------------------------------------------------------------
 
 export function makeSubcallNode(opts: {
@@ -137,7 +147,7 @@ export function makeSubcallNode(opts: {
 // Utility
 // ---------------------------------------------------------------------------
 
-function addUsage(a: TokenUsage, b: TokenUsage): TokenUsage {
+function sumUsage(a: TokenUsage, b: TokenUsage): TokenUsage {
   return {
     inputTokens: a.inputTokens + b.inputTokens,
     outputTokens: a.outputTokens + b.outputTokens,

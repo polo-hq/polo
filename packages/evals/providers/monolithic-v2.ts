@@ -14,6 +14,9 @@ import {
   summarizeWarnings,
   toPromptfooResponse,
 } from "./shared.ts";
+import { homedir } from "node:os";
+import { mkdirSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 
 interface MonolithicV2ProviderConfig {
   corpusRoot?: string;
@@ -23,6 +26,28 @@ interface MonolithicV2ProviderConfig {
   actionModel?: string;
   provider?: string;
   maxSteps?: number;
+}
+
+const traceDir = path.join(homedir(), ".budge", "traces", "nextjs");
+mkdirSync(traceDir, { recursive: true });
+
+function sanitizeForFilename(name: string): string {
+  return name.replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0, 60);
+}
+
+async function writeTrace(opts: {
+  subdir: string;
+  scenarioName: string | undefined;
+  task: string;
+  payload: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    const label = opts.scenarioName ?? opts.task;
+    const file = path.join(traceDir, `${sanitizeForFilename(label)}-${Date.now()}.json`);
+    await writeFile(file, JSON.stringify(opts.payload, null, 2));
+  } catch {
+    // best-effort; don't fail the eval on trace-write errors
+  }
 }
 
 export default class MonolithicV2Provider {
@@ -85,6 +110,17 @@ export default class MonolithicV2Provider {
         },
       });
 
+      await writeTrace({
+        subdir: "nextjs-mono",
+        scenarioName: parsed.scenarioName,
+        task: parsed.task,
+        payload: {
+          task: parsed.task,
+          scenarioName: parsed.scenarioName,
+          output: scenario.output,
+        },
+      });
+
       return toPromptfooResponse({
         output: scenario.output,
         prepTokens: 0,
@@ -109,6 +145,19 @@ export default class MonolithicV2Provider {
       stopWhen: stepCountIs(this.config.maxSteps ?? 30),
     });
     const actionMs = Date.now() - start;
+
+    await writeTrace({
+      subdir: "nextjs-mono",
+      scenarioName: parsed.scenarioName,
+      task: parsed.task,
+      payload: {
+        task: parsed.task,
+        scenarioName: parsed.scenarioName,
+        output: result.text,
+        steps: result.steps.length,
+        toolCalls: countToolCalls(result.steps),
+      },
+    });
 
     return toPromptfooResponse({
       output: result.text,

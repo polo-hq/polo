@@ -8,6 +8,7 @@ import * as handoffModule from "../src/handoff.ts";
 import { buildFallbackHandoff, buildHandoff, renderHandoffMarkdown } from "../src/handoff.ts";
 import { Truncator } from "../src/truncation.ts";
 import type { HandoffStructured, RuntimeTrace } from "../src/types.ts";
+import { stubRouting } from "./helpers.ts";
 
 vi.mock("ai", async () => {
   const actual = await vi.importActual<typeof import("ai")>("ai");
@@ -32,6 +33,7 @@ function makeTrace(): RuntimeTrace<any> {
       codebase: ["src/auth.ts"],
       history: ["thread/123"],
     },
+    routing: stubRouting(),
     tree: {
       type: "root",
       task: "Review auth flows",
@@ -146,6 +148,26 @@ function makeStructured(): HandoffStructured {
     confidence: "High",
     confidenceRationale: "Findings align with traced reads and focused subcall output.",
   };
+}
+
+/**
+ * Returns true if the generateText args look like the router's classifier call.
+ * The classifier uses a system prompt starting with "Classify a research task".
+ */
+function isClassifierCall(args: { system?: unknown }): boolean {
+  return typeof args.system === "string" && args.system.startsWith("Classify a research task");
+}
+
+function classifierStubResult(): Awaited<ReturnType<typeof generateText>> {
+  return {
+    output: {
+      decomposition: "synthetic",
+      budget: "standard",
+      confidence: 0.9,
+      rationale: "test-stub",
+    },
+    usage: { inputTokens: 0, outputTokens: 0 },
+  } as Awaited<ReturnType<typeof generateText>>;
 }
 
 beforeEach(() => {
@@ -288,10 +310,13 @@ describe("createBudge().prepare()", () => {
       answer: "Prepared auth analysis.",
       finishReason: "finish",
     });
-    mockGenerateText.mockResolvedValue({
-      output: makeStructured(),
-      usage: { inputTokens: 4, outputTokens: 6 },
-    } as Awaited<ReturnType<typeof generateText>>);
+    mockGenerateText.mockImplementation(async (args) => {
+      if (isClassifierCall(args)) return classifierStubResult();
+      return {
+        output: makeStructured(),
+        usage: { inputTokens: 4, outputTokens: 6 },
+      } as Awaited<ReturnType<typeof generateText>>;
+    });
 
     const budge = createBudge({ orchestrator, worker });
     const context = await budge.prepare({
@@ -305,6 +330,9 @@ describe("createBudge().prepare()", () => {
     expect(context.handoffStructured.goal).toBe("Review auth flows");
     expect(typeof context.handoff).toBe("string");
     expect(context.handoffFailed).toBe(false);
+    // ctx.routing and ctx.trace.routing must be the same reference.
+    expect(context.routing).toBe(context.trace.routing);
+    expect(context.routing.pattern).toBeDefined();
   });
 
   it("sets handoffFailed and returns the fallback handoff when synthesis fails", async () => {
@@ -336,7 +364,11 @@ describe("createBudge().prepare()", () => {
       answer: "Prepared auth analysis.",
       finishReason: "finish",
     });
-    mockGenerateText.mockRejectedValueOnce(new Error("structured output validation failed"));
+    // Classifier stubs successfully; handoff call rejects.
+    mockGenerateText.mockImplementation(async (args) => {
+      if (isClassifierCall(args)) return classifierStubResult();
+      throw new Error("structured output validation failed");
+    });
 
     const budge = createBudge({ orchestrator, worker });
     const context = await budge.prepare({

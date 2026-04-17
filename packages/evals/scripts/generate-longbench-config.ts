@@ -76,7 +76,7 @@ const config = {
         workerModel: "openai/gpt-5.4-mini",
         actionModel: "openai/gpt-5.4-mini",
         provider: "openrouter",
-        maxSteps: 20,
+        maxSteps: 80,
       },
     },
     {

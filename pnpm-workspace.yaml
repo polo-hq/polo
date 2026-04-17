@@ -3,6 +3,6 @@ packages:
   - examples/*
 catalog:
   "@types/node": ^25.5.0
-  "@typescript/native-preview": 7.0.0-dev.20260316.1
+  "@typescript/native-preview": 7.0.0-dev.20260416.2
   typescript: ^5.9.3
   zod: ^4.3.6

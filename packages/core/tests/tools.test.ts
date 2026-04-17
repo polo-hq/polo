@@ -1,12 +1,14 @@
+import type { LanguageModel } from "ai";
 import { tool } from "ai";
+import { Effect, Ref } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { z } from "zod";
-import type { LanguageModel } from "ai";
-import type { ContributedToolEvents, ToolCallEvent } from "../src/types.ts";
 import type { SourceAdapter } from "../src/sources/interface.ts";
 import { buildTools } from "../src/tools.ts";
-import { TraceBuilder } from "../src/trace.ts";
+import { buildTrace } from "../src/trace.ts";
 import { Truncator } from "../src/truncation.ts";
+import type { ContributedToolEvents, ToolCallEvent } from "../src/types.ts";
+import { makeTraceRef } from "./helpers.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -14,10 +16,6 @@ import { Truncator } from "../src/truncation.ts";
 
 function makeWorker() {
   return {} as LanguageModel;
-}
-
-function makeTrace() {
-  return new TraceBuilder("test");
 }
 
 function makeTruncator() {
@@ -82,77 +80,77 @@ function makeFullSource() {
 // ---------------------------------------------------------------------------
 
 describe("buildTools() — conditional standard tool registration", () => {
-  it("registers list_source when at least one source has list", () => {
+  it("registers list_source when at least one source has list", async () => {
     const tools = buildTools({
       sources: { docs: makeListReadSource() },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
     }) as Record<string, unknown>;
 
     expect(tools.list_source).toBeDefined();
   });
 
-  it("does NOT register list_source when no source has list", () => {
+  it("does NOT register list_source when no source has list", async () => {
     const tools = buildTools({
       sources: { notes: makeSearchSource() },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
     }) as Record<string, unknown>;
 
     expect(tools.list_source).toBeUndefined();
   });
 
-  it("registers read_source when at least one source has read", () => {
+  it("registers read_source when at least one source has read", async () => {
     const tools = buildTools({
       sources: { docs: makeListReadSource() },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
     }) as Record<string, unknown>;
 
     expect(tools.read_source).toBeDefined();
   });
 
-  it("does NOT register read_source when no source has read", () => {
+  it("does NOT register read_source when no source has read", async () => {
     const tools = buildTools({
       sources: { notes: makeSearchSource() },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
     }) as Record<string, unknown>;
 
     expect(tools.read_source).toBeUndefined();
   });
 
-  it("registers search_source when at least one source has search", () => {
+  it("registers search_source when at least one source has search", async () => {
     const tools = buildTools({
       sources: { notes: makeSearchSource() },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
     }) as Record<string, unknown>;
 
     expect(tools.search_source).toBeDefined();
   });
 
-  it("does NOT register search_source when no source has search", () => {
+  it("does NOT register search_source when no source has search", async () => {
     const tools = buildTools({
       sources: { docs: makeListReadSource() },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
     }) as Record<string, unknown>;
 
     expect(tools.search_source).toBeUndefined();
   });
 
-  it("registers all three when one source has all methods", () => {
+  it("registers all three when one source has all methods", async () => {
     const tools = buildTools({
       sources: { full: makeFullSource() },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
     }) as Record<string, unknown>;
 
@@ -161,18 +159,68 @@ describe("buildTools() — conditional standard tool registration", () => {
     expect(tools.search_source).toBeDefined();
   });
 
-  it("always registers run_subcall, run_subcalls, and finish", () => {
-    // Even with a search-only source
+  it("registers run_subcall, run_subcalls, and finish when a source supports read (default pattern)", async () => {
     const tools = buildTools({
-      sources: { notes: makeSearchSource() },
+      sources: { docs: makeListReadSource() },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
     }) as Record<string, unknown>;
 
     expect(tools.run_subcall).toBeDefined();
     expect(tools.run_subcalls).toBeDefined();
     expect(tools.finish).toBeDefined();
+  });
+
+  it("always registers finish regardless of pattern or capabilities", async () => {
+    const tools = buildTools({
+      sources: { notes: makeSearchSource() },
+      worker: makeWorker(),
+      traceRef: await makeTraceRef("test"),
+      truncator: makeTruncator(),
+    }) as Record<string, unknown>;
+
+    expect(tools.finish).toBeDefined();
+  });
+
+  it("omits both subcall tools for pattern 'direct'", async () => {
+    const tools = buildTools({
+      sources: { docs: makeListReadSource() },
+      worker: makeWorker(),
+      traceRef: await makeTraceRef("test"),
+      truncator: makeTruncator(),
+      pattern: "direct",
+    }) as Record<string, unknown>;
+
+    expect(tools.run_subcall).toBeUndefined();
+    expect(tools.run_subcalls).toBeUndefined();
+    expect(tools.finish).toBeDefined();
+  });
+
+  it("registers only run_subcalls for pattern 'fan-out'", async () => {
+    const tools = buildTools({
+      sources: { docs: makeListReadSource() },
+      worker: makeWorker(),
+      traceRef: await makeTraceRef("test"),
+      truncator: makeTruncator(),
+      pattern: "fan-out",
+    }) as Record<string, unknown>;
+
+    expect(tools.run_subcall).toBeUndefined();
+    expect(tools.run_subcalls).toBeDefined();
+  });
+
+  it("registers only run_subcall for pattern 'chain'", async () => {
+    const tools = buildTools({
+      sources: { docs: makeListReadSource() },
+      worker: makeWorker(),
+      traceRef: await makeTraceRef("test"),
+      truncator: makeTruncator(),
+      pattern: "chain",
+    }) as Record<string, unknown>;
+
+    expect(tools.run_subcall).toBeDefined();
+    expect(tools.run_subcalls).toBeUndefined();
   });
 });
 
@@ -181,11 +229,11 @@ describe("buildTools() — conditional standard tool registration", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildTools() — source-contributed tools", () => {
-  it("namespaces contributed tools with source name", () => {
+  it("namespaces contributed tools with source name", async () => {
     const tools = buildTools({
       sources: { db: makeToolsSource() },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
     }) as Record<string, unknown>;
 
@@ -193,11 +241,11 @@ describe("buildTools() — source-contributed tools", () => {
     expect(tools["db.search_patients"]).toBeDefined();
   });
 
-  it("does not expose un-namespaced contributed tool names", () => {
+  it("does not expose un-namespaced contributed tool names", async () => {
     const tools = buildTools({
       sources: { db: makeToolsSource() },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
     }) as Record<string, unknown>;
 
@@ -205,14 +253,14 @@ describe("buildTools() — source-contributed tools", () => {
     expect(tools["search_patients"]).toBeUndefined();
   });
 
-  it("multiple sources each get their own namespace", () => {
+  it("multiple sources each get their own namespace", async () => {
     const tools = buildTools({
       sources: {
         db: makeToolsSource(),
         full: makeFullSource(),
       },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
     }) as Record<string, unknown>;
 
@@ -223,11 +271,11 @@ describe("buildTools() — source-contributed tools", () => {
 
   it("fires onToolCall for contributed tool invocations", async () => {
     const events: Array<{ tool: string; args: unknown }> = [];
-    const trace = new TraceBuilder("observability test");
+    const traceRef = await makeTraceRef("observability test");
     const tools = buildTools({
       sources: { db: makeToolsSource() },
       worker: makeWorker(),
-      trace,
+      traceRef,
       truncator: makeTruncator(),
       onToolCall: (event) => events.push(event),
     }) as Record<string, any>;
@@ -240,17 +288,17 @@ describe("buildTools() — source-contributed tools", () => {
   });
 
   it("records contributed tool calls in the trace", async () => {
-    const trace = new TraceBuilder("trace test");
+    const traceRef = await makeTraceRef("trace test");
     const tools = buildTools({
       sources: { db: makeToolsSource() },
       worker: makeWorker(),
-      trace,
+      traceRef,
       truncator: makeTruncator(),
     }) as Record<string, any>;
 
     await tools["db.get_patient"].execute({ id: 99 }, {} as never);
 
-    const built = trace.build();
+    const built = buildTrace(await Effect.runPromise(Ref.get(traceRef)));
     const record = built.tree.toolCalls.find((c) => c.tool === "db.get_patient");
     expect(record).toBeDefined();
     expect(record!.args).toEqual({ id: 99 });
@@ -261,7 +309,7 @@ describe("buildTools() — source-contributed tools", () => {
     const tools = buildTools({
       sources: { db: makeToolsSource() },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
     }) as Record<string, any>;
 
@@ -348,7 +396,7 @@ describe("ToolCallEvent<S> — type inference", () => {
     const allTools = buildTools({
       sources: { db },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
       onToolCall: (event: ToolCallEvent<Sources>) => {
         if (event.tool === "db.get_patient") {
@@ -369,11 +417,11 @@ describe("ToolCallEvent<S> — type inference", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildTools() — dynamic descriptions", () => {
-  it("list_source description mentions supporting sources", () => {
+  it("list_source description mentions supporting sources", async () => {
     const tools = buildTools({
       sources: { docs: makeListReadSource(), notes: makeSearchSource() },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
     }) as Record<string, { description?: string }>;
 
@@ -381,11 +429,11 @@ describe("buildTools() — dynamic descriptions", () => {
     expect(desc).toContain("docs");
   });
 
-  it("list_source description mentions non-supporting sources", () => {
+  it("list_source description mentions non-supporting sources", async () => {
     const tools = buildTools({
       sources: { docs: makeListReadSource(), notes: makeSearchSource() },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
     }) as Record<string, { description?: string }>;
 
@@ -394,11 +442,11 @@ describe("buildTools() — dynamic descriptions", () => {
     expect(desc).toContain("search_source");
   });
 
-  it("search_source description includes per-source describe() text", () => {
+  it("search_source description includes per-source describe() text", async () => {
     const tools = buildTools({
       sources: { notes: makeSearchSource() },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
     }) as Record<string, { description?: string }>;
 
@@ -417,7 +465,7 @@ describe("buildTools() — resolveSourceForMethod errors", () => {
     const tools = buildTools({
       sources: { docs: makeListReadSource() },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
     }) as Record<string, any>;
 
@@ -433,7 +481,7 @@ describe("buildTools() — resolveSourceForMethod errors", () => {
         docs: makeListReadSource(),
       },
       worker: makeWorker(),
-      trace: makeTrace(),
+      traceRef: await makeTraceRef("test"),
       truncator: makeTruncator(),
     }) as Record<string, any>;
 

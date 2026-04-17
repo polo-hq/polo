@@ -1,0 +1,116 @@
+import { Effect, Ref } from "effect";
+import type { LanguageModel } from "ai";
+import { buildHandoff, buildFallbackHandoff } from "./handoff.ts";
+import { runAgent } from "./agent.ts";
+import { route, type Pattern, type RoutingDecision } from "./router.ts";
+import type { SourceAdapter } from "./sources/interface.ts";
+import type { HandoffStructured, PrepareOptions, RunFinishReason, RuntimeTrace } from "./types.ts";
+import type { Truncator } from "./truncation.ts";
+import { traceSetRouting, type Trace } from "./trace.ts";
+
+// ---------------------------------------------------------------------------
+// Stage 1: classify
+// Classifies the task, selects an orchestration pattern, records it on the
+// trace. Never fails — classifier errors produce a fallback decision inside
+// route().
+// ---------------------------------------------------------------------------
+
+export function stageClassify<S extends Record<string, SourceAdapter>>(opts: {
+  task: string;
+  sources: S;
+  worker: LanguageModel;
+  traceRef: Ref.Ref<Trace>;
+}): Effect.Effect<RoutingDecision, never> {
+  return Effect.gen(function* () {
+    const decision = yield* route({
+      task: opts.task,
+      sources: opts.sources,
+      worker: opts.worker,
+    });
+    yield* Ref.update(opts.traceRef, (t) => traceSetRouting(t, decision));
+    return decision;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Stage 2: research
+// Agentic exploration of sources — currently the full runAgent loop
+// ---------------------------------------------------------------------------
+
+export function stageResearch<S extends Record<string, SourceAdapter>>(opts: {
+  task: string;
+  sources: S;
+  orchestrator: LanguageModel;
+  worker: LanguageModel;
+  concurrency: number;
+  maxSteps: number | undefined;
+  onToolCall: PrepareOptions<S>["onToolCall"];
+  subcallSchemas: PrepareOptions<S>["subcallSchemas"];
+  traceRef: Ref.Ref<Trace>;
+  truncator: Truncator;
+  pattern: Pattern;
+}): Effect.Effect<{ answer: string; finishReason: RunFinishReason }, Error> {
+  return Effect.tryPromise({
+    try: () =>
+      runAgent({
+        orchestrator: opts.orchestrator,
+        worker: opts.worker,
+        task: opts.task,
+        sources: opts.sources,
+        onToolCall: opts.onToolCall,
+        maxSteps: opts.maxSteps,
+        subcallSchemas: opts.subcallSchemas,
+        concurrency: opts.concurrency,
+        traceRef: opts.traceRef,
+        truncator: opts.truncator,
+        pattern: opts.pattern,
+      }),
+    catch: (e) => (e instanceof Error ? e : new Error(String(e))),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Stage 3: synthesize
+// Stub — will become AggAgent-style trace navigation once gather is stable
+// ---------------------------------------------------------------------------
+
+export function stageSynthesize(): Effect.Effect<void> {
+  return Effect.void;
+}
+
+// ---------------------------------------------------------------------------
+// Stage 4: handoff
+// Synthesizes the briefing document for the action agent
+// ---------------------------------------------------------------------------
+
+export function stageHandoff<S extends Record<string, SourceAdapter>>(opts: {
+  task: string;
+  answer: string;
+  trace: RuntimeTrace<S>;
+  worker: LanguageModel;
+  system: string | undefined;
+}): Effect.Effect<{ structured: HandoffStructured; markdown: string; failed: boolean }, Error> {
+  return Effect.tryPromise({
+    try: async () => {
+      try {
+        const result = await buildHandoff({
+          task: opts.task,
+          answer: opts.answer,
+          trace: opts.trace,
+          worker: opts.worker,
+          system: opts.system,
+        });
+        return { ...result, failed: false };
+      } catch {
+        const result = buildFallbackHandoff({
+          task: opts.task,
+          answer: opts.answer,
+          trace: opts.trace,
+          system: opts.system,
+        });
+        return { ...result, failed: true };
+      }
+    },
+    catch: (e) => (e instanceof Error ? e : new Error(String(e))),
+  });
+}

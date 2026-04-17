@@ -14,6 +14,12 @@ export default defineConfig({
     ignorePatterns: hiddenPaths,
   },
   test: {
-    exclude: ["**/node_modules/**", "**/.git/**", "**/.agents/**", "**/.claude/**"],
+    exclude: [
+      "**/node_modules/**",
+      "**/.git/**",
+      "**/.agents/**",
+      "**/.claude/**",
+      "packages/evals/**",
+    ],
   },
 });
